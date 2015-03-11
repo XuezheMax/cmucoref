@@ -1,0 +1,3 @@
+Main-Class: maxparser.MaxParser
+Class-Path: lib/trove.jar
+
