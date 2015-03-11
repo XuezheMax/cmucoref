@@ -53,4 +53,12 @@ public class Sentence {
 	public void setLexicons(Lexicon[] lexicons){
 		this.lexicons = lexicons;
 	}
+	
+	public String getRawText(){
+		StringBuilder text = new StringBuilder();
+		for(int i = 1; i < lexicons.length; ++i){
+			text.append(lexicons[i].form + " ");
+		}
+		return text.toString();
+	}
 }
