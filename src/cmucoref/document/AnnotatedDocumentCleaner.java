@@ -25,7 +25,7 @@ public class AnnotatedDocumentCleaner {
 		File[] files = dir.listFiles();
 		
 		DocumentReader docReader = DocumentReader.createDocumentReader(AnnotatedDocumentReader.class.getName());
-		DocumentWriter docWriter = DocumentWriter.createDocumentReader(AnnotatedDocumentWriter.class.getName());
+		DocumentWriter docWriter = DocumentWriter.createDocumentWriter(AnnotatedDocumentWriter.class.getName());
 		HashMap<String, String> docMap = new HashMap<String, String>();
 		
 		int total = 0, tooShort = 0, missNer = 0, duplication = 0;

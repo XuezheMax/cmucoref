@@ -12,7 +12,7 @@ import cmucoref.mention.Mention;
 public abstract class DocumentWriter {
 	protected BufferedWriter writer;
 	
-	public static DocumentWriter createDocumentReader(String readerClassName) throws InstantiationException, IllegalAccessException, ClassNotFoundException{
+	public static DocumentWriter createDocumentWriter(String readerClassName) throws InstantiationException, IllegalAccessException, ClassNotFoundException{
 		return (DocumentWriter) Class.forName(readerClassName).newInstance();
 	}
 	public void startWriting(String file) throws IOException {

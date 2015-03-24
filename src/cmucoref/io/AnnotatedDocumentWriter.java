@@ -31,7 +31,7 @@ public class AnnotatedDocumentWriter extends DocumentWriter {
 		
 		Lexicon[] lexicons = sent.getLexicons();
 		for(int i = 1; i < sent.length(); ++i){
-			writer.write(lexicons[i].form + "\t" + lexicons[i].lemma + "\t");
+			writer.write(i + "\t" + lexicons[i].form + "\t" + lexicons[i].lemma + "\t");
 			writer.write(lexicons[i].cpostag + "\t" + lexicons[i].postag + "\t");
 			writer.write(lexicons[i].basic_head + "\t" + lexicons[i].basic_deprel + "\t");
 			writer.write(lexicons[i].collapsed_head + "\t" + lexicons[i].collapsed_deprel + "\t");

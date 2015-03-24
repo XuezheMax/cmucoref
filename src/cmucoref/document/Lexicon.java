@@ -48,4 +48,10 @@ public class Lexicon {
 		this.collapsed_head = collapsed_head;
 		this.collapsed_deprel = collapsed_deprel;
 	}
+	
+	public Lexicon(Lexicon lex){
+		this(lex.id, lex.form, lex.lemma, lex.cpostag, lex.postag, 
+				lex.ner, lex.basic_head, lex.basic_deprel,
+				lex.collapsed_head, lex.collapsed_deprel);
+	}
 }
