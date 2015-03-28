@@ -40,7 +40,7 @@ public class Test {
 		while(doc != null){
 			List<List<Mention>> mentionList = mentionExtractor.extractPredictedMentions(doc, options);
 			mentionExtractor.displayMentions(doc, mentionList, printer);
-			System.exit(0);
+			//System.exit(0);
 			doc = docReader.getNextDocument();
 		}
 		System.out.println("time: " + (System.currentTimeMillis() - start ) / 1000);

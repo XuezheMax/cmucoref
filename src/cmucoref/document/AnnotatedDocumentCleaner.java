@@ -21,6 +21,7 @@ public class AnnotatedDocumentCleaner {
 	 */
 	public static void main(String[] args) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException {
 		String dirPath = args[0];
+		String destPath = args[1];
 		File dir = new File(dirPath);
 		File[] files = dir.listFiles();
 		
@@ -31,7 +32,7 @@ public class AnnotatedDocumentCleaner {
 		int total = 0, tooShort = 0, missNer = 0, duplication = 0;
 		for(File file : files){
 			docReader.startReading(file.getAbsolutePath());
-			docWriter.startWriting(file.getPath().substring(0, file.getPath().lastIndexOf('.')) + ".anno");
+			docWriter.startWriting(destPath + file.getName().substring(0, file.getName().lastIndexOf('.')) + ".anno");
 			Document doc = docReader.getNextDocument();
 			while(doc != null){
 				total++;

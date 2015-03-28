@@ -42,6 +42,9 @@ public class AnnotatedDocumentReader extends DocumentReader{
 		else if(line.equals("#end document")){
 			return null;
 		}
+		else if(!line.startsWith("(ROOT")){
+			throw new IOException("reading sentence error: penn parse tree error:\n" + line);
+		}
 		else{
 			parseTree = line;
 		}

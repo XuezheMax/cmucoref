@@ -130,10 +130,11 @@ public class Options implements Serializable{
 	private void parseOptions(String configfile) throws OptionException{
 		try {
 			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(configfile)));
-			String line = reader.readLine().trim();
+			String line = reader.readLine();
 			while(line != null){
+				line = line.trim();
 				if(line.length() == 0){
-					line = reader.readLine().trim();
+					line = reader.readLine();
 					continue;
 				}
 				String[] tokens = line.split("=");
@@ -144,7 +145,7 @@ public class Options implements Serializable{
 				else{
 					argToValueMap.put(tokens[0], tokens[1]);
 				}
-				line = reader.readLine().trim();
+				line = reader.readLine();
 			}
 			reader.close();
 		} catch (IOException e) {

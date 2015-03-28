@@ -77,67 +77,58 @@ public abstract class MentionExtractor {
 	}
 	
 	protected void findSyntacticRelation(List<Mention> mentions, Sentence sent, Options options) throws InstantiationException, IllegalAccessException, ClassNotFoundException{
-		markListMemberRelation(mentions, sent, RelationExtractor.createExtractor(options.getListMemberRelationExtractor()));
-		markAppositionRelation(mentions, sent, RelationExtractor.createExtractor(options.getAppositionRelationExtractor()));
-		markPredicateNominativeRelation(mentions, sent, RelationExtractor.createExtractor(options.getPredicateNominativeRelationExtractor()));
-		markRelativePronounRelation(mentions, sent, RelationExtractor.createExtractor(options.getRelativePronounRelationExtractor()));
-	}
-	
-	protected void markListMemberRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor){
-		Set<Pair<Integer, Integer>> foundPairs = extractor.extractRelation(sent, mentions);
 		try {
-			markMentionRelation(mentions, foundPairs, "LISTMEMBER");
+			markListMemberRelation(mentions, sent, RelationExtractor.createExtractor(options.getListMemberRelationExtractor()));
+			markAppositionRelation(mentions, sent, RelationExtractor.createExtractor(options.getAppositionRelationExtractor()));
+			markPredicateNominativeRelation(mentions, sent, RelationExtractor.createExtractor(options.getPredicateNominativeRelationExtractor()));
+			markRelativePronounRelation(mentions, sent, RelationExtractor.createExtractor(options.getRelativePronounRelationExtractor()));
 		} catch (MentionException e) {
 			e.printStackTrace();
-			System.exit(0);
+			PrintWriter printer = new PrintWriter(System.err);
+			for(Mention mention : mentions){
+				displayMention(sent, mention, printer);
+			}
+			//System.exit(0);
 		}
 	}
 	
-	protected void markAppositionRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor){
+	protected void markListMemberRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor) throws MentionException{
 		Set<Pair<Integer, Integer>> foundPairs = extractor.extractRelation(sent, mentions);
-		try {
-			markMentionRelation(mentions, foundPairs, "APPOSITION");
-		} catch (MentionException e) {
-			e.printStackTrace();
-			System.exit(0);
-		}
+		markMentionRelation(mentions, foundPairs, "LISTMEMBER");
 	}
 	
-	protected void markPredicateNominativeRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor){
+	protected void markAppositionRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor) throws MentionException{
 		Set<Pair<Integer, Integer>> foundPairs = extractor.extractRelation(sent, mentions);
-		try {
-			markMentionRelation(mentions, foundPairs, "PREDICATE_NOMINATIVE");
-		} catch (MentionException e) {
-			e.printStackTrace();
-			System.exit(0);
-		}
+		markMentionRelation(mentions, foundPairs, "APPOSITION");
 	}
 	
-	protected void markRelativePronounRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor){
+	protected void markPredicateNominativeRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor) throws MentionException{
 		Set<Pair<Integer, Integer>> foundPairs = extractor.extractRelation(sent, mentions);
-		try {
-			markMentionRelation(mentions, foundPairs, "RELATIVE_PRONOUN");
-		} catch (MentionException e) {
-			e.printStackTrace();
-			System.exit(0);
-		}
+		markMentionRelation(mentions, foundPairs, "PREDICATE_NOMINATIVE");
+	}
+	
+	protected void markRelativePronounRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor) throws MentionException{
+		Set<Pair<Integer, Integer>> foundPairs = extractor.extractRelation(sent, mentions);
+		markMentionRelation(mentions, foundPairs, "RELATIVE_PRONOUN");
 	}
 	
 	protected void markMentionRelation(List<Mention> mentions, Set<Pair<Integer, Integer>> foundPairs, String relation) throws MentionException{
 		for(Mention mention1 : mentions){
 			for(Mention mention2 : mentions){
+				if(mention1 == mention2){
+					continue;
+				}
+				
 				if(!relation.equals("LISTMEMBER")){
 					// Ignore if m2 and m1 are in list relationship
 					if(mention1.isListMemberOf(mention2) || mention2.isListMemberOf(mention1)){
-						System.err.println("Relation error: " + relation);
-						displayMention(mention1, new PrintWriter(System.err));
-						displayMention(mention2, new PrintWriter(System.err));
-						System.exit(0);
+						continue;
 					}
 				}
 				
 				for(Pair<Integer, Integer> pair : foundPairs){
 					if(pair.first == mention1.headIndex && pair.second == mention2.headIndex){
+						System.out.println(pair.first + " " + pair.second);
 						if(relation.equals("LISTMEMBER")){
 							mention2.addListMember(mention1);
 						}
@@ -171,6 +162,7 @@ public abstract class MentionExtractor {
 			printer.println("----------------------------------------");
 		}
 		printer.println("end document");
+		printer.flush();
 	}
 	
 	public void displayMention(Mention mention, PrintWriter printer) {
@@ -187,19 +179,11 @@ public abstract class MentionExtractor {
 		printer.println("mention person: " + mention.person);
 		printer.println("#end Mention " + mention.mentionID);
 		printer.println("===================================");
+		printer.flush();
 	}
 	
 	public void displayMention(Sentence sent, Mention mention, PrintWriter printer){
 		printer.println("#Begin Mention " + mention.mentionID);
-		
-		printer.println("Children Mentions: ");
-		if(mention.children != null){
-			for(Mention child : mention.children){
-				displayMention(sent, child, printer);
-			}
-		}
-		printer.println("end");
-		
 		printer.println("sent ID: " + mention.sentID);
 		printer.println("mention ID: " + mention.mentionID);
 		printer.println(mention.startIndex + " " + mention.endIndex + " " + mention.getSpan(sent));
@@ -212,5 +196,6 @@ public abstract class MentionExtractor {
 		printer.println("mention person: " + mention.person);
 		printer.println("#end Mention " + mention.mentionID);
 		printer.println("===================================");
+		printer.flush();
 	}
 }

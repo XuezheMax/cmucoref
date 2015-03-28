@@ -7,6 +7,7 @@ import java.util.List;
 
 import cmucoref.document.Lexicon;
 import cmucoref.document.Sentence;
+import cmucoref.exception.MentionException;
 
 import edu.stanford.nlp.dcoref.Dictionaries;
 import edu.stanford.nlp.dcoref.Dictionaries.Animacy;
@@ -102,19 +103,45 @@ public class Mention implements Serializable{
 	}
 	
 	public boolean isListMemberOf(Mention m){
-		return this.belongTo.equals(m);
+		return belongTo == null ? false : this.belongTo.equals(m);
 	}
 	
-	public void addApposition(Mention appo){
-		// TODO
+	public void addApposition(Mention appo) throws MentionException{
+		if(appo.apposTo != null){
+			throw new MentionException(appo.headString + " is apposition to another mention " + appo.apposTo.headString);
+		}
+		
+		if(appo.headword.basic_head != this.headIndex || !appo.headword.basic_deprel.equals("appos")){
+			throw new MentionException(appo.headString + " is not a apposition to mention " + this.headString);
+		}
+		
+		if(appositions == null){
+			appositions = new ArrayList<Mention>();
+		}
+		
+		appositions.add(appo);
+		appo.apposTo = this;
 	}
 	
-	public void addPredicativeNominative(Mention predMomi){
-		// TODO
+	public void addPredicativeNominative(Mention predMomi) throws MentionException{
+		if(predMomi.predNomiTo != null){
+			throw new MentionException(predMomi.headString + " is predicate nominative to another mention " + predMomi.predNomiTo.headString);
+		}
+		
+		if(this.headword.basic_head != predMomi.headword.basic_head){
+			throw new MentionException(predMomi.headString + " is not predicate nominative to mention " + this.headString);
+		}
+		
+		if(predicateNominatives == null){
+			predicateNominatives = new ArrayList<Mention>();
+		}
+		
+		predicateNominatives.add(predMomi);
+		predMomi.predNomiTo = this;
 	}
 	
-	public void addRelativePronoun(Mention relPron){
-		// TODO
+	public void addRelativePronoun(Mention relPron) throws MentionException{
+		throw new MentionException(relPron.headString + " is relative pronoun to mention " + this.headString);
 	}
 	
 	public String getSpan(Sentence sent){

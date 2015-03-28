@@ -1,0 +1,13 @@
+<project default="compile">
+    <target name="compile">
+         <javac srcdir="src" destdir="." debug="on">
+             <classpath>
+                 <fileset dir="lib">
+                     <include name="trove.jar"/>
+                     <include name="stanford-corenlp-3.4.jar"/>
+                     <include name="stanford-corenlp-3.4-models.jar"/>
+                 </fileset>
+             </classpath>
+         </javac>
+    </target>
+</project>
