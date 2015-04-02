@@ -10,7 +10,7 @@ import cmucoref.util.Pair;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -26,70 +26,54 @@ public abstract class MentionExtractor {
 	
 	public abstract List<List<Mention>> extractPredictedMentions(Document doc, Options options) throws IOException;
 	
-	protected List<List<Mention>> constructMentionTreeList(List<List<Mention>> originalList){
-		int numSent = originalList.size();
-		List<List<Mention>> mentionList = new ArrayList<List<Mention>>(numSent);
-		for(int i = 0; i < numSent; ++i){
-			List<Mention> orgMentions = originalList.get(i);
-			mentionList.add(constructMentionTree(orgMentions));
-		}
-		return mentionList;
-	}
-	
-	protected List<Mention> constructMentionTree(List<Mention> orgMentions){
-		List<Mention> mentions = new ArrayList<Mention>();
-		for(Mention orgMention : orgMentions){
-			setParent(mentions, orgMention);
-		}
-		return mentions;
-	}
-	
-	protected void postTreeOrderMentions(List<Mention> mentions, List<Mention> postOrderMentions){
-		for(Mention mention : mentions){
-			if(mention.children != null){
-				postTreeOrderMentions(mention.children, postOrderMentions);
-			}
-			postOrderMentions.add(mention);
-		}
-	}
-	
-	protected void setParent(List<Mention> mentions, Mention addMention){
-		int index = -1;
-		int size = mentions.size();
-		for(int i = 0; i < size; ++i){
-			Mention mention = mentions.get(i);
-			if(addMention.cover(mention)){
-				if(index == -1){
-					index = i;
+	protected void deleteSpuriousNamedEntityMentions(List<Mention> mentions, Sentence sent){
+		Set<Mention> remove = new HashSet<Mention>();
+		for(Mention mention1 : mentions){
+			if(mention1.isPureNerMention(sent)){
+				for(Mention mention2 : mentions){
+					if(mention1.overlap(mention2)){
+						remove.add(mention1);
+						
+//						if(mention1.startIndex > mention2.startIndex){
+//							mention2.endIndex = mention1.endIndex;
+//						}
+//						else{
+//							mention2.startIndex = mention1.startIndex;
+//							mention2.headIndex = mention1.headIndex;
+//							mention2.process(sent, dict);
+//						}
+					}
 				}
-				addMention.addChild(mention);
 			}
 		}
-		if(index == -1){
-			mentions.add(addMention);			
-		}
-		else{
-			for(int i = size - 1; i >= index; --i){
-				mentions.remove(i);
-			}
-			mentions.add(addMention);
-		}
+		mentions.removeAll(remove);
 	}
 	
-	protected void findSyntacticRelation(List<Mention> mentions, Sentence sent, Options options) throws InstantiationException, IllegalAccessException, ClassNotFoundException{
-		try {
-			markListMemberRelation(mentions, sent, RelationExtractor.createExtractor(options.getListMemberRelationExtractor()));
-			markAppositionRelation(mentions, sent, RelationExtractor.createExtractor(options.getAppositionRelationExtractor()));
-			markPredicateNominativeRelation(mentions, sent, RelationExtractor.createExtractor(options.getPredicateNominativeRelationExtractor()));
-			markRelativePronounRelation(mentions, sent, RelationExtractor.createExtractor(options.getRelativePronounRelationExtractor()));
-		} catch (MentionException e) {
-			e.printStackTrace();
-			PrintWriter printer = new PrintWriter(System.err);
-			for(Mention mention : mentions){
-				displayMention(sent, mention, printer);
+	protected void findSyntacticRelation(List<Mention> mentions, Sentence sent, Options options) throws InstantiationException, IllegalAccessException, ClassNotFoundException, MentionException{
+		markListMemberRelation(mentions, sent, RelationExtractor.createExtractor(options.getListMemberRelationExtractor()));
+		deleteSpuriousListMentions(mentions, sent);
+		markAppositionRelation(mentions, sent, RelationExtractor.createExtractor(options.getAppositionRelationExtractor()));
+		markPredicateNominativeRelation(mentions, sent, RelationExtractor.createExtractor(options.getPredicateNominativeRelationExtractor()));
+		//markRelativePronounRelation(mentions, sent, RelationExtractor.createExtractor(options.getRelativePronounRelationExtractor()));
+	}
+	
+	protected void deleteSpuriousListMentions(List<Mention> mentions, Sentence sent){
+		Set<Mention> remove = new HashSet<Mention>();
+		for(Mention mention1 : mentions){
+			for(Mention mention2 : mentions){
+				if(mention1.headIndex == mention2.headIndex && mention2.cover(mention1) && !mention1.isListMemberOf(mention2)){
+					if(mention2.startIndex == mention1.startIndex 
+							&& mention2.endIndex == mention1.endIndex + 1
+							&& sent.getLexicon(mention1.endIndex).form.equals(",")){
+						remove.add(mention2);
+					}
+					else {
+						remove.add(mention1);
+					}
+				}
 			}
-			//System.exit(0);
 		}
+		mentions.removeAll(remove);
 	}
 	
 	protected void markListMemberRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor) throws MentionException{
@@ -115,34 +99,36 @@ public abstract class MentionExtractor {
 	protected void markMentionRelation(List<Mention> mentions, Set<Pair<Integer, Integer>> foundPairs, String relation) throws MentionException{
 		for(Mention mention1 : mentions){
 			for(Mention mention2 : mentions){
-				if(mention1 == mention2){
+				if(mention1.equals(mention2)){
 					continue;
 				}
 				
-				if(!relation.equals("LISTMEMBER")){
-					// Ignore if m2 and m1 are in list relationship
-					if(mention1.isListMemberOf(mention2) || mention2.isListMemberOf(mention1)){
-						continue;
-					}
-				}
-				
-				for(Pair<Integer, Integer> pair : foundPairs){
-					if(pair.first == mention1.headIndex && pair.second == mention2.headIndex){
-						System.out.println(pair.first + " " + pair.second);
-						if(relation.equals("LISTMEMBER")){
+				if(relation.equals("LISTMEMBER")){
+					for(Pair<Integer, Integer> pair : foundPairs){
+						if(pair.first == mention1.mentionID && pair.second == mention2.mentionID){
 							mention2.addListMember(mention1);
 						}
-						else if(relation.equals("APPOSITION")){
-							mention2.addApposition(mention1);
-						}
-						else if(relation.equals("PREDICATE_NOMINATIVE")){
+					}
+				}
+				else if(relation.equals("PREDICATE_NOMINATIVE")){
+					for(Pair<Integer, Integer> pair : foundPairs){
+						if(pair.first == mention1.mentionID && pair.second == mention2.mentionID){
 							mention2.addPredicativeNominative(mention1);
 						}
-						else if(relation.equals("RELATIVE_PRONOUN")){
-							mention2.addRelativePronoun(mention1);
-						}
-						else{
-							throw new MentionException("Unknown mention relation: " + relation);
+					}
+				}
+				else{
+					for(Pair<Integer, Integer> pair : foundPairs){
+						if(pair.first == mention1.headIndex && pair.second == mention2.headIndex){
+							if(relation.equals("APPOSITION")){
+								mention2.addApposition(mention1);
+							}
+							else if(relation.equals("RELATIVE_PRONOUN")){
+								mention2.addRelativePronoun(mention1);
+							}
+							else{
+								throw new MentionException("Unknown mention relation: " + relation);
+							}
 						}
 					}
 				}

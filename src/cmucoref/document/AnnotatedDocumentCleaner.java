@@ -29,7 +29,7 @@ public class AnnotatedDocumentCleaner {
 		DocumentWriter docWriter = DocumentWriter.createDocumentWriter(AnnotatedDocumentWriter.class.getName());
 		HashMap<String, String> docMap = new HashMap<String, String>();
 		
-		int total = 0, tooShort = 0, missNer = 0, duplication = 0;
+		int total = 0, tooShort = 0, missNer = 0, duplication = 0, shortSents = 0;
 		for(File file : files){
 			docReader.startReading(file.getAbsolutePath());
 			docWriter.startWriting(destPath + file.getName().substring(0, file.getName().lastIndexOf('.')) + ".anno");
@@ -40,6 +40,14 @@ public class AnnotatedDocumentCleaner {
 					System.err.println(doc.getFileName() + " docId " + doc.getDocId() + ": too few sentences");
 					doc = docReader.getNextDocument();
 					tooShort++;
+					continue;
+				}
+				
+				//check short sentences
+				if(numOfShortSent(doc) > 2){
+					System.err.println(doc.getFileName() + " docId " + doc.getDocId() + ": too many short sentences");
+					doc = docReader.getNextDocument();
+					shortSents++;
 					continue;
 				}
 				
@@ -72,10 +80,21 @@ public class AnnotatedDocumentCleaner {
 			docWriter.close();
 		}
 		System.out.println("total documents: " + total);
-		System.out.println("accepted documents: " + (total - tooShort - missNer - duplication));
+		System.out.println("accepted documents: " + (total - tooShort - missNer - duplication - shortSents));
 		System.out.println("too short documents: " + tooShort);
+		System.out.println("too many short sents documents: " + shortSents);
 		System.out.println("miss ner documents: " + missNer);
 		System.out.println("duplicated documents: " + duplication);
+	}
+	
+	public static int numOfShortSent(Document doc){
+		int num = 0;
+		for(Sentence sent : doc.getSentences()){
+			if(sent.length() < 5){
+				num++;
+			}
+		}
+		return num;
 	}
 
 	public static boolean checkNer(Document doc){

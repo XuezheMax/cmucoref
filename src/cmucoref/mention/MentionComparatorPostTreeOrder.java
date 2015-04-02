@@ -2,7 +2,7 @@ package cmucoref.mention;
 
 import java.util.Comparator;
 
-public class MentionComparator implements Comparator<Mention>{
+public class MentionComparatorPostTreeOrder implements Comparator<Mention>{
 
 	@Override
 	public int compare(Mention m1, Mention m2) {

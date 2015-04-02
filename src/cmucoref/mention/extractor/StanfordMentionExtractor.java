@@ -9,8 +9,10 @@ import java.util.List;
 import cmucoref.document.Document;
 import cmucoref.document.Lexicon;
 import cmucoref.document.Sentence;
+import cmucoref.exception.MentionException;
 import cmucoref.mention.Mention;
-import cmucoref.mention.MentionComparator;
+import cmucoref.mention.MentionComparatorHeadIndexOrder;
+import cmucoref.mention.MentionComparatorPostTreeOrder;
 import cmucoref.model.Options;
 
 import edu.stanford.nlp.ling.CoreAnnotations.*;
@@ -82,24 +84,26 @@ public class StanfordMentionExtractor extends MentionExtractor{
 				}
 				mentions.add(mention);
 			}
-			Collections.sort(mentions, new MentionComparator());
-			List<Mention> treeStructureMentions = constructMentionTree(mentions);
+			
+			deleteSpuriousNamedEntityMentions(mentions, sent);
+			
+			Collections.sort(mentions, new MentionComparatorPostTreeOrder());
 			
 			// find syntactic relations
 			if(options.extractMentionRelation()){
-				List<Mention> postTreeOrderedMentions = new ArrayList<Mention>();
-				postTreeOrderMentions(treeStructureMentions, postTreeOrderedMentions);
 				try {
-					findSyntacticRelation(postTreeOrderedMentions, sent, options);
+					findSyntacticRelation(mentions, sent, options);
 				} catch (InstantiationException | IllegalAccessException
-						| ClassNotFoundException e) {
+						| ClassNotFoundException | MentionException e) {
 					e.printStackTrace();
 					System.exit(0);
 				}
 			}
 			
+			Collections.sort(mentions, new MentionComparatorHeadIndexOrder());
+			
 			//add mentions to mentionList
-			mentionList.add(treeStructureMentions);
+			mentionList.add(mentions);
 		}
 		return mentionList;
 	}

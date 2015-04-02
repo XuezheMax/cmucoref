@@ -29,13 +29,15 @@ public class Options implements Serializable{
 								EXTRACT_MENTION_RELATION = "extract-mention-relation",
 								DEFAULT_EXTRACT_MENTION_RELATION = Boolean.TRUE.toString(),
 								APPOSITION_EXTRACTOR = "apposition-extractor",
-								DEFAULT_APPOSITION_EXTRACTOR = cmucoref.mention.extractor.relationextractor.AppositionRelationPennExtractor.class.getName(),
+								DEFAULT_APPOSITION_EXTRACTOR = cmucoref.mention.extractor.relationextractor.AppositionRelationDepExtractor.class.getName(),
 								LISTMEMBER_EXTRACTOR = "list-member-extractor",
 								DEFAULT_LISTMEMBER_EXTRACTOR = cmucoref.mention.extractor.relationextractor.ListMemberRelationExtractor.class.getName(),
 								PREDICATENOMINATIVE_EXTRACTOR = "predicate-nominative-extractor",
-								DEFAULT_PREDICATENOMINATIVE_EXTRACTOR = cmucoref.mention.extractor.relationextractor.PredicateNominativePennExtractor.class.getName(),
+								DEFAULT_PREDICATENOMINATIVE_EXTRACTOR = cmucoref.mention.extractor.relationextractor.PredicateNominativeDepExtractor.class.getName(),
 								RELATIVEPRONOUN_EXTRACTOR = "relative-pronoun-extractor",
 								DEFAULT_RELATIVEPRONOUN_EXTRACTOR = cmucoref.mention.extractor.relationextractor.RelativePronounRelationExtractor.class.getName(),
+								CREATE_TRAININGTMP = "create-tmp",
+								DEFAULT_CREATE_TRAININGTMP = Boolean.FALSE.toString(),
 								CONFIGURATION = "config",
 								TRAININGFILE = "train-file",
 								TESTFILE = "test-file",
@@ -49,6 +51,7 @@ public class Options implements Serializable{
 	private HashSet<String> valid_opt_set = null;
 	private final int maxiter = 5000;
 	private final double stop_eta = 0.000001;
+	private final String train_tmp = "tmp/train.tmp";
 	
 	private void init(){
 		argToValueMap = new gnu.trove.map.hash.THashMap<String, String>();
@@ -79,6 +82,9 @@ public class Options implements Serializable{
 		argToValueMap.put(PREDICATENOMINATIVE_EXTRACTOR, DEFAULT_PREDICATENOMINATIVE_EXTRACTOR);
 		valid_opt_set.add(RELATIVEPRONOUN_EXTRACTOR);
 		argToValueMap.put(RELATIVEPRONOUN_EXTRACTOR, DEFAULT_RELATIVEPRONOUN_EXTRACTOR);
+		//training tmp file
+		valid_opt_set.add(CREATE_TRAININGTMP);
+		argToValueMap.put(CREATE_TRAININGTMP, DEFAULT_CREATE_TRAININGTMP);
 		//file name
 		valid_opt_set.add(TRAININGFILE);
 		valid_opt_set.add(TESTFILE);
@@ -221,6 +227,14 @@ public class Options implements Serializable{
 	
 	public double stopEta(){
 		return stop_eta;
+	}
+	
+	public boolean createTrainingTmp(){
+		return Boolean.parseBoolean(getArgValue(CREATE_TRAININGTMP));
+	}
+	
+	public String getTrainTmp(){
+		return train_tmp;
 	}
 	
 	public String getTrainingFile(){

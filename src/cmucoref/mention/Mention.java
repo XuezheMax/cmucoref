@@ -35,9 +35,6 @@ public class Mention implements Serializable{
 	public Animacy animacy;
 	public Person person;
 	
-	public List<Mention> children = null;
-	public Mention parent = null;
-	
 	public List<Mention> listMember = null;
 	public Mention belongTo = null;
 	public List<Mention> appositions = null;
@@ -73,20 +70,34 @@ public class Mention implements Serializable{
 	}
 	
 	public boolean cover(Mention mention){
-		return (this.startIndex <= mention.startIndex && this.endIndex >= mention.endIndex);
+		return ((this.sentID == mention.sentID) 
+				&& (this.startIndex <= mention.startIndex && this.endIndex >= mention.endIndex) 
+				&& (this.endIndex - this.startIndex > mention.endIndex - mention.startIndex));
 	}
-	public void addChild(Mention child){
-		if(children == null){
-			children = new ArrayList<Mention>();
+	
+	public boolean overlap(Mention mention){
+		if(this.startIndex < mention.startIndex){
+			return this.endIndex > mention.startIndex && this.endIndex < mention.endIndex;
+		}
+		else if(this.startIndex > mention.startIndex){
+			return mention.endIndex > this.startIndex && mention.endIndex < this.endIndex;
+		}
+		else{
+			return false;
+		}
+	}
+	
+	public boolean isPureNerMention(Sentence sent){
+		if(headword.ner.equals("O")){
+			return false;
 		}
 		
-		children.add(child);
-		child.parent = this;
-		
-		//LIST Mention;
-		if(child.headIndex == this.headIndex){
-			this.addListMember(child);
+		for(int i = this.startIndex; i < this.endIndex; ++i){
+			if(!(sent.getLexicon(i).ner.equals(headword.ner))){
+				return false;
+			}
 		}
+		return true;
 	}
 	
 	public void addListMember(Mention member) {
@@ -100,6 +111,8 @@ public class Mention implements Serializable{
 		}
 		listMember.add(member);
 		member.belongTo = this;
+		this.mentionType = MentionType.LIST;
+		this.number = Number.PLURAL;
 	}
 	
 	public boolean isListMemberOf(Mention m){
@@ -108,11 +121,16 @@ public class Mention implements Serializable{
 	
 	public void addApposition(Mention appo) throws MentionException{
 		if(appo.apposTo != null){
-			throw new MentionException(appo.headString + " is apposition to another mention " + appo.apposTo.headString);
+			if(this.equals(appo.apposTo) || appo.apposTo.isListMemberOf(this)) {
+				return;
+			}
+			else{
+				throw new MentionException(appo.headString + " is apposition to another mention " + appo.apposTo.mentionID);
+			}
 		}
 		
 		if(appo.headword.basic_head != this.headIndex || !appo.headword.basic_deprel.equals("appos")){
-			throw new MentionException(appo.headString + " is not a apposition to mention " + this.headString);
+			return;
 		}
 		
 		if(appositions == null){
@@ -125,11 +143,7 @@ public class Mention implements Serializable{
 	
 	public void addPredicativeNominative(Mention predMomi) throws MentionException{
 		if(predMomi.predNomiTo != null){
-			throw new MentionException(predMomi.headString + " is predicate nominative to another mention " + predMomi.predNomiTo.headString);
-		}
-		
-		if(this.headword.basic_head != predMomi.headword.basic_head){
-			throw new MentionException(predMomi.headString + " is not predicate nominative to mention " + this.headString);
+			return;
 		}
 		
 		if(predicateNominatives == null){
@@ -331,12 +345,12 @@ public class Mention implements Serializable{
 					int[] ids = getNerSpan(sent);
 					for(int j = ids[0]; j < ids[1]; ++j){
 						if(dict.maleWords.contains(sent.getLexicon(j).form.toLowerCase())) {
-				gender = Gender.MALE;
-				break;
+							gender = Gender.MALE;
+							break;
 						}
 						if(dict.femaleWords.contains(sent.getLexicon(j).form.toLowerCase())) {
-				gender = Gender.FEMALE;
-				break;
+							gender = Gender.FEMALE;
+							break;
 						}
 					}
 				}
