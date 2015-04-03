@@ -20,10 +20,14 @@ public class Options implements Serializable{
 								DEFAULT_DOC_READER_CLASS = cmucoref.io.AnnotatedDocumentReader.class.getName(),
 								DOC_WRITER = "writer",
 								DEFAULT_DOC_WRITER_CLASS = cmucoref.io.AnnotatedDocumentWriter.class.getName(),
+								TRAINER = "trainer",
+								DEFAULT_TRAINER_CLASS = cmucoref.trainer.EMTrainer.class.getName(),
 								MODE = "mode",
 								DEFAULT_MODE = "test",
 								THREAD_NUM = "thread-num",
 								DEFAULT_THREAD_NUM = "1",
+								MENTION_EXTRACTOR = "mention-extractor",
+								DEFAULT_MENTION_EXTRACTOR_CLASS = cmucoref.mention.extractor.StanfordMentionExtractor.class.getName(),
 								EXTRACT_MENTION_ATTRIBUTE = "extract-mention-attribute",
 								DEFAULT_EXTRACT_MENTION_ATTRIBUTE = Boolean.TRUE.toString(),
 								EXTRACT_MENTION_RELATION = "extract-mention-relation",
@@ -42,7 +46,7 @@ public class Options implements Serializable{
 								TRAININGFILE = "train-file",
 								TESTFILE = "test-file",
 								DEVFILE = "dev-file",
-								OUTFILE = "output-file",
+								OUTDIR = "output-dir",
 								GOLDFILE = "gold-file",
 								LOGFILE = "log-file",
 								MODELFILE = "model-file";
@@ -68,6 +72,12 @@ public class Options implements Serializable{
 		//thread num
 		valid_opt_set.add(THREAD_NUM);
 		argToValueMap.put(THREAD_NUM, DEFAULT_THREAD_NUM);
+		//trainer
+		valid_opt_set.add(TRAINER);
+		argToValueMap.put(TRAINER, DEFAULT_TRAINER_CLASS);
+		//mention extractor
+		valid_opt_set.add(MENTION_EXTRACTOR);
+		argToValueMap.put(MENTION_EXTRACTOR, DEFAULT_MENTION_EXTRACTOR_CLASS);
 		//extract mention attribute
 		valid_opt_set.add(EXTRACT_MENTION_ATTRIBUTE);
 		argToValueMap.put(EXTRACT_MENTION_ATTRIBUTE, DEFAULT_EXTRACT_MENTION_ATTRIBUTE);
@@ -89,7 +99,7 @@ public class Options implements Serializable{
 		valid_opt_set.add(TRAININGFILE);
 		valid_opt_set.add(TESTFILE);
 		valid_opt_set.add(DEVFILE);
-		valid_opt_set.add(OUTFILE);
+		valid_opt_set.add(OUTDIR);
 		valid_opt_set.add(GOLDFILE);
 		valid_opt_set.add(MODELFILE);
 		valid_opt_set.add(LOGFILE);
@@ -181,11 +191,11 @@ public class Options implements Serializable{
 		argToValueMap.put(argName, value);
 	}
 	
-	public String getReader(){
+	public String getDocReader(){
 		return getArgValue(DOC_READER);
 	}
 	
-	public String getWriter(){
+	public String getDocWriter(){
 		return getArgValue(DOC_WRITER);
 	}
 	
@@ -195,6 +205,14 @@ public class Options implements Serializable{
 	
 	public int getThreadNum(){
 		return Integer.parseInt(getArgValue(THREAD_NUM));
+	}
+	
+	public String getTrainer(){
+		return getArgValue(TRAINER);
+	}
+	
+	public String getMentionExtractor(){
+		return getArgValue(MENTION_EXTRACTOR);
 	}
 	
 	public boolean extractMentionAttribute(){
@@ -250,7 +268,7 @@ public class Options implements Serializable{
 	}
 	
 	public String getOutFile(){
-		return getArgValue(OUTFILE);
+		return getArgValue(OUTDIR);
 	}
 	
 	public String getGoldFile(){
@@ -265,11 +283,11 @@ public class Options implements Serializable{
 		return getArgValue(MODELFILE);
 	}
 	
-	public void putReader(String reader){
+	public void putDocReader(String reader){
 		putArgValue(DOC_READER, reader);
 	}
 	
-	public void putWriter(String writer){
+	public void putDocWriter(String writer){
 		putArgValue(DOC_WRITER, writer);
 	}
 }

@@ -18,7 +18,6 @@ import cmucoref.model.Options;
 import edu.stanford.nlp.ling.CoreAnnotations.*;
 import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.pipeline.Annotation;
-import edu.stanford.nlp.dcoref.Dictionaries;
 import edu.stanford.nlp.util.ArrayCoreMap;
 import edu.stanford.nlp.util.CoreMap;
 import edu.stanford.nlp.trees.TreeCoreAnnotations.TreeAnnotation;
@@ -32,8 +31,8 @@ public class StanfordMentionExtractor extends MentionExtractor{
 
 	private edu.stanford.nlp.dcoref.RuleBasedCorefMentionFinder mentionFinder = null;
 	
-	public StanfordMentionExtractor(Dictionaries dict){
-		super(dict);
+	public StanfordMentionExtractor(){
+		super();
 		mentionFinder = new edu.stanford.nlp.dcoref.RuleBasedCorefMentionFinder(false);
 	}
 	

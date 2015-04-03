@@ -36,14 +36,16 @@ public class Alphabet implements Serializable{
 		}
 		
 		TObjectIntHashMap<String> subMap = map.containsKey(given) ? map.get(given) : null;
-		int ret = subMap == null ? -1 : subMap.get(entry);
+		int ret = subMap == null || !subMap.containsKey(entry) ? -1 : subMap.get(entry);
 		
-		if(subMap == null && !growthStopped){
-			subMap = new TObjectIntHashMap<String>();
+		if(ret == -1 && !growthStopped){
+			if(subMap == null){
+				subMap = new TObjectIntHashMap<String>();
+				map.put(given, subMap);
+			}
 			subMap.put(entry, numEntries);
 			ret = numEntries;
 			numEntries++;
-			map.put(given, subMap);
 		}
 		
 		return ret;

@@ -20,8 +20,8 @@ public abstract class MentionExtractor {
 	
 	protected Dictionaries dict;
 	
-	public MentionExtractor(Dictionaries dict){
-		this.dict = dict;
+	public MentionExtractor(){
+		this.dict = new Dictionaries();
 	}
 	
 	public abstract List<List<Mention>> extractPredictedMentions(Document doc, Options options) throws IOException;

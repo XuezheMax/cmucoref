@@ -33,8 +33,7 @@ public class Test {
 		Options options = new Options();
 		PrintWriter printer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(new File("mention.txt")), "UTF-8"));
 		//PrintWriter printer2 = new PrintWriter(new OutputStreamWriter(new FileOutputStream(new File("new.txt")), "UTF-8"));
-		Dictionaries dict = new Dictionaries();
-		MentionExtractor mentionExtractor = new StanfordMentionExtractor(dict);
+		MentionExtractor mentionExtractor = new StanfordMentionExtractor();
 		Document doc = docReader.getNextDocument();
 		long start = System.currentTimeMillis();
 		while(doc != null){

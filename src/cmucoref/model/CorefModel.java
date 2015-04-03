@@ -1,5 +1,8 @@
 package cmucoref.model;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
 public class CorefModel implements Serializable{
@@ -46,5 +49,17 @@ public class CorefModel implements Serializable{
 	//get feature size
 	public int featureSize(){
 		return featAlphabet.size();
+	}
+	
+	private void writeObject(ObjectOutputStream out) throws IOException{
+		out.writeObject(options);
+		out.writeObject(featAlphabet);
+		out.writeObject(params);
+	}
+	
+	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException{
+		options = (Options) in.readObject();
+		featAlphabet = (Alphabet) in.readObject();
+		params = (Parameters) in.readObject();
 	}
 }
