@@ -17,7 +17,9 @@ public class AppositionRelationDepExtractor extends RelationExtractor{
 		for(Mention mention : mentions){
 			Lexicon headword = mention.headword;
 			if(headword.basic_deprel.equals("appos")){
-				relationSet.add(new Pair<Integer, Integer>(mention.headIndex, headword.basic_head));
+				if(mention.headIndex > headword.basic_head){
+					relationSet.add(new Pair<Integer, Integer>(mention.headIndex, headword.basic_head));
+				}
 			}
 		}
 		return relationSet;

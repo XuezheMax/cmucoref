@@ -27,9 +27,10 @@ public class AnnotatedDocumentCleaner {
 		
 		DocumentReader docReader = DocumentReader.createDocumentReader(AnnotatedDocumentReader.class.getName());
 		DocumentWriter docWriter = DocumentWriter.createDocumentWriter(AnnotatedDocumentWriter.class.getName());
-		HashMap<String, String> docMap = new HashMap<String, String>();
+		HashMap<String, String> docMap1 = new HashMap<String, String>();
+		HashMap<String, String> docMap2 = new HashMap<String, String>();
 		
-		int total = 0, tooShort = 0, missNer = 0, duplication = 0, shortSents = 0;
+		int total = 0, tooShort = 0, missNer = 0, duplication1 = 0, shortSents = 0, duplication2 = 0;;
 		for(File file : files){
 			docReader.startReading(file.getAbsolutePath());
 			docWriter.startWriting(destPath + file.getName().substring(0, file.getName().lastIndexOf('.')) + ".anno");
@@ -51,18 +52,6 @@ public class AnnotatedDocumentCleaner {
 					continue;
 				}
 				
-				ArrayList<Sentence> sents = doc.getSentences();
-				String key = sents.get(0).getRawText() + sents.get(1).getRawText() + sents.get(2).getRawText();
-				
-				//check duplication
-				String val = docMap.get(key);
-				if(val != null){
-					System.err.println(doc.getFileName() + " docId " + doc.getDocId() + ": duplicated with " + val);
-					doc = docReader.getNextDocument();
-					duplication++;
-					continue;
-				}
-				
 				//check ner missing
 				if(!checkNer(doc)){
 					System.err.println(doc.getFileName() + " docId " + doc.getDocId() + ": missing ner");
@@ -71,7 +60,32 @@ public class AnnotatedDocumentCleaner {
 					continue;
 				}
 				
-				docMap.put(key, doc.getFileName() + " docId " + doc.getDocId());
+				ArrayList<Sentence> sents = doc.getSentences();
+				String key = sents.get(0).getRawText() + "|" + sents.get(1).getRawText() + "|" + sents.get(2).getRawText();
+				
+				//check duplication1
+				String val = docMap1.get(key);
+				if(val != null){
+					System.err.println(doc.getFileName() + " docId " + doc.getDocId() + ": duplicated 1 with " + val);
+					doc = docReader.getNextDocument();
+					duplication1++;
+					continue;
+				}
+				docMap1.put(key, doc.getFileName() + " docId " + doc.getDocId());
+				
+				//check duplication2
+				if(doc.size() > 3){
+					key = sents.get(1).getRawText() + "|" + sents.get(2).getRawText() + "|" + sents.get(3).getRawText();
+					val = docMap2.get(key);
+					if(val != null){
+						System.err.println(doc.getFileName() + " docId " + doc.getDocId() + ": duplicated 2 with " + val);
+						doc = docReader.getNextDocument();
+						duplication2++;
+						continue;
+					}
+					docMap2.put(key, doc.getFileName() + " docId " + doc.getDocId());
+				}
+				
 				System.out.println(doc.getFileName() + " docId " + doc.getDocId() + ": accepted");
 				docWriter.writeDocument(doc, null);
 				doc = docReader.getNextDocument();
@@ -80,11 +94,12 @@ public class AnnotatedDocumentCleaner {
 			docWriter.close();
 		}
 		System.out.println("total documents: " + total);
-		System.out.println("accepted documents: " + (total - tooShort - missNer - duplication - shortSents));
+		System.out.println("accepted documents: " + (total - tooShort - missNer - duplication1 - duplication2 - shortSents));
 		System.out.println("too short documents: " + tooShort);
 		System.out.println("too many short sents documents: " + shortSents);
 		System.out.println("miss ner documents: " + missNer);
-		System.out.println("duplicated documents: " + duplication);
+		System.out.println("duplicated 1 documents: " + duplication1);
+		System.out.println("duplicated 2 documents: " + duplication2);
 	}
 	
 	public static int numOfShortSent(Document doc){

@@ -3,6 +3,7 @@ package cmucoref.model;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
 import java.io.Serializable;
 
 public class CorefModel implements Serializable{
@@ -45,10 +46,19 @@ public class CorefModel implements Serializable{
 	public int getFeatureIndex(String feat, String given){
 		return featAlphabet.lookupIndex(feat, given);
 	}
+	
+	//thread number
+	public int threadNum(){
+		return options.getThreadNum();
+	}
 
 	//get feature size
 	public int featureSize(){
 		return featAlphabet.size();
+	}
+	
+	public void displayAlphabet(PrintWriter printer){
+		featAlphabet.display(printer);
 	}
 	
 	private void writeObject(ObjectOutputStream out) throws IOException{

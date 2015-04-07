@@ -29,7 +29,8 @@ public class PredicateNominativeDepExtractor extends RelationExtractor{
 					continue;
 				}
 				
-				if(mention1.headword.basic_head == mention2.headword.basic_head){
+				if(mention1.headIndex < mention2.headIndex 
+						&& mention1.headword.basic_head == mention2.headword.basic_head){
 					int head = mention1.headword.basic_head;
 					if(sent.getLexicon(head).lemma.equals("be")
 						&& mention1.headword.collapsed_deprel.equals("nsubj")

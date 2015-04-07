@@ -2,6 +2,7 @@ package cmucoref;
 
 import java.io.IOException;
 
+import cmucoref.exception.CreatingInstanceException;
 import cmucoref.manager.CorefManager;
 import cmucoref.mention.extractor.MentionExtractor;
 import cmucoref.model.CorefModel;
@@ -16,8 +17,9 @@ public class CorefSystem {
 	 * @throws IllegalAccessException 
 	 * @throws InstantiationException 
 	 * @throws IOException 
+	 * @throws CreatingInstanceException 
 	 */
-	public static void main(String[] args) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException {
+	public static void main(String[] args) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, CreatingInstanceException {
 		Options options = new Options(args);
 		if(options.getMode().equals("train")){
 			CorefModel model = new CorefModel(options);

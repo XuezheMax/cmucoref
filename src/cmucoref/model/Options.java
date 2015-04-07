@@ -46,7 +46,7 @@ public class Options implements Serializable{
 								TRAININGFILE = "train-file",
 								TESTFILE = "test-file",
 								DEVFILE = "dev-file",
-								OUTDIR = "output-dir",
+								OUTFILE = "output-file",
 								GOLDFILE = "gold-file",
 								LOGFILE = "log-file",
 								MODELFILE = "model-file";
@@ -99,7 +99,7 @@ public class Options implements Serializable{
 		valid_opt_set.add(TRAININGFILE);
 		valid_opt_set.add(TESTFILE);
 		valid_opt_set.add(DEVFILE);
-		valid_opt_set.add(OUTDIR);
+		valid_opt_set.add(OUTFILE);
 		valid_opt_set.add(GOLDFILE);
 		valid_opt_set.add(MODELFILE);
 		valid_opt_set.add(LOGFILE);
@@ -268,7 +268,7 @@ public class Options implements Serializable{
 	}
 	
 	public String getOutFile(){
-		return getArgValue(OUTDIR);
+		return getArgValue(OUTFILE);
 	}
 	
 	public String getGoldFile(){

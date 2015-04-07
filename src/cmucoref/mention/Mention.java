@@ -2,8 +2,12 @@ package cmucoref.mention;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 import cmucoref.document.Lexicon;
 import cmucoref.document.Sentence;
@@ -21,6 +25,9 @@ public class Mention implements Serializable{
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	
+	public static final Comparator<Mention> headIndexOrderComparator = new MentionComparatorHeadIndexOrder();
+	public static final Comparator<Mention> postTreeOrderComparator = new MentionComparatorPostTreeOrder();
 	
 	public int startIndex;
 	public int endIndex;
@@ -158,9 +165,97 @@ public class Mention implements Serializable{
 		throw new MentionException(relPron.headString + " is relative pronoun to mention " + this.headString);
 	}
 	
+	private static final List<String> entityWordsToExclude =
+			Arrays.asList(new String[]{ "the","this", "mr.", "miss", "mrs.", "dr.", "ms.", "inc.", "ltd.", "corp.", "'s"});
+	
+	public boolean wordsIncluded(Sentence sent, Mention mention, Sentence sentOfM){
+		Set<String> wordsOfThis = new HashSet<String>();
+		for(int i = this.startIndex; i < this.endIndex; ++i){
+			wordsOfThis.add(sent.getLexicon(i).form.toLowerCase());
+		}
+		
+		Set<String> wordsExceptStopWords = new HashSet<String>();
+		for(int i = mention.startIndex; i < mention.endIndex; ++i){
+			wordsExceptStopWords.add(sentOfM.getLexicon(i).form.toLowerCase());
+		}
+		wordsExceptStopWords.removeAll(entityWordsToExclude);
+		wordsExceptStopWords.remove(mention.headString);
+		
+		return wordsOfThis.containsAll(wordsExceptStopWords);
+	}
+	
+	public boolean isAcronymTo(Mention mention, Sentence sent){
+		if(this.endIndex - this.startIndex != 1){
+			return false;
+		}
+		
+		String acronym = this.headword.form;
+		for(int i = 0; i < acronym.length(); ++i){
+			if(acronym.charAt(i) < 'A' || acronym.charAt(i) > 'Z'){
+				return false;
+			}
+		}
+		
+		int acronymPos = 0;
+		for(int i = mention.startIndex; i < mention.endIndex; ++i){
+			String word = sent.getLexicon(i).form;
+			for(int ch = 0; ch < word.length(); ++ch){
+				if (word.charAt(ch) >= 'A' && word.charAt(ch) <= 'Z') {
+					if(acronymPos >= acronym.length()){
+						return false;
+					}
+					if(acronym.charAt(acronymPos) != word.charAt(ch)){
+						return false;
+					}
+					acronymPos++;
+				}
+			}
+		}
+		
+		if(acronymPos != acronym.length()){
+			return false;
+		}
+		return true;
+	}
+	
 	public String getSpan(Sentence sent){
 		StringBuilder span = new StringBuilder();
 		for(int i = startIndex; i < endIndex; ++i){
+			if(i > startIndex){
+				span.append(" ");
+			}
+			span.append(sent.getLexicon(i).form);
+		}
+		return span.toString();
+	}
+	
+	public String getSpanBeforeHead(Sentence sent){
+		int posComma = -1;
+		int posWH = -1;
+		for(int i = startIndex; i < endIndex; ++i){
+			Lexicon lex = sent.getLexicon(i);
+			if(posComma == -1 && lex.postag.equals(",")){
+				posComma = i;
+			}
+			if(posWH == -1 && lex.postag.startsWith("W")){
+				posWH = i;
+			}
+		}
+		
+		int pos = -1;
+		if(posComma == -1){
+			pos = posWH;
+		}
+		else if(posWH == -1){
+			pos = posComma;
+		}
+		else{
+			Math.min(posComma, posWH);
+		}
+		pos = Math.max(this.headIndex + 1, pos);
+		
+		StringBuilder span = new StringBuilder();
+		for(int i = startIndex; i < pos; ++i){
 			if(i > startIndex){
 				span.append(" ");
 			}

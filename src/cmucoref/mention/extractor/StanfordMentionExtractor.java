@@ -11,8 +11,6 @@ import cmucoref.document.Lexicon;
 import cmucoref.document.Sentence;
 import cmucoref.exception.MentionException;
 import cmucoref.mention.Mention;
-import cmucoref.mention.MentionComparatorHeadIndexOrder;
-import cmucoref.mention.MentionComparatorPostTreeOrder;
 import cmucoref.model.Options;
 
 import edu.stanford.nlp.ling.CoreAnnotations.*;
@@ -86,7 +84,7 @@ public class StanfordMentionExtractor extends MentionExtractor{
 			
 			deleteSpuriousNamedEntityMentions(mentions, sent);
 			
-			Collections.sort(mentions, new MentionComparatorPostTreeOrder());
+			Collections.sort(mentions, Mention.postTreeOrderComparator);
 			
 			// find syntactic relations
 			if(options.extractMentionRelation()){
@@ -99,7 +97,7 @@ public class StanfordMentionExtractor extends MentionExtractor{
 				}
 			}
 			
-			Collections.sort(mentions, new MentionComparatorHeadIndexOrder());
+			Collections.sort(mentions, Mention.headIndexOrderComparator);
 			
 			//add mentions to mentionList
 			mentionList.add(mentions);

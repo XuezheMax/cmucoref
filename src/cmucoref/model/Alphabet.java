@@ -5,7 +5,9 @@ import gnu.trove.map.hash.TObjectIntHashMap;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
 import java.io.Serializable;
+import java.util.Set;
 
 import cmucoref.util.trove.EqualsHashingStrategy;
 
@@ -27,7 +29,7 @@ public class Alphabet implements Serializable{
 	}
 
 	public Alphabet() {
-		this(100000);
+		this(10000);
 	}
 	
 	public int lookupIndex(String entry, String given) {
@@ -58,6 +60,19 @@ public class Alphabet implements Serializable{
 	public void stopGrowth() {
 		growthStopped = true;
 		map.compact();
+	}
+	
+	public void display(PrintWriter printer){
+		Set<String> givens = map.keySet();
+		for(String given : givens){
+			TObjectIntHashMap<String> subMap = map.get(given);
+			Object[] feats = subMap.keys();
+			for(Object feat : feats){
+				printer.println(feat + "|" + given);
+			}
+			printer.println("------------------");
+		}
+		printer.flush();
 	}
 	
 	// Serialization
