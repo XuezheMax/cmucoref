@@ -57,7 +57,10 @@ public class Sentence {
 	public String getRawText(){
 		StringBuilder text = new StringBuilder();
 		for(int i = 1; i < lexicons.length; ++i){
-			text.append(lexicons[i].form + " ");
+			if(i > 1){
+				text.append(" ");
+			}
+			text.append(lexicons[i].form);
 		}
 		return text.toString();
 	}

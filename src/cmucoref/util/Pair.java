@@ -1,6 +1,16 @@
 package cmucoref.util;
 
-public class Pair<T1, T2> {
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
+
+public class Pair<T1, T2> implements Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	
 	public T1 first;
 	public T2 second;
 	
@@ -36,5 +46,16 @@ public class Pair<T1, T2> {
 	
 	public String toString(){
 		return "(" + first + ", " + second + ")";
+	}
+	
+	private void writeObject(ObjectOutputStream out) throws IOException{
+		out.writeObject(first);
+		out.writeObject(second);
+	}
+	
+	@SuppressWarnings("unchecked")
+	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException{
+		first = (T1) in.readObject();
+		second = (T2) in.readObject();
 	}
 }

@@ -22,7 +22,7 @@ public abstract class DocumentReader {
 		inputReader.close();
 	}
 	
-	public abstract Document getNextDocument() throws IOException;
+	public abstract Document getNextDocument(boolean readCorefLabel) throws IOException, ClassNotFoundException;
 	
 	protected String normalize(String s) {
 		if (s.matches("[0-9]+|[0-9]+\\.[0-9]+|[0-9]+[0-9,]+")){

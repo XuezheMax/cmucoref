@@ -5,6 +5,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
+import cmucoref.model.params.ParameterInitializer;
+
 public class Parameters implements Serializable{
 
 	/**
@@ -16,8 +18,13 @@ public class Parameters implements Serializable{
 	
 	public Parameters(){}
 	
-	public Parameters(int size){
+	public Parameters(int size, ParameterInitializer initializer){
 		parameters = new double[size];
+		this.initialize(initializer);
+	}
+	
+	private void initialize(ParameterInitializer initializer){
+		initializer.initializeParams(this.parameters);
 	}
 	
 	public Parameters(double[] parameters){
@@ -28,8 +35,8 @@ public class Parameters implements Serializable{
 		return fv.getScore(parameters);
 	}
 	
-	public void update(FeatureVector fv, double val){
-		fv.update(parameters, val);
+	public void update(int index, double val){
+		parameters[index] = val;
 	}
 	
 	public double paramAt(int index){

@@ -2,13 +2,17 @@ package cmucoref.model;
 
 import gnu.trove.map.hash.TCustomHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
+import gnu.trove.list.array.TIntArrayList;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.PrintWriter;
+import java.io.PrintStream;
 import java.io.Serializable;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
+import cmucoref.util.Pair;
 import cmucoref.util.trove.EqualsHashingStrategy;
 
 public class Alphabet implements Serializable{
@@ -16,45 +20,82 @@ public class Alphabet implements Serializable{
 	 * 
 	 */
 
-	TCustomHashMap<String, TObjectIntHashMap<String>> map;
+	private TCustomHashMap<String, TObjectIntHashMap<String>> map;
+	private TObjectIntHashMap<String> givenMap;
+	private TIntArrayList idToGid;
 	
-	int numEntries;
+	private int numEntries;
+	private int numGivens;
 
-	boolean growthStopped;
+	private boolean growthStopped;
 
 	public Alphabet(int capacity) {
 		this.map = new TCustomHashMap<String, TObjectIntHashMap<String>>(new EqualsHashingStrategy<String>(), capacity);
+		this.givenMap = new TObjectIntHashMap<String>(10000);
+		idToGid = new TIntArrayList(100000);
 		numEntries = 0;
+		numGivens = 0;
 		growthStopped = false;
 	}
 
 	public Alphabet() {
-		this(10000);
+		this(100000);
 	}
 	
-	public int lookupIndex(String entry, String given) {
+	public int lookupGivenIndex(String given){
+		if (given == null) {
+			throw new IllegalArgumentException("Can't lookup \"null\" in an Alphabet.");
+		}
+		
+		int ret = givenMap.containsKey(given) ? givenMap.get(given) : -1;
+		
+		if(ret == -1 && !growthStopped){
+			ret = numGivens;
+			givenMap.put(given, ret);
+			numGivens++;
+		}
+		return ret;
+	}
+	
+	public Pair<Integer, Integer> lookupIndex(String entry, String given) {
 		if (entry == null || given == null) {
 			throw new IllegalArgumentException("Can't lookup \"null\" in an Alphabet.");
 		}
 		
+		int gid = lookupGivenIndex(given);
+		if(gid == -1){
+			return null;
+		}
+		
 		TObjectIntHashMap<String> subMap = map.containsKey(given) ? map.get(given) : null;
-		int ret = subMap == null || !subMap.containsKey(entry) ? -1 : subMap.get(entry);
+		if(subMap == null){
+			subMap = new TObjectIntHashMap<String>();
+			map.put(given, subMap);
+		}
+		
+		int ret = subMap.containsKey(entry) ? subMap.get(entry) : -1;
 		
 		if(ret == -1 && !growthStopped){
-			if(subMap == null){
-				subMap = new TObjectIntHashMap<String>();
-				map.put(given, subMap);
-			}
 			subMap.put(entry, numEntries);
 			ret = numEntries;
+			idToGid.add(gid);
 			numEntries++;
 		}
 		
-		return ret;
+		if(ret != -1){
+			return new Pair<Integer, Integer>(ret, gid);
+		}
+		else{
+			return null;
+		}
 	}
 	
 	public int size() {
 		return numEntries;
+	}
+	
+	public int sizeOfGiven(){
+		return numGivens;
 	}
 
 	public void stopGrowth() {
@@ -62,13 +103,19 @@ public class Alphabet implements Serializable{
 		map.compact();
 	}
 	
-	public void display(PrintWriter printer){
-		Set<String> givens = map.keySet();
+	public int getGidFromIndex(int index){
+		return idToGid.get(index);
+	}
+	
+	public void display(PrintStream printer, Parameters params){
+		List<String> givens = new ArrayList<String>(map.keySet());
+		Collections.sort(givens);
 		for(String given : givens){
 			TObjectIntHashMap<String> subMap = map.get(given);
 			Object[] feats = subMap.keys();
 			for(Object feat : feats){
-				printer.println(feat + "|" + given);
+				int index = subMap.get(feat);
+				printer.println(feat + "|" + given + ": " + params.paramAt(index));
 			}
 			printer.println("------------------");
 		}

@@ -3,8 +3,11 @@ package cmucoref.model;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.PrintWriter;
+import java.io.PrintStream;
 import java.io.Serializable;
+
+import cmucoref.model.params.ParameterInitializer;
+import cmucoref.util.Pair;
 
 public class CorefModel implements Serializable{
 
@@ -22,8 +25,10 @@ public class CorefModel implements Serializable{
 		featAlphabet = new Alphabet();
 	}
 	
-	public void createParameters(){
-		params = new Parameters(featAlphabet.size());
+	public void createParameters() throws InstantiationException, IllegalAccessException, ClassNotFoundException{
+		ParameterInitializer initializer = (ParameterInitializer) Class.forName(options.getParamInitializer()).newInstance();
+		initializer.setModel(this);
+		params = new Parameters(featAlphabet.size(), initializer);
 	}
 	
 	public void closeAlphabets(){
@@ -34,8 +39,8 @@ public class CorefModel implements Serializable{
 		return params.getScore(fv);
 	}
 	
-	public void update(FeatureVector fv, double val){
-		params.update(fv, val);
+	public void update(int index, double val){
+		params.update(index, val);
 	}
 	
 	public double paramAt(int index){
@@ -43,8 +48,12 @@ public class CorefModel implements Serializable{
 	}
 	
 	//get feature index
-	public int getFeatureIndex(String feat, String given){
+	public Pair<Integer, Integer> getFeatureIndex(String feat, String given){
 		return featAlphabet.lookupIndex(feat, given);
+	}
+	
+	public int getGidFromIndex(int index){
+		return featAlphabet.getGidFromIndex(index);
 	}
 	
 	//thread number
@@ -52,13 +61,18 @@ public class CorefModel implements Serializable{
 		return options.getThreadNum();
 	}
 
+	//get given size
+	public int givenSize(){
+		return featAlphabet.sizeOfGiven();
+	}
+	
 	//get feature size
 	public int featureSize(){
 		return featAlphabet.size();
 	}
 	
-	public void displayAlphabet(PrintWriter printer){
-		featAlphabet.display(printer);
+	public void displayAlphabet(PrintStream printer){
+		featAlphabet.display(printer, this.params);
 	}
 	
 	private void writeObject(ObjectOutputStream out) throws IOException{

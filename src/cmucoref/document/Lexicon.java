@@ -13,7 +13,9 @@ public class Lexicon {
 	public int collapsed_head = 0;
 	public String collapsed_deprel = null;
 	
-	public String ner;
+	public String ner = null;
+	
+	public String corefLabel = null;
 	
 	public Lexicon(){
 		id = 0;
@@ -47,6 +49,13 @@ public class Lexicon {
 		this.basic_deprel = basic_deprel;
 		this.collapsed_head = collapsed_head;
 		this.collapsed_deprel = collapsed_deprel;
+	}
+	
+	public Lexicon(int id, String form, String lemma, String cpostag, String postag, 
+			String ner, int basic_head, String basic_deprel, 
+			int collapsed_head, String collapsed_deprel, String corefLabel){
+		this(id, form, lemma, cpostag, postag, ner, basic_head, basic_deprel, collapsed_head, collapsed_deprel);
+		this.corefLabel = corefLabel;
 	}
 	
 	public Lexicon(Lexicon lex){

@@ -10,7 +10,7 @@ import cmucoref.document.Sentence;
 public class AnnotatedDocumentReader extends DocumentReader{
 
 	@Override
-	public Document getNextDocument() throws IOException {
+	public Document getNextDocument(boolean readCorefLabel) throws IOException {
 		String line = inputReader.readLine();
 		Document doc = new Document();
 		
@@ -23,16 +23,16 @@ public class AnnotatedDocumentReader extends DocumentReader{
 		
 		ArrayList<Sentence> sentences = new ArrayList<Sentence>();
 		int id = 0;
-		Sentence sent = getNextSentence(id++);
+		Sentence sent = getNextSentence(id++, readCorefLabel);
 		while(sent != null){
 			sentences.add(sent);
-			sent = getNextSentence(id++);
+			sent = getNextSentence(id++, readCorefLabel);
 		}
 		doc.setSentences(sentences);
 		return doc;
 	}
 	
-	protected Sentence getNextSentence(int id) throws IOException {
+	protected Sentence getNextSentence(int id, boolean readCorefLabel) throws IOException {
 		String parseTree = null;
 		
 		String line = inputReader.readLine();
@@ -68,8 +68,14 @@ public class AnnotatedDocumentReader extends DocumentReader{
 		
 		int i = 1;
 		for(String[] info : lineList){
-			lexicons[i] = new Lexicon(i++, info[1], info[2], info[3], info[4], info[9], 
-					Integer.parseInt(info[5]), info[6], Integer.parseInt(info[7]), info[8]);
+			if(readCorefLabel){
+				lexicons[i] = new Lexicon(i++, info[1], info[2], info[3], info[4], info[9], 
+						Integer.parseInt(info[5]), info[6], Integer.parseInt(info[7]), info[8], info[10]);
+			}
+			else{
+				lexicons[i] = new Lexicon(i++, info[1], info[2], info[3], info[4], info[9], 
+						Integer.parseInt(info[5]), info[6], Integer.parseInt(info[7]), info[8]);
+			}
 		}
 		
 		return new Sentence(lexicons, parseTree, id);

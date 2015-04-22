@@ -1,5 +1,6 @@
 package cmucoref.model;
 
+import cmucoref.util.Pair;
 import gnu.trove.list.linked.TLinkedList;
 
 @SuppressWarnings("rawtypes")
@@ -8,34 +9,40 @@ public class FeatureVector extends TLinkedList {
 	public FeatureVector(){}
 	
 	@SuppressWarnings("unchecked")
-	public FeatureVector(int[] keys){
+	public FeatureVector(int[] keys, int[] gids){
 		for(int i = 0; i < keys.length; ++i){
-			this.add(new Feature(keys[i], 1.0));		
+			this.add(new Feature(keys[i], gids[i]));		
 		}
 	}
 	
 	@SuppressWarnings("unchecked")
-	public void add(int index, double value){
-		this.add(new Feature(index, value));
+	public void addFeature(int index, int gid){
+		this.add(new Feature(index, gid));
 	}
 
-	public int[] keys(){
+	public Pair<int[], int[]> keys(){
 		int size = this.size();
 		int[] keys = new int[size];
+		int[] gids = new int[size];
 		int i = 0;
 		for(Object b : this){
 			Feature f = (Feature)(b);
-			keys[i++] = f.index;
+			keys[i] = f.index;
+			gids[i++] = f.gid;
 		}
-		return keys;
+		return new Pair<int[], int[]>(keys, gids);
 	}
 	
 	public final double getScore(double[] params){
-		double score = 0.0;
+		if(this.size() == 0){
+			return 0.0;
+		}
+		
+		double score = 1.0;
 		
 		for(Object b : this){
 			Feature f = (Feature)(b);
-			score += params[f.index] * f.value;
+			score *= params[f.index];
 		}
 		return score;
 	}
@@ -43,7 +50,7 @@ public class FeatureVector extends TLinkedList {
 	public void update(double[] parameters, double val){
 		for(Object b : this){
 			Feature f = (Feature)(b);
-			parameters[f.index] += val * f.value;
+			parameters[f.index] += val;
 		}
 	}
 }

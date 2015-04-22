@@ -25,6 +25,7 @@ public class CorefSystem {
 			CorefModel model = new CorefModel(options);
 			Trainer trainer = (Trainer) Class.forName(options.getTrainer()).newInstance();
 			MentionExtractor mentionExtractor = (MentionExtractor) Class.forName(options.getMentionExtractor()).newInstance();
+			mentionExtractor.createDict(options.getPropFile());
 			CorefManager manager = new CorefManager(mentionExtractor);
 			trainer.train(manager, model, options.getTrainingFile(), options.getLogFile(), options.getModelFile());
 		}

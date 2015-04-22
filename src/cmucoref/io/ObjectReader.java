@@ -3,13 +3,14 @@ package cmucoref.io;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.util.zip.GZIPInputStream;
 
 public class ObjectReader {
 private ObjectInputStream in = null;
 	
 	public ObjectReader(String file){
 		try {
-			in = new ObjectInputStream(new FileInputStream(file));
+			in = new ObjectInputStream(new GZIPInputStream(new FileInputStream(file + ".gz")));
 		} catch (IOException e) {
 			e.printStackTrace();
 			System.exit(0);

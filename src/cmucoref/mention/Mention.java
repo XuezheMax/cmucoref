@@ -1,5 +1,6 @@
 package cmucoref.mention;
 
+import java.io.PrintStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,6 +51,7 @@ public class Mention implements Serializable{
 	public Mention predNomiTo = null;
 	public List<Mention> relativePronouns = null;
 	public Mention relPronTo = null;
+	public List<Mention> spanMatchs = null;
 	
 	public int sentID = -1;
 	
@@ -94,6 +96,63 @@ public class Mention implements Serializable{
 		}
 	}
 	
+	public int getDistOfSent(Mention mention){
+		int distOfSent = (this.sentID - mention.sentID) / 5;
+		if(distOfSent > 9){
+			distOfSent = 9;
+		}
+		return distOfSent;
+	}
+	
+	public boolean numberAgree(Mention mention){
+//		if(this.mentionType == MentionType.LIST && mention.mentionType == MentionType.LIST){
+//			return true;
+//		}
+		
+		if(this.number != Number.UNKNOWN && mention.number != Number.UNKNOWN){
+			return this.number == mention.number ? true : false;
+		}
+		else{
+			return true;
+		}
+	}
+	
+	public boolean genderAgree(Mention mention){
+		if(this.gender != Gender.UNKNOWN && mention.gender != Gender.UNKNOWN){
+			return this.gender == mention.gender ? true : false;
+		}
+		else{
+			return true;
+		}
+	}
+	
+	public boolean animateAgree(Mention mention){
+		if(this.animacy == Animacy.UNKNOWN || mention.animacy == Animacy.UNKNOWN){
+			return true;
+		}
+		else{
+			return this.animacy == mention.animacy ? true : false;
+		}
+	}
+	
+	public boolean personAgree(Mention mention){
+		if(this.person == Person.UNKNOWN || mention.person == Person.UNKNOWN){
+			return true;
+		}
+		else{
+			return this.person == mention.person ? true : false;
+		}
+	}
+	
+	public boolean NERAgree(Mention mention){
+		if(this.headword.ner.equals("O") || mention.headword.ner.equals("O")){			
+			return true;
+		}
+		else{
+			return this.headword.ner.equals(mention.headword.ner) ? true : false;
+		}
+	}
+	
 	public boolean isPureNerMention(Sentence sent){
 		if(headword.ner.equals("O")){
 			return false;
@@ -118,12 +177,22 @@ public class Mention implements Serializable{
 		}
 		listMember.add(member);
 		member.belongTo = this;
-		this.mentionType = MentionType.LIST;
+		//this.mentionType = MentionType.LIST;
 		this.number = Number.PLURAL;
 	}
 	
 	public boolean isListMemberOf(Mention m){
 		return belongTo == null ? false : this.belongTo.equals(m);
+	}
+	
+	public void addSpanMatch(Mention spanMatch){
+		if(this.spanMatchs == null){
+			this.spanMatchs = new ArrayList<Mention>();
+		}
+		if(spanMatch.spanMatchs != null){
+			this.spanMatchs.addAll(spanMatch.spanMatchs);
+		}
+		this.spanMatchs.add(spanMatch);
 	}
 	
 	public void addApposition(Mention appo) throws MentionException{
@@ -168,7 +237,14 @@ public class Mention implements Serializable{
 	private static final List<String> entityWordsToExclude =
 			Arrays.asList(new String[]{ "the","this", "mr.", "miss", "mrs.", "dr.", "ms.", "inc.", "ltd.", "corp.", "'s"});
 	
-	public boolean wordsIncluded(Sentence sent, Mention mention, Sentence sentOfM){
+	public boolean headwordInclude(Sentence sent, Mention mention){
+		Set<String> wordsOfThis = new HashSet<String>();
+		for(int i = this.startIndex; i < this.endIndex; ++i){
+			wordsOfThis.add(sent.getLexicon(i).form.toLowerCase());
+		}
+		return wordsOfThis.contains(mention.headString);
+	}
+	public boolean wordsInclude(Sentence sent, Mention mention, Sentence sentOfM){
 		Set<String> wordsOfThis = new HashSet<String>();
 		for(int i = this.startIndex; i < this.endIndex; ++i){
 			wordsOfThis.add(sent.getLexicon(i).form.toLowerCase());
@@ -179,13 +255,17 @@ public class Mention implements Serializable{
 			wordsExceptStopWords.add(sentOfM.getLexicon(i).form.toLowerCase());
 		}
 		wordsExceptStopWords.removeAll(entityWordsToExclude);
-		wordsExceptStopWords.remove(mention.headString);
+		//wordsExceptStopWords.remove(mention.headString);
 		
 		return wordsOfThis.containsAll(wordsExceptStopWords);
 	}
 	
 	public boolean isAcronymTo(Mention mention, Sentence sent){
 		if(this.endIndex - this.startIndex != 1){
+			return false;
+		}
+		
+		if(mention.endIndex - mention.startIndex == 1 && this.headString.equals(mention.headString)){
 			return false;
 		}
 		
@@ -199,6 +279,10 @@ public class Mention implements Serializable{
 		int acronymPos = 0;
 		for(int i = mention.startIndex; i < mention.endIndex; ++i){
 			String word = sent.getLexicon(i).form;
+			if(word.equals(acronym) && (mention.endIndex - mention.startIndex) > 1) {
+				return false;
+			}
+			
 			for(int ch = 0; ch < word.length(); ++ch){
 				if (word.charAt(ch) >= 'A' && word.charAt(ch) <= 'Z') {
 					if(acronymPos >= acronym.length()){
@@ -218,6 +302,24 @@ public class Mention implements Serializable{
 		return true;
 	}
 	
+	public boolean relaxedSpanMatch(Sentence sent, Mention mention, Sentence sentOfM){
+		String anaphSpanBeforeHead = this.getSpanBeforeHead(sent).toLowerCase();
+		String antecSpanBeforeHead = mention.getSpanBeforeHead(sentOfM).toLowerCase();
+		boolean relaxedSpanMatch = anaphSpanBeforeHead.equals(antecSpanBeforeHead) 
+				|| anaphSpanBeforeHead.equals(antecSpanBeforeHead + " 's")
+				|| antecSpanBeforeHead.equals(anaphSpanBeforeHead + " 's");
+		return relaxedSpanMatch;
+	}
+	
+	public boolean exactSpanMatch(Sentence sent, Mention mention, Sentence sentOfM){
+		String anaphSpan = this.getSpan(sent).toLowerCase();
+		String antecSpan = mention.getSpan(sentOfM).toLowerCase();
+		boolean exactSpanMatch = anaphSpan.equals(antecSpan) 
+				|| anaphSpan.equals(antecSpan + " 's") 
+				|| antecSpan.equals(anaphSpan + " 's");
+		return exactSpanMatch;
+	}
+	
 	public String getSpan(Sentence sent){
 		StringBuilder span = new StringBuilder();
 		for(int i = startIndex; i < endIndex; ++i){
@@ -230,32 +332,8 @@ public class Mention implements Serializable{
 	}
 	
 	public String getSpanBeforeHead(Sentence sent){
-		int posComma = -1;
-		int posWH = -1;
-		for(int i = startIndex; i < endIndex; ++i){
-			Lexicon lex = sent.getLexicon(i);
-			if(posComma == -1 && lex.postag.equals(",")){
-				posComma = i;
-			}
-			if(posWH == -1 && lex.postag.startsWith("W")){
-				posWH = i;
-			}
-		}
-		
-		int pos = -1;
-		if(posComma == -1){
-			pos = posWH;
-		}
-		else if(posWH == -1){
-			pos = posComma;
-		}
-		else{
-			Math.min(posComma, posWH);
-		}
-		pos = Math.max(this.headIndex + 1, pos);
-		
 		StringBuilder span = new StringBuilder();
-		for(int i = startIndex; i < pos; ++i){
+		for(int i = startIndex; i <= headIndex; ++i){
 			if(i > startIndex){
 				span.append(" ");
 			}
@@ -292,8 +370,8 @@ public class Mention implements Serializable{
 		getHeadword(sent);
 		setType(sent, dict);
 		setNumber(sent, dict);
-		setGender(sent, dict, getGender(sent, dict));
 		setAnimacy(sent, dict);
+		setGender(sent, dict, getGender(sent, dict));
 		setPerson(sent, dict);
 	}
 	
@@ -449,16 +527,21 @@ public class Mention implements Serializable{
 						}
 					}
 				}
-			}
-			else{
-				if(dict.maleWords.contains(headString)) {
-					gender = Gender.MALE;
-				}
-				else if(dict.femaleWords.contains(headString)) {
-					gender = Gender.FEMALE;
-				}
-				else if(dict.neutralWords.contains(headString)) {
-					gender = Gender.NEUTRAL;
+				else{
+					if(dict.maleWords.contains(headString)) {
+						gender = Gender.MALE;
+					}
+					else if(dict.femaleWords.contains(headString)) {
+						gender = Gender.FEMALE;
+					}
+					else if(dict.neutralWords.contains(headString)) {
+						gender = Gender.NEUTRAL;
+					}
+					else if(mentionType == MentionType.PROPER || mentionType == MentionType.NOMINAL){
+						if(animacy == Animacy.INANIMATE){
+							gender = Gender.NEUTRAL;
+						}
+					}
 				}
 			}
 		}
@@ -516,16 +599,16 @@ public class Mention implements Serializable{
 			animacy = Animacy.INANIMATE;
 		}
 		else{
-			animacy = Animacy.INANIMATE;
+			animacy = Animacy.UNKNOWN;
 		}
 		
 		if(mentionType != MentionType.PRONOMINAL) {
 			// Better heuristics using DekangLin:
 			if(animacy == Animacy.UNKNOWN) {
-				if(dict.animateWords.contains(headString)) {
+				if(dict.animateWords.contains(headString) || dict.animateWords.contains(headword.form)) {
 					animacy = Animacy.ANIMATE;
 				}
-				else if(dict.inanimateWords.contains(headString)) {
+				else if(dict.inanimateWords.contains(headString) || dict.inanimateWords.contains(headword.form)) {
 					animacy = Animacy.INANIMATE;
 				}
 			}
@@ -612,5 +695,23 @@ public class Mention implements Serializable{
 	public boolean equals(Mention m){
 		return this.sentID == m.sentID && this.mentionID == m.mentionID
 				&& this.startIndex == m.startIndex && this.endIndex == m.endIndex ;
+	}
+	
+	public void display(Sentence sent, PrintStream printer){
+		printer.println("#Begin Mention " + this.mentionID);
+		printer.println("sent ID: " + this.sentID);
+		printer.println("mention ID: " + this.mentionID);
+		printer.println(this.startIndex + " " + this.endIndex + " " + this.getSpan(sent));
+		printer.println("headIndex: " + this.headIndex);
+		printer.println("headString: " + this.headString);
+		printer.println("mention type: " + this.mentionType);
+		printer.println("mention gender: " + this.gender);
+		printer.println("mention number: " + this.number);
+		printer.println("mention animacy: " + this.animacy);
+		printer.println("mention person: " + this.person);
+		printer.println("mention ner: " + this.headword.ner);
+		printer.println("#end Mention " + this.mentionID);
+		printer.println("===================================");
+		printer.flush();
 	}
 }

@@ -8,25 +8,35 @@ import cmucoref.mention.extractor.relationextractor.*;
 import cmucoref.model.Options;
 import cmucoref.util.Pair;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.Properties;
 
 import edu.stanford.nlp.dcoref.Dictionaries;
+import edu.stanford.nlp.dcoref.Dictionaries.MentionType;
 
 public abstract class MentionExtractor {
 	
 	protected Dictionaries dict;
 	
-	public MentionExtractor(){
-		this.dict = new Dictionaries();
+	public MentionExtractor(){}
+	
+	public void createDict(String propfile) throws FileNotFoundException, IOException{
+		Properties props = new Properties();
+		props.load(new FileInputStream(propfile));
+		this.dict = new Dictionaries(props);
 	}
 	
 	public abstract List<List<Mention>> extractPredictedMentions(Document doc, Options options) throws IOException;
 	
 	protected void deleteSpuriousNamedEntityMentions(List<Mention> mentions, Sentence sent){
+		//remove overlap mentions
 		Set<Mention> remove = new HashSet<Mention>();
 		for(Mention mention1 : mentions){
 			if(mention1.isPureNerMention(sent)){
@@ -47,6 +57,59 @@ public abstract class MentionExtractor {
 			}
 		}
 		mentions.removeAll(remove);
+		
+		//remove single number named entity mentions
+		remove.clear();
+		for(Mention mention : mentions){
+			if(mention.endIndex - mention.startIndex == 1){
+				if(mention.headword.ner.equals("NUMBER") || mention.headword.ner.equals("ORDINAL") || mention.headword.ner.equals("CARDINAL")){
+					remove.add(mention);
+				}
+			}
+		}
+		mentions.removeAll(remove);
+	}
+	
+	public List<Mention> getSingleMentionList(Document doc, List<List<Mention>> mentionList, Options options){
+		List<Mention> allMentions = new ArrayList<Mention>();
+		for(List<Mention> mentions : mentionList){
+			allMentions.addAll(mentions);
+		}
+		
+		if(options.useSpanMatch()){
+			findSpanMatchRelation(doc, allMentions);
+		}
+		
+		return allMentions;
+	}
+	
+	protected void findSpanMatchRelation(Document doc, List<Mention> allMentions){
+		for(int i = 1; i < allMentions.size(); ++i){
+			Mention anaph = allMentions.get(i);
+			if(anaph.mentionType != MentionType.NOMINAL && anaph.mentionType != MentionType.PROPER){
+				continue;
+			}
+			for(int j = i - 1; j >=0; --j){
+				Mention antec = allMentions.get(j);
+				if(antec.mentionType != MentionType.NOMINAL && antec.mentionType != MentionType.PROPER){
+					continue;
+				}
+				if(anaph.cover(antec) || antec.cover(anaph)){
+					continue;
+				}
+				
+				boolean headMatch = anaph.headString.equals(antec.headString);
+				boolean isAcronym = false;
+				if(anaph.mentionType == MentionType.PROPER && antec.mentionType == MentionType.PROPER){
+					isAcronym = anaph.isAcronymTo(antec, doc.getSentence(antec.sentID)) 
+							|| antec.isAcronymTo(anaph, doc.getSentence(anaph.sentID));
+				}
+				if(headMatch || isAcronym){
+					anaph.addSpanMatch(antec);
+					break;
+				}
+			}
+		}
 	}
 	
 	protected void findSyntacticRelation(List<Mention> mentions, Sentence sent, Options options) throws InstantiationException, IllegalAccessException, ClassNotFoundException, MentionException{
@@ -136,7 +199,7 @@ public abstract class MentionExtractor {
 		}
 	}
 	
-	public void displayMentions(Document doc, List<List<Mention>> mentionList, PrintWriter printer){
+	public void displayMentions(Document doc, List<List<Mention>> mentionList, PrintStream printer){
 		printer.println("#begin document " + doc.getFileName() + " docId " + doc.getDocId());
 		int sentId = 0;
 		for(List<Mention> mentions : mentionList){
@@ -151,7 +214,7 @@ public abstract class MentionExtractor {
 		printer.flush();
 	}
 	
-	public void displayMention(Mention mention, PrintWriter printer) {
+	public void displayMention(Mention mention, PrintStream printer) {
 		printer.println("#Begin Mention " + mention.mentionID);
 		printer.println("sent ID: " + mention.sentID);
 		printer.println("mention ID: " + mention.mentionID);
@@ -168,20 +231,7 @@ public abstract class MentionExtractor {
 		printer.flush();
 	}
 	
-	public void displayMention(Sentence sent, Mention mention, PrintWriter printer){
-		printer.println("#Begin Mention " + mention.mentionID);
-		printer.println("sent ID: " + mention.sentID);
-		printer.println("mention ID: " + mention.mentionID);
-		printer.println(mention.startIndex + " " + mention.endIndex + " " + mention.getSpan(sent));
-		printer.println("headIndex: " + mention.headIndex);
-		printer.println("headString: " + mention.headString);
-		printer.println("mention type: " + mention.mentionType);
-		printer.println("mention gender: " + mention.gender);
-		printer.println("mention number: " + mention.number);
-		printer.println("mention animacy: " + mention.animacy);
-		printer.println("mention person: " + mention.person);
-		printer.println("#end Mention " + mention.mentionID);
-		printer.println("===================================");
-		printer.flush();
+	public void displayMention(Sentence sent, Mention mention, PrintStream printer){
+		mention.display(sent, printer);
 	}
 }

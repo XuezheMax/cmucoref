@@ -11,25 +11,21 @@ public class Feature extends TLinkableAdapter{
 
 	public int index;
 
-	public double value;
+	public int gid;
 
-	public Feature(int i, double v) {
+	public Feature(int i, int gid) {
 		index = i;
-		value = v;
+		this.gid = gid;
 	}
 
 	@Override
 	public final Feature clone() {
-		return new Feature(index, value);
-	}
-
-	public final Feature negation() {
-		return new Feature(index, -value);
+		return new Feature(index, gid);
 	}
 
 	@Override
 	public final String toString() {
-		return index + "=" + value;
+		return index + "|" + gid;
 	}
 }
 

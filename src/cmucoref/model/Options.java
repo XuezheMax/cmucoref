@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.HashSet;
 
@@ -26,8 +28,12 @@ public class Options implements Serializable{
 								DEFAULT_MODE = "test",
 								THREAD_NUM = "thread-num",
 								DEFAULT_THREAD_NUM = "1",
+								PARAMETER_INITIALIZER = "parameter-initializer",
+								DEFAULT_PARAMETER_INITIALIZER = cmucoref.model.params.UniformInitializer.class.getName(),
 								MENTION_EXTRACTOR = "mention-extractor",
 								DEFAULT_MENTION_EXTRACTOR_CLASS = cmucoref.mention.extractor.StanfordMentionExtractor.class.getName(),
+								USE_SPAN_MATCH = "use-span-match",
+								DEFAULT_USE_SPAN_MATCH = Boolean.TRUE.toString(),
 								EXTRACT_MENTION_ATTRIBUTE = "extract-mention-attribute",
 								DEFAULT_EXTRACT_MENTION_ATTRIBUTE = Boolean.TRUE.toString(),
 								EXTRACT_MENTION_RELATION = "extract-mention-relation",
@@ -49,11 +55,13 @@ public class Options implements Serializable{
 								OUTFILE = "output-file",
 								GOLDFILE = "gold-file",
 								LOGFILE = "log-file",
-								MODELFILE = "model-file";
+								MODELFILE = "model-file",
+								PROPERTYFILE = "property-file",
+								DEFAULT_PROPERTY_FILE = "lib/default.properties";
 	
 	private gnu.trove.map.hash.THashMap<String, String> argToValueMap = null;
 	private HashSet<String> valid_opt_set = null;
-	private final int maxiter = 5000;
+	private final int maxiter = 7;
 	private final double stop_eta = 0.000001;
 	private final String train_tmp = "tmp/train.tmp";
 	
@@ -75,9 +83,15 @@ public class Options implements Serializable{
 		//trainer
 		valid_opt_set.add(TRAINER);
 		argToValueMap.put(TRAINER, DEFAULT_TRAINER_CLASS);
+		//parameter initializer
+		valid_opt_set.add(PARAMETER_INITIALIZER);
+		argToValueMap.put(PARAMETER_INITIALIZER, DEFAULT_PARAMETER_INITIALIZER);
 		//mention extractor
 		valid_opt_set.add(MENTION_EXTRACTOR);
 		argToValueMap.put(MENTION_EXTRACTOR, DEFAULT_MENTION_EXTRACTOR_CLASS);
+		//use span match
+		valid_opt_set.add(USE_SPAN_MATCH);
+		argToValueMap.put(USE_SPAN_MATCH, DEFAULT_USE_SPAN_MATCH);
 		//extract mention attribute
 		valid_opt_set.add(EXTRACT_MENTION_ATTRIBUTE);
 		argToValueMap.put(EXTRACT_MENTION_ATTRIBUTE, DEFAULT_EXTRACT_MENTION_ATTRIBUTE);
@@ -104,6 +118,8 @@ public class Options implements Serializable{
 		valid_opt_set.add(MODELFILE);
 		valid_opt_set.add(LOGFILE);
 		valid_opt_set.add(CONFIGURATION);
+		valid_opt_set.add(PROPERTYFILE);
+		argToValueMap.put(PROPERTYFILE, DEFAULT_PROPERTY_FILE);
 	}
 	
 	private String helpInfo(){
@@ -211,8 +227,16 @@ public class Options implements Serializable{
 		return getArgValue(TRAINER);
 	}
 	
+	public String getParamInitializer(){
+		return getArgValue(PARAMETER_INITIALIZER);
+	}
+	
 	public String getMentionExtractor(){
 		return getArgValue(MENTION_EXTRACTOR);
+	}
+	
+	public boolean useSpanMatch(){
+		return Boolean.parseBoolean(getArgValue(USE_SPAN_MATCH));
 	}
 	
 	public boolean extractMentionAttribute(){
@@ -283,11 +307,50 @@ public class Options implements Serializable{
 		return getArgValue(MODELFILE);
 	}
 	
+	public String getPropFile(){
+		return getArgValue(PROPERTYFILE);
+	}
+	
 	public void putDocReader(String reader){
 		putArgValue(DOC_READER, reader);
 	}
 	
 	public void putDocWriter(String writer){
 		putArgValue(DOC_WRITER, writer);
+	}
+	
+	private void writeObject(ObjectOutputStream out) throws IOException{
+		out.writeBoolean(extractMentionAttribute());
+		out.writeObject(getMentionExtractor());
+		out.writeBoolean(extractMentionRelation());
+		out.writeObject(getAppositionRelationExtractor());
+		out.writeObject(getListMemberRelationExtractor());
+		out.writeObject(getPredicateNominativeRelationExtractor());
+		out.writeObject(getRelativePronounRelationExtractor());
+	}
+	
+	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException{
+		argToValueMap = new gnu.trove.map.hash.THashMap<String, String>();
+		//read extract mention attribute
+		boolean flag = in.readBoolean();
+		argToValueMap.put(EXTRACT_MENTION_ATTRIBUTE, Boolean.toString(flag));
+		//read mention extractor
+		String mentionExtractor = (String) in.readObject();
+		argToValueMap.put(MENTION_EXTRACTOR, mentionExtractor);
+		//read extract mention relation
+		flag = in.readBoolean();
+		argToValueMap.put(EXTRACT_MENTION_RELATION, Boolean.toString(flag));
+		//read apposition relation extractor
+		String apposExtractor = (String) in.readObject();
+		argToValueMap.put(APPOSITION_EXTRACTOR, apposExtractor);
+		//read list member relation extractor
+		String listExtractor = (String) in.readObject();
+		argToValueMap.put(LISTMEMBER_EXTRACTOR, listExtractor);
+		//read predicate nominative relation extractor
+		String predNomiExtractor = (String) in.readObject();
+		argToValueMap.put(PREDICATENOMINATIVE_EXTRACTOR, predNomiExtractor);
+		//read relative pronoun relation extractor
+		String relPronExtractor = (String) in.readObject();
+		argToValueMap.put(RELATIVEPRONOUN_EXTRACTOR, relPronExtractor);
 	}
 }
