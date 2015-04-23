@@ -83,69 +83,24 @@ public class MentionFeatureGenerator {
 	}
 	
 	protected void genStringMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, String given, CorefModel model, FeatureVector fv){
-		
-		//exact string match
-		boolean exactSpanMatch = anaph.exactSpanMatch(anaphSent, antec, antecSent);
-		
-		//Acronym
-		if(anaph.mentionType == MentionType.PROPER && antec.mentionType == MentionType.PROPER){
-			boolean isAcronym = anaph.isAcronymTo(antec, antecSent) || antec.isAcronymTo(anaph, anaphSent);
-			exactSpanMatch = exactSpanMatch || isAcronym;
-		}
-		
-		boolean relaxedSpanMatch = true;
-		boolean wordIncluded = true;
-		boolean headMatch = true;
-		if(!exactSpanMatch){
-			//relaxed string match
-			relaxedSpanMatch = anaph.relaxedSpanMatch(anaphSent, antec, antecSent);
-			
-			//antec includes all non-stop words of anaph
-			wordIncluded = antec.wordsInclude(antecSent, anaph, anaphSent);
-//						| anaph.wordsInclude(anaphSent, antec, antecSent);
-			
-			//head match
-			headMatch = anaph.headString.equals(antec.headString);
-		}
-		
-//		if(!relaxedSpanMatch && wordIncluded && headMatch && anaph.mentionType == MentionType.PROPER && antec.mentionType == MentionType.NOMINAL){
-//			antec.display(antecSent, System.err);
-//			anaph.display(anaphSent, System.err);
-//		}
+		boolean wordIncluded = antec.wordsInclude(antecSent, anaph, anaphSent);
+		boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent);
+		boolean relaxMatch = anaph.relaxedSpanMatch(anaphSent, antec, antecSent);
 		
 		String hdMat = Boolean.toString(headMatch);
-		String wdInd = Boolean.toString(wordIncluded);
-		String rlMat = Boolean.toString(relaxedSpanMatch);
-		String exMat = Boolean.toString(exactSpanMatch);
+		String spMat = Boolean.toString(wordIncluded || relaxMatch);
 		
-		//add head match feature
-		addFeature("WRDIN=" + wdInd + ", " + "HDMAT=" + hdMat, given, model, fv);
-		
-//		//add higher level match features
-//		addFeature("RLMAT=" + rlMat + ", " + "WRDIN=" + wdInd, 
-//				"HDMAT=" + hdMat + ", " + given, model, fv);
-		
-//		//add word included feature
-//		addFeature("WRDIN=" + wdInd, "HDMAT=" + hdMat + ", " + given, model, fv);
-//		
-//		//add relaxed match feature
-//		if(headMatch){
-//			addFeature("RLMAT=" + rlMat, "WRDIN=" + wdInd + ", " + "HDMAT=" + hdMat + ", " + given, model, fv);
-//		}
-//		
-//		//add exact match feature
-//		if(relaxedSpanMatch && wordIncluded){
-//			addFeature("EXMAT=" + exMat, "RLMAT=" + rlMat + ", " + "WRDIN=" + wdInd + ", " + given, model, fv);
-//		}
+		//add head match and span match feature
+		addFeature("SPMAT=" + spMat + ", " + "HDMAT=" + hdMat, given, model, fv);
 	}
 	
-	public void genNewClusterFeatures(Mention anaph, Sentence anaphSent, boolean wordIncluded, boolean headMatch, CorefModel model, FeatureVector fv){
+	public void genNewClusterFeatures(Mention anaph, Sentence anaphSent, boolean spanMatch, boolean headMatch, CorefModel model, FeatureVector fv){
 		// anaph starts a new cluster
 		addFeature("TYPE=" + anaph.mentionType, "NEWCLUSTER", model, fv);
 		String given  = "TYPE=" + anaph.mentionType + ", " + "NEWCLUSTER";
 		
 		String hdMat = Boolean.toString(headMatch);
-		String wdInd = Boolean.toString(wordIncluded);
+		String wdInd = Boolean.toString(spanMatch);
 		
 		if(anaph.mentionType == MentionType.NOMINAL || anaph.mentionType == MentionType.PROPER){
 			addFeature("WRDIN=" + wdInd + ", " + "HDMAT=" + hdMat, given, model, fv);

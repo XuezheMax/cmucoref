@@ -14,11 +14,11 @@ public class PriorKnowledgeInitializer extends ParameterInitializer{
 		String[] NounTypes = {"NOMINAL", "PROPER"};
 		Pair<Integer, Integer> index = null;
 		
-		//init new cluster features
-		for(String type : NounTypes){
-			index = model.getFeatureIndex("TYPE=" + type, "NEWCLUSTER");
-			parameters[index.first] = 4;
-		}
+//		//init new cluster features
+//		for(String type : NounTypes){
+//			index = model.getFeatureIndex("TYPE=" + type, "NEWCLUSTER");
+//			parameters[index.first] = 4;
+//		}
 		
 		//init distance features
 		for(int i = 0; i < 10; ++i){
@@ -75,6 +75,10 @@ public class PriorKnowledgeInitializer extends ParameterInitializer{
 					+ "ANAPHTYPE=PRONOMINAL, ANTECTYPE=PRONOMINAL");
 			parameters[index.first] += 9 - i;
 		}
+		
+		//init head match features
+		index = model.getFeatureIndex("SPMAT=true, HDMAT=true", "ATTRMAT=true");
+		parameters[index.first] = 7;
 		
 		double[] c = new double[model.givenSize()];
 		for(int j = 0; j < parameters.length; ++j){

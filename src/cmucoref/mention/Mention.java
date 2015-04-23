@@ -237,12 +237,22 @@ public class Mention implements Serializable{
 	private static final List<String> entityWordsToExclude =
 			Arrays.asList(new String[]{ "the","this", "mr.", "miss", "mrs.", "dr.", "ms.", "inc.", "ltd.", "corp.", "'s"});
 	
-	public boolean headwordInclude(Sentence sent, Mention mention){
-		Set<String> wordsOfThis = new HashSet<String>();
-		for(int i = this.startIndex; i < this.endIndex; ++i){
-			wordsOfThis.add(sent.getLexicon(i).form.toLowerCase());
+	public boolean headMatch(Sentence sent, Mention mention, Sentence sentOfM){
+		if(this.headString.equals(mention.headString)){
+			return true;
 		}
-		return wordsOfThis.contains(mention.headString);
+		else if(this.exactSpanMatch(sent, mention, sentOfM)){
+			return true;
+		}
+		else if(this.relaxedSpanMatch(sent, mention, sentOfM)){
+			return true;
+		}
+		else if(this.mentionType == MentionType.PROPER && mention.mentionType == MentionType.PROPER){
+			return this.isAcronymTo(mention, sentOfM) || mention.isAcronymTo(this, sent);
+		}
+		else{
+			return false;
+		}
 	}
 	public boolean wordsInclude(Sentence sent, Mention mention, Sentence sentOfM){
 		Set<String> wordsOfThis = new HashSet<String>();
@@ -257,7 +267,15 @@ public class Mention implements Serializable{
 		wordsExceptStopWords.removeAll(entityWordsToExclude);
 		//wordsExceptStopWords.remove(mention.headString);
 		
-		return wordsOfThis.containsAll(wordsExceptStopWords);
+		if(wordsOfThis.containsAll(wordsExceptStopWords)){
+			return true;
+		}
+		else if(this.mentionType == MentionType.PROPER && mention.mentionType == MentionType.PROPER){
+			return this.isAcronymTo(mention, sentOfM) || mention.isAcronymTo(this, sent);
+		}
+		else{
+			return false;
+		}
 	}
 	
 	public boolean isAcronymTo(Mention mention, Sentence sent){
@@ -303,8 +321,8 @@ public class Mention implements Serializable{
 	}
 	
 	public boolean relaxedSpanMatch(Sentence sent, Mention mention, Sentence sentOfM){
-		String anaphSpanBeforeHead = this.getSpanBeforeHead(sent).toLowerCase();
-		String antecSpanBeforeHead = mention.getSpanBeforeHead(sentOfM).toLowerCase();
+		String anaphSpanBeforeHead = this.getRelaxedSpan(sent).toLowerCase();
+		String antecSpanBeforeHead = mention.getRelaxedSpan(sentOfM).toLowerCase();
 		boolean relaxedSpanMatch = anaphSpanBeforeHead.equals(antecSpanBeforeHead) 
 				|| anaphSpanBeforeHead.equals(antecSpanBeforeHead + " 's")
 				|| antecSpanBeforeHead.equals(anaphSpanBeforeHead + " 's");
@@ -331,9 +349,29 @@ public class Mention implements Serializable{
 		return span.toString();
 	}
 	
-	public String getSpanBeforeHead(Sentence sent){
+	public String getRelaxedSpan(Sentence sent){
 		StringBuilder span = new StringBuilder();
-		for(int i = startIndex; i <= headIndex; ++i){
+		int posComma = -1;
+		int posWH = -1;
+		for(int i = startIndex; i < endIndex; ++i){
+			String postag = sent.getLexicon(i).postag;
+			if(posComma == -1 && postag.equals(",")){
+				posComma = i;
+			}
+			if(posWH == -1 && postag.startsWith("W")){
+				posWH = i;
+			}
+		}
+		
+		int posEnd = this.endIndex;
+		if(posComma != -1 && this.headIndex < posComma){
+			posEnd = posComma;
+		}
+		if(posComma==-1 && posWH != -1 && this.headIndex < posWH){
+			posEnd = posWH;
+		}
+		
+		for(int i = startIndex; i < posEnd; ++i){
 			if(i > startIndex){
 				span.append(" ");
 			}

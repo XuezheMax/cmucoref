@@ -98,13 +98,8 @@ public abstract class MentionExtractor {
 					continue;
 				}
 				
-				boolean headMatch = anaph.headString.equals(antec.headString);
-				boolean isAcronym = false;
-				if(anaph.mentionType == MentionType.PROPER && antec.mentionType == MentionType.PROPER){
-					isAcronym = anaph.isAcronymTo(antec, doc.getSentence(antec.sentID)) 
-							|| antec.isAcronymTo(anaph, doc.getSentence(anaph.sentID));
-				}
-				if(headMatch || isAcronym){
+				boolean headMatch = anaph.headMatch(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID));
+				if(headMatch){
 					anaph.addSpanMatch(antec);
 					break;
 				}
