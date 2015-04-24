@@ -86,22 +86,35 @@ public abstract class MentionExtractor {
 	protected void findSpanMatchRelation(Document doc, List<Mention> allMentions){
 		for(int i = 1; i < allMentions.size(); ++i){
 			Mention anaph = allMentions.get(i);
-			if(anaph.mentionType != MentionType.NOMINAL && anaph.mentionType != MentionType.PROPER){
-				continue;
+			if(anaph.mentionType == MentionType.PRONOMINAL){
+				for(int j = i - 1; j >=0; --j){
+					Mention antec = allMentions.get(j);
+					int distOfSent = anaph.getDistOfSent(antec);
+					if(distOfSent > 0){
+						break;
+					}
+					else{
+						if(anaph.attrAgree(antec)){
+							anaph.localAttrMatch = true;
+							break;
+						}
+					}
+				}
 			}
-			for(int j = i - 1; j >=0; --j){
-				Mention antec = allMentions.get(j);
-				if(antec.mentionType != MentionType.NOMINAL && antec.mentionType != MentionType.PROPER){
-					continue;
-				}
-				if(anaph.cover(antec) || antec.cover(anaph)){
-					continue;
-				}
-				
-				boolean headMatch = anaph.headMatch(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID));
-				if(headMatch){
-					anaph.addSpanMatch(antec);
-					break;
+			else if(anaph.mentionType == MentionType.NOMINAL || anaph.mentionType == MentionType.PROPER){				
+				for(int j = i - 1; j >=0; --j){
+					Mention antec = allMentions.get(j);
+					if(antec.mentionType != MentionType.NOMINAL && antec.mentionType != MentionType.PROPER){
+						continue;
+					}
+					if(anaph.cover(antec) || antec.cover(anaph)){
+						continue;
+					}
+					
+					if(anaph.headMatch(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID))){
+						anaph.addSpanMatch(antec, doc);
+						break;
+					}
 				}
 			}
 		}

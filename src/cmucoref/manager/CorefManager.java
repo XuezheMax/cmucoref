@@ -89,30 +89,22 @@ public class CorefManager {
 				for(int i = 0; i < allMentions.size(); ++i){
 					Mention anaph = allMentions.get(i);
 					if(anaph.spanMatchs != null){
-						boolean spMat = false;
-						boolean hdMat = false;
 						for(Mention antec : anaph.spanMatchs){
-							boolean attrMat = mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
-							if(attrMat){
-								hdMat = true;
-								spMat = spMat 
-										|| antec.wordsInclude(doc.getSentence(antec.sentID), anaph, doc.getSentence(anaph.sentID))
-										|| antec.relaxedSpanMatch(doc.getSentence(antec.sentID), anaph, doc.getSentence(anaph.sentID));
-							}
+							mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
 						}
-						//mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), spMat, hdMat, model, null);
+						mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), model, null);
 						continue;
 					}
 					
 					if(anaph.apposTo != null){
 						Mention antec = anaph.apposTo;
-						mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
+						mentionFeatGen.genAppositiveFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
 						continue;
 					}
 					
 					if(anaph.predNomiTo != null){
 						Mention antec = anaph.predNomiTo;
-						mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
+						mentionFeatGen.genPredicativeNominativeFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
 						continue;
 					}
 					
@@ -125,7 +117,7 @@ public class CorefManager {
 							mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
 						}
 						else{
-							//mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), false, false, model, null);
+							mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), model, null);
 						}
 					}
 				}
@@ -152,33 +144,23 @@ public class CorefManager {
 			int[][] gids = null;
 			
 			if(anaph.spanMatchs != null) {
-				boolean spMat = false;
-				boolean hdMat = false;
 				keys = new int[anaph.spanMatchs.size() + 1][];
 				gids = new int[anaph.spanMatchs.size() + 1][];
 				for(int j = 0; j <= anaph.spanMatchs.size(); ++j){
 					if(j < anaph.spanMatchs.size()){
 						Mention antec = anaph.spanMatchs.get(j);
 						FeatureVector fv = new FeatureVector();
-						boolean attrMat = mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, fv);
-						if(attrMat){
-							hdMat = true;
-							spMat = spMat 
-									|| antec.wordsInclude(doc.getSentence(antec.sentID), anaph, doc.getSentence(anaph.sentID))
-									|| antec.relaxedSpanMatch(doc.getSentence(antec.sentID), anaph, doc.getSentence(anaph.sentID));
-						}
+						mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, fv);
 						Pair<int[], int[]> res = fv.keys();
 						keys[j] = res.first;
 						gids[j] = res.second;
 					}
 					else{
-//						FeatureVector fv = new FeatureVector();
-//						mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), spMat, hdMat, model, fv);
-//						Pair<int[], int[]> res = fv.keys();
-//						keys[j] = res.first;
-//						gids[j] = res.second;
-						keys[j] = null;
-						gids[j] = null;
+						FeatureVector fv = new FeatureVector();
+						mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), model, fv);
+						Pair<int[], int[]> res = fv.keys();
+						keys[j] = res.first;
+						gids[j] = res.second;
 					}
 				}
 				out.writeObject(keys);
@@ -231,13 +213,11 @@ public class CorefManager {
 					gids[j] = res.second;
 				}
 				else{
-//					FeatureVector fv = new FeatureVector();
-//					mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), false, false, model, fv);
-//					Pair<int[], int[]> res = fv.keys();
-//					keys[j] = res.first;
-//					gids[j] = res.second;
-					keys[j] = null;
-					gids[j] = null;
+					FeatureVector fv = new FeatureVector();
+					mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), model, fv);
+					Pair<int[], int[]> res = fv.keys();
+					keys[j] = res.first;
+					gids[j] = res.second;
 				}
 			}
 			out.writeObject(keys);

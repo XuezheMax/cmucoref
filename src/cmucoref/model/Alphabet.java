@@ -112,7 +112,8 @@ public class Alphabet implements Serializable{
 		Collections.sort(givens);
 		for(String given : givens){
 			TObjectIntHashMap<String> subMap = map.get(given);
-			Object[] feats = subMap.keys();
+			List<String> feats = new ArrayList<String>(subMap.keySet());
+			Collections.sort(feats);
 			for(Object feat : feats){
 				int index = subMap.get(feat);
 				printer.println(feat + "|" + given + ": " + params.paramAt(index));

@@ -14,72 +14,70 @@ public class PriorKnowledgeInitializer extends ParameterInitializer{
 		String[] NounTypes = {"NOMINAL", "PROPER"};
 		Pair<Integer, Integer> index = null;
 		
-//		//init new cluster features
-//		for(String type : NounTypes){
-//			index = model.getFeatureIndex("TYPE=" + type, "NEWCLUSTER");
-//			parameters[index.first] = 4;
-//		}
-		
 		//init distance features
 		for(int i = 0; i < 10; ++i){
-			for(String anaphType : mentionTypes){
-				for(String antecType : mentionTypes){
-					index = model.getFeatureIndex("DISTOFSENT=" + i, 
-							"ANAPHTYPE=" + anaphType + ", " + "ANTECTYPE=" + antecType);
-					parameters[index.first] = 10 / (i + 1);
-				}
+			for(String mentionType : mentionTypes){
+				index = model.getFeatureIndex("DISTOFSENT=" + i, "ANAPHTYPE=" + mentionType + ", " + "ANTECTYPE=PRONOMINAL");
+				parameters[index.first] = 10 / (i + 1);
+				
+				index = model.getFeatureIndex("DISTOFSENT=" + i, "ANAPHTYPE=PRONOMINAL" + ", " + "ANTECTYPE=" + mentionType);
+				parameters[index.first] = 10 / (i + 1);
 			}
 		}
 		
-		//init gender match and number match features
+		//init attribute match features
+		//nominal & proper
+		index = model.getFeatureIndex("GENMAT=true, NUMMAT=true, ANIMAT=true", "ANAPHTYPE=NOMINAL, ANTECTYPE=NOMINAL");
+		parameters[index.first] = 63;
+		index = model.getFeatureIndex("GENMAT=true, NUMMAT=true, ANIMAT=true", "ANAPHTYPE=PROPER, ANTECTYPE=NOMINAL");
+		parameters[index.first] = 63;
+		index = model.getFeatureIndex("GENMAT=true, NUMMAT=true, ANIMAT=true", "ANAPHTYPE=NOMINAL, ANTECTYPE=PROPER");
+		parameters[index.first] = 63;
+		//proper & proper
+		index = model.getFeatureIndex("GENMAT=true, NUMMAT=true, ANIMAT=true, NERMAT=true", "ANAPHTYPE=PROPER, ANTECTYPE=PROPER");
+		parameters[index.first] = 112;
+		index = model.getFeatureIndex("GENMAT=true, NUMMAT=true, ANIMAT=true, NERMAT=false", "ANAPHTYPE=PROPER, ANTECTYPE=PROPER");
+		parameters[index.first] = 14;
+		//pronominal
 		for(int i = 0; i < 10; ++i){
-			for(String anaphType : mentionTypes){
-				for(String antecType : mentionTypes){
-					index = model.getFeatureIndex("GENMAT=true", 
-							"GENMAT(" + "DISTOFSENT=" + i + ", "
-							+ "ANAPHTYPE=" + anaphType + ", " + "ANTECTYPE=" + antecType + ")");
-					parameters[index.first] = 9;
-					
-					index = model.getFeatureIndex("NUMMAT=true", 
-							"NUMMAT(" + "DISTOFSENT=" + i + ", "
-							+ "ANAPHTYPE=" + anaphType + ", " + "ANTECTYPE=" + antecType + ")");
-					parameters[index.first] = 9;
-				}
+			for(String type : NounTypes){
+				index = model.getFeatureIndex("GENMAT=true, NUMMAT=true", 
+						"DISTOFSENT=" + i + ", " +  "ANAPHTYPE=" + type + ", " + "ANTECTYPE=PRONOMINAL");
+				parameters[index.first] = 10 - i;
+				
+				index = model.getFeatureIndex("GENMAT=true, NUMMAT=true", 
+						"DISTOFSENT=" + i + ", " +  "ANAPHTYPE=PRONOMINAL" + ", " + "ANTECTYPE=" + type);
+				parameters[index.first] = 10 - i;
 			}
-		}
-		
-		//init animacy match features
-		for(int i = 0; i < 10; ++i){
-			for(String anaphType : NounTypes){
-				for(String antecType : NounTypes){
-					index = model.getFeatureIndex("ANIMAT=true", 
-							"GENMAT1=true, " + "DISTOFSENT=" + i + ", "
-							+ "ANAPHTYPE=" + anaphType + ", " + "ANTECTYPE=" + antecType);
-					parameters[index.first] = 9;
-				}
-			}
-		}
-		
-		//init NER match features
-		for(int i = 0; i < 10; ++i){
-			index = model.getFeatureIndex("NERMAT=true", 
-					"GENMAT2=true, " + "DISTOFSENT=" + i + ", "
-					+ "ANAPHTYPE=PROPER, ANTECTYPE=PROPER");
-			parameters[index.first] = 9;
-		}
-		
-		//init person match features
-		for(int i = 0; i < 10; ++i){
-			index = model.getFeatureIndex("PERMAT=true", 
-					"GENMAT=true, NUMMAT=true, " + "DISTOFSENT=" + i + ", "
-					+ "ANAPHTYPE=PRONOMINAL, ANTECTYPE=PRONOMINAL");
-			parameters[index.first] += 9 - i;
+			
+			index = model.getFeatureIndex("GENMAT=true, NUMMAT=true, PERMAT=true", 
+						"DISTOFSENT=" + i + ", " +  "ANAPHTYPE=PRONOMINAL, ANTECTYPE=PRONOMINAL");
+			parameters[index.first] = 20 - 2 * i;
 		}
 		
 		//init head match features
-		index = model.getFeatureIndex("SPMAT=true, HDMAT=true", "ATTRMAT=true");
-		parameters[index.first] = 7;
+		for(String anaphType : NounTypes){
+			for(String antecType : NounTypes){				
+				index = model.getFeatureIndex("SPMAT=true, HDMAT=true", 
+						"ATTRMAT=true" + ", " + "ANAPHTYPE=" + anaphType + ", " + "ANTECTYPE=" + antecType);
+				parameters[index.first] = 30;
+				
+				index = model.getFeatureIndex("SPMAT=true, HDMAT=true", 
+						"ATTRMAT=true" + ", " + "ANAPHTYPE=" + anaphType + ", " + "ANTECTYPE=" + antecType);
+				parameters[index.first] = 15;
+			}
+		}
 		
+		//init new cluster features
+		for(String type : NounTypes){
+			index = model.getFeatureIndex("TYPE=" + type + ", " + "HDMATPOS=10, SPMAT=false", "NEWCLUSTER");
+			parameters[index.first] = 40;
+			index = model.getFeatureIndex("TYPE=" + type + ", " + "HDMATPOS=0, SPMAT=true", "NEWCLUSTER");
+			parameters[index.first] = 0.01;
+		}
+		index = model.getFeatureIndex("TYPE=PRONOMINAL, LOCATTRMAT=false", "NEWCLUSTER");
+		parameters[index.first] = 2;
+				
 		double[] c = new double[model.givenSize()];
 		for(int j = 0; j < parameters.length; ++j){
 			int gid = model.getGidFromIndex(j);

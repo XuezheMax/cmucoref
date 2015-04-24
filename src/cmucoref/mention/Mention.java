@@ -10,6 +10,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import cmucoref.document.Document;
 import cmucoref.document.Lexicon;
 import cmucoref.document.Sentence;
 import cmucoref.exception.MentionException;
@@ -52,6 +53,9 @@ public class Mention implements Serializable{
 	public List<Mention> relativePronouns = null;
 	public Mention relPronTo = null;
 	public List<Mention> spanMatchs = null;
+	public int closestSpanMatchPos = 10;
+	public boolean closestSpanMatch = false;
+	public boolean localAttrMatch = false;
 	
 	public int sentID = -1;
 	
@@ -66,6 +70,9 @@ public class Mention implements Serializable{
 		this.mentionID = mentionID;
 		this.startIndex = startIndex;
 		this.endIndex = endIndex;
+		closestSpanMatchPos = 10;
+		closestSpanMatch = false;
+		localAttrMatch = false;
 	}
 	
 	public Mention(int mentionID, int startIndex, int endIndex, int headIndex, int sentID){
@@ -153,6 +160,33 @@ public class Mention implements Serializable{
 		}
 	}
 	
+	public boolean attrAgree(Mention mention){
+		if(!(this.numberAgree(mention))){
+			return false;
+		}
+		else if(!(this.genderAgree(mention))){
+			return false;
+		}
+		else if(this.mentionType != MentionType.PRONOMINAL 
+				&& mention.mentionType != MentionType.PRONOMINAL 
+				&& !(this.animateAgree(mention))){
+			return false;
+		}
+		else if(this.mentionType == MentionType.PRONOMINAL 
+				&& mention.mentionType == MentionType.PRONOMINAL
+				&& !(this.personAgree(mention))){
+			return false;
+		}
+		else if(this.mentionType == MentionType.PROPER 
+				&& mention.mentionType == MentionType.PROPER
+				&& !(this.NERAgree(mention))){
+			return false;
+		}
+		else{
+			return true;
+		}
+	}
+	
 	public boolean isPureNerMention(Sentence sent){
 		if(headword.ner.equals("O")){
 			return false;
@@ -185,7 +219,7 @@ public class Mention implements Serializable{
 		return belongTo == null ? false : this.belongTo.equals(m);
 	}
 	
-	public void addSpanMatch(Mention spanMatch){
+	public void addSpanMatch(Mention spanMatch, Document doc){
 		if(this.spanMatchs == null){
 			this.spanMatchs = new ArrayList<Mention>();
 		}
@@ -193,6 +227,26 @@ public class Mention implements Serializable{
 			this.spanMatchs.addAll(spanMatch.spanMatchs);
 		}
 		this.spanMatchs.add(spanMatch);
+		
+		for(Mention antec : this.spanMatchs){
+			if(this.attrAgree(antec)){
+				boolean tmp = antec.wordsInclude(doc.getSentence(antec.sentID), this, doc.getSentence(this.sentID))
+						|| antec.relaxedSpanMatch(doc.getSentence(antec.sentID), this, doc.getSentence(this.sentID));
+				
+				if(tmp){
+					if(this.closestSpanMatch){
+						this.closestSpanMatchPos = Math.min(this.closestSpanMatchPos, this.getDistOfSent(antec));
+					}
+					else{
+						this.closestSpanMatchPos = this.getDistOfSent(antec);
+						this.closestSpanMatch = true;
+					}
+				}
+				else if(!(this.closestSpanMatch)){
+					this.closestSpanMatchPos = Math.min(this.closestSpanMatchPos, this.getDistOfSent(antec));
+				}
+			}
+		}
 	}
 	
 	public void addApposition(Mention appo) throws MentionException{
