@@ -98,13 +98,13 @@ public class CorefManager {
 					
 					if(anaph.apposTo != null){
 						Mention antec = anaph.apposTo;
-						mentionFeatGen.genAppositiveFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
+						mentionFeatGen.genSpecialCasesFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
 						continue;
 					}
 					
 					if(anaph.predNomiTo != null){
 						Mention antec = anaph.predNomiTo;
-						mentionFeatGen.genPredicativeNominativeFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
+						mentionFeatGen.genSpecialCasesFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
 						continue;
 					}
 					
@@ -112,6 +112,9 @@ public class CorefManager {
 						if(j < i){
 							Mention antec = allMentions.get(j);
 							if(antec.cover(anaph) || anaph.cover(antec)){
+								continue;
+							}
+							if(antec.isPronominal() && (anaph.isNominative() || anaph.isProper())){
 								continue;
 							}
 							mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
@@ -173,7 +176,7 @@ public class CorefManager {
 				gids = new int[1][];
 				Mention antec = anaph.apposTo;
 				FeatureVector fv = new FeatureVector();
-				mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, fv);
+				mentionFeatGen.genSpecialCasesFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, fv);
 				Pair<int[], int[]> res = fv.keys();
 				keys[0] = res.first;
 				gids[0] = res.second;
@@ -187,7 +190,7 @@ public class CorefManager {
 				gids = new int[1][];
 				Mention antec = anaph.predNomiTo;
 				FeatureVector fv = new FeatureVector();
-				mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, fv);
+				mentionFeatGen.genSpecialCasesFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, fv);
 				Pair<int[], int[]> res = fv.keys();
 				keys[0] = res.first;
 				gids[0] = res.second;
@@ -202,6 +205,11 @@ public class CorefManager {
 				if(j < i){
 					Mention antec = allMentions.get(j);
 					if(antec.cover(anaph) || anaph.cover(antec)){
+						keys[j] = null;
+						gids[j] = null;
+						continue;
+					}
+					if(antec.isPronominal() && (anaph.isNominative() || anaph.isProper())){
 						keys[j] = null;
 						gids[j] = null;
 						continue;

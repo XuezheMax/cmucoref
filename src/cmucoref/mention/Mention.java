@@ -53,9 +53,12 @@ public class Mention implements Serializable{
 	public List<Mention> relativePronouns = null;
 	public Mention relPronTo = null;
 	public List<Mention> spanMatchs = null;
-	public int closestSpanMatchPos = 10;
-	public boolean closestSpanMatch = false;
-	public boolean localAttrMatch = false;
+	public int closestSpanMatchPos = -1;
+	public MentionType closestSpanMatchType = null;
+	public boolean spanMatch = false;
+	public int localAttrMatchOfSent = -1;
+	public int localAttrMatchOfMention = -1;
+	public MentionType localAttrMatchType = null;
 	
 	public int sentID = -1;
 	
@@ -70,9 +73,12 @@ public class Mention implements Serializable{
 		this.mentionID = mentionID;
 		this.startIndex = startIndex;
 		this.endIndex = endIndex;
-		closestSpanMatchPos = 10;
-		closestSpanMatch = false;
-		localAttrMatch = false;
+		closestSpanMatchPos = -1;
+		closestSpanMatchType = null;
+		spanMatch = false;
+		localAttrMatchOfSent = -1;
+		localAttrMatchOfMention = -1;
+		localAttrMatchType = null;
 	}
 	
 	public Mention(int mentionID, int startIndex, int endIndex, int headIndex, int sentID){
@@ -103,8 +109,41 @@ public class Mention implements Serializable{
 		}
 	}
 	
+	public boolean isNominative(){
+		return this.mentionType == MentionType.NOMINAL;
+	}
+	
+	public boolean isProper(){
+		return this.mentionType == MentionType.PROPER;
+	}
+	
+	public boolean isPronominal(){
+		return this.mentionType == MentionType.PRONOMINAL;
+	}
+	
+	public boolean isList(){
+		return this.mentionType == MentionType.LIST;
+	}
+	
+	public int getDistOfMention(Mention mention){
+//		int distOfSent = this.getDistOfSent(mention);
+//		int lowerbound = distOfSent * 10;
+//		int upperbound = (distOfSent + 1) * 10 - 1;
+//		
+//		int distOfMention = (this.mentionID - mention.mentionID) / 5;
+//		if(distOfMention < lowerbound){
+//			distOfMention = lowerbound;
+//		}
+//		if(distOfMention > upperbound){
+//			distOfMention = upperbound;
+//		}
+//		return distOfMention;
+		return this.mentionID - mention.mentionID;
+	}
+	
 	public int getDistOfSent(Mention mention){
-		int distOfSent = (this.sentID - mention.sentID) / 5;
+		int distOfSent = (this.sentID - mention.sentID) / 4;
+		
 		if(distOfSent > 9){
 			distOfSent = 9;
 		}
@@ -167,19 +206,13 @@ public class Mention implements Serializable{
 		else if(!(this.genderAgree(mention))){
 			return false;
 		}
-		else if(this.mentionType != MentionType.PRONOMINAL 
-				&& mention.mentionType != MentionType.PRONOMINAL 
-				&& !(this.animateAgree(mention))){
+		else if(!this.isPronominal() && !mention.isPronominal() && !(this.animateAgree(mention))){
 			return false;
 		}
-		else if(this.mentionType == MentionType.PRONOMINAL 
-				&& mention.mentionType == MentionType.PRONOMINAL
-				&& !(this.personAgree(mention))){
+		else if(this.isPronominal() && mention.isPronominal() && !(this.personAgree(mention))){
 			return false;
 		}
-		else if(this.mentionType == MentionType.PROPER 
-				&& mention.mentionType == MentionType.PROPER
-				&& !(this.NERAgree(mention))){
+		else if(this.isProper() && mention.isProper() && !(this.NERAgree(mention))){
 			return false;
 		}
 		else{
@@ -227,26 +260,9 @@ public class Mention implements Serializable{
 			this.spanMatchs.addAll(spanMatch.spanMatchs);
 		}
 		this.spanMatchs.add(spanMatch);
-		
-		for(Mention antec : this.spanMatchs){
-			if(this.attrAgree(antec)){
-				boolean tmp = antec.wordsInclude(doc.getSentence(antec.sentID), this, doc.getSentence(this.sentID))
-						|| antec.relaxedSpanMatch(doc.getSentence(antec.sentID), this, doc.getSentence(this.sentID));
-				
-				if(tmp){
-					if(this.closestSpanMatch){
-						this.closestSpanMatchPos = Math.min(this.closestSpanMatchPos, this.getDistOfSent(antec));
-					}
-					else{
-						this.closestSpanMatchPos = this.getDistOfSent(antec);
-						this.closestSpanMatch = true;
-					}
-				}
-				else if(!(this.closestSpanMatch)){
-					this.closestSpanMatchPos = Math.min(this.closestSpanMatchPos, this.getDistOfSent(antec));
-				}
-			}
-		}
+		this.spanMatch = true;
+		this.closestSpanMatchPos = this.getDistOfSent(spanMatch);
+		this.closestSpanMatchType = spanMatch.mentionType;
 	}
 	
 	public void addApposition(Mention appo) throws MentionException{
@@ -291,7 +307,20 @@ public class Mention implements Serializable{
 	private static final List<String> entityWordsToExclude =
 			Arrays.asList(new String[]{ "the","this", "mr.", "miss", "mrs.", "dr.", "ms.", "inc.", "ltd.", "corp.", "'s"});
 	
+	public boolean spanMatch(Sentence sent, Mention mention, Sentence sentOfM){
+		if(this.isPronominal() || mention.isPronominal()){
+			System.err.println("error: head matching does not apply for pronominals");
+			System.exit(0);
+		}
+		return this.headMatch(sent, mention, sentOfM)
+				&& (this.wordsInclude(sent, mention, sentOfM) || this.relaxedSpanMatch(sent, mention, sentOfM));
+	}
+	
 	public boolean headMatch(Sentence sent, Mention mention, Sentence sentOfM){
+		if(this.isPronominal() || mention.isPronominal()){
+			System.err.println("error: head matching does not apply for pronominals");
+			System.exit(0);
+		}
 		if(this.headString.equals(mention.headString)){
 			return true;
 		}
@@ -301,7 +330,7 @@ public class Mention implements Serializable{
 		else if(this.relaxedSpanMatch(sent, mention, sentOfM)){
 			return true;
 		}
-		else if(this.mentionType == MentionType.PROPER && mention.mentionType == MentionType.PROPER){
+		else if(this.isProper() && mention.isProper()){
 			return this.isAcronymTo(mention, sentOfM) || mention.isAcronymTo(this, sent);
 		}
 		else{
@@ -309,6 +338,11 @@ public class Mention implements Serializable{
 		}
 	}
 	public boolean wordsInclude(Sentence sent, Mention mention, Sentence sentOfM){
+		if(this.isPronominal() || mention.isPronominal()){
+			System.err.println("error: word including does not apply for pronominals");
+			System.exit(0);
+		}
+		
 		Set<String> wordsOfThis = new HashSet<String>();
 		for(int i = this.startIndex; i < this.endIndex; ++i){
 			wordsOfThis.add(sent.getLexicon(i).form.toLowerCase());
@@ -324,7 +358,7 @@ public class Mention implements Serializable{
 		if(wordsOfThis.containsAll(wordsExceptStopWords)){
 			return true;
 		}
-		else if(this.mentionType == MentionType.PROPER && mention.mentionType == MentionType.PROPER){
+		else if(this.isProper() && mention.isProper()){
 			return this.isAcronymTo(mention, sentOfM) || mention.isAcronymTo(this, sent);
 		}
 		else{
@@ -333,6 +367,11 @@ public class Mention implements Serializable{
 	}
 	
 	public boolean isAcronymTo(Mention mention, Sentence sent){
+		if(!this.isProper() || !mention.isProper()){
+			System.err.println("error: acronym applies for propers");
+			System.exit(0);
+		}
+		
 		if(this.endIndex - this.startIndex != 1){
 			return false;
 		}
@@ -375,6 +414,11 @@ public class Mention implements Serializable{
 	}
 	
 	public boolean relaxedSpanMatch(Sentence sent, Mention mention, Sentence sentOfM){
+		if(this.isPronominal() || mention.isPronominal()){
+			System.err.println("error: relaxed matching does not apply for pronominals");
+			System.exit(0);
+		}
+		
 		String anaphSpanBeforeHead = this.getRelaxedSpan(sent).toLowerCase();
 		String antecSpanBeforeHead = mention.getRelaxedSpan(sentOfM).toLowerCase();
 		boolean relaxedSpanMatch = anaphSpanBeforeHead.equals(antecSpanBeforeHead) 
@@ -384,6 +428,11 @@ public class Mention implements Serializable{
 	}
 	
 	public boolean exactSpanMatch(Sentence sent, Mention mention, Sentence sentOfM){
+		if(this.isPronominal() || mention.isPronominal()){
+			System.err.println("error: exact matching does not apply for pronominals");
+			System.exit(0);
+		}
+		
 		String anaphSpan = this.getSpan(sent).toLowerCase();
 		String antecSpan = mention.getSpan(sentOfM).toLowerCase();
 		boolean exactSpanMatch = anaphSpan.equals(antecSpan) 
@@ -498,7 +547,7 @@ public class Mention implements Serializable{
 	}
 	
 	private void setNumber(Sentence sent, Dictionaries dict){
-		if(mentionType == MentionType.PRONOMINAL){
+		if(this.isPronominal()){
 			if (dict.pluralPronouns.contains(headString)) {
 				number = Number.PLURAL;
 			}
@@ -509,10 +558,10 @@ public class Mention implements Serializable{
 				number = Number.UNKNOWN;
 			}
 		}
-		else if(mentionType == MentionType.LIST){
+		else if(this.isList()){
 			number = Number.PLURAL;
 		}
-		else if(!headword.ner.equals("O") && mentionType != MentionType.NOMINAL){
+		else if(!headword.ner.equals("O") && !this.isNominative()){
 			if(!(headword.ner.equals("ORGANIZATION") || headword.ner.startsWith("ORG"))){
 				number = Number.SINGULAR;
 			}
@@ -533,7 +582,7 @@ public class Mention implements Serializable{
 			}
 		}
 		
-		if(mentionType != MentionType.PRONOMINAL) {
+		if(!this.isPronominal()) {
 			if(number == Number.UNKNOWN){
 				if(dict.singularWords.contains(headString)){
 					number = Number.SINGULAR;
@@ -596,7 +645,7 @@ public class Mention implements Serializable{
 			gender = genderNumberResult;
 		}
 		
-		if (mentionType == MentionType.PRONOMINAL) {
+		if (this.isPronominal()) {
 			if (dict.malePronouns.contains(headString)) {
 				gender = Gender.MALE;
 			} 
@@ -629,7 +678,7 @@ public class Mention implements Serializable{
 					else if(dict.neutralWords.contains(headString)) {
 						gender = Gender.NEUTRAL;
 					}
-					else if(mentionType == MentionType.PROPER || mentionType == MentionType.NOMINAL){
+					else if(this.isProper() || this.isNominative()){
 						if(animacy == Animacy.INANIMATE){
 							gender = Gender.NEUTRAL;
 						}
@@ -640,7 +689,7 @@ public class Mention implements Serializable{
 	}
 	
 	private void setAnimacy(Sentence sent, Dictionaries dict){
-		if(mentionType == MentionType.PRONOMINAL) {
+		if(this.isPronominal()) {
 			if(dict.animatePronouns.contains(headString)) {
 				animacy = Animacy.ANIMATE;
 			}
@@ -694,7 +743,7 @@ public class Mention implements Serializable{
 			animacy = Animacy.UNKNOWN;
 		}
 		
-		if(mentionType != MentionType.PRONOMINAL) {
+		if(!this.isPronominal()) {
 			// Better heuristics using DekangLin:
 			if(animacy == Animacy.UNKNOWN) {
 				if(dict.animateWords.contains(headString) || dict.animateWords.contains(headword.form)) {
@@ -709,7 +758,7 @@ public class Mention implements Serializable{
 	
 	private void setPerson(Sentence sent, Dictionaries dict){
 		// only do for pronoun
-		if(mentionType != MentionType.PRONOMINAL){
+		if(!this.isPronominal()){
 			person = Person.UNKNOWN;
 			return;
 		}

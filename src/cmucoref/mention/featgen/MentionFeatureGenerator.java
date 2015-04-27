@@ -6,157 +6,129 @@ import cmucoref.model.CorefModel;
 import cmucoref.model.FeatureVector;
 import cmucoref.util.Pair;
 
-import edu.stanford.nlp.dcoref.Dictionaries.MentionType;
-
 public class MentionFeatureGenerator {
 	public MentionFeatureGenerator(){}
 	
 	public void genCoreferentFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, CorefModel model, FeatureVector fv){
 		
 		// anaph is coreferent with previous antec 
-		//mention type features
-		addFeature("ANAPHTYPE=" + anaph.mentionType, "ANTECTYPE=" + antec.mentionType, model, fv);
-		
-		String given = "ANAPHTYPE=" + anaph.mentionType + ", " + "ANTECTYPE=" + antec.mentionType;
-		
-		//distance of sentences features (only apply for prononimals)
-		if(anaph.mentionType == MentionType.PRONOMINAL || antec.mentionType == MentionType.PRONOMINAL){
-			int distOfSent = anaph.getDistOfSent(antec);
-			addFeature("DISTOFSENT=" + distOfSent, given, model, fv);
-			given = "DISTOFSENT=" + distOfSent + ", " + given;
-		}
-		
 		//attribute match features
-		boolean attrMat = genAttrMatchFeatures(anaph, antec, given, model, fv);
-		
-		//head features
-		if((anaph.mentionType == MentionType.NOMINAL || anaph.mentionType == MentionType.PROPER)
-				&& (antec.mentionType == MentionType.NOMINAL || antec.mentionType == MentionType.PROPER)){
-			genStringMatchFeatures(anaph, anaphSent, antec, antecSent, attrMat, model, fv);
-		}
+		genAttrMatchFeatures(anaph, anaphSent, antec, antecSent, model, fv);
 	}
 	
-	public void genAppositiveFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, CorefModel model, FeatureVector fv){
+	public void genSpecialCasesFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, CorefModel model, FeatureVector fv){
 		// anaph is appositive to antec 
-		//mention type features
-		addFeature("ANAPHTYPE=" + anaph.mentionType, "ANTECTYPE=" + antec.mentionType, model, fv);
-				
-		String given = "ANAPHTYPE=" + anaph.mentionType + ", " + "ANTECTYPE=" + antec.mentionType;
-		//distance of sentences features (only apply for prononimals)
-		if(anaph.mentionType == MentionType.PRONOMINAL || antec.mentionType == MentionType.PRONOMINAL){
-			int distOfSent = anaph.getDistOfSent(antec);
-			addFeature("DISTOFSENT=" + distOfSent, given, model, fv);
-			given = "DISTOFSENT=" + distOfSent + ", " + given;
-		}
-		
 		//attribute match features
-		boolean attrMat = genAttrMatchFeatures(anaph, antec, given, model, fv);
-		
-		if((anaph.mentionType == MentionType.NOMINAL || anaph.mentionType == MentionType.PROPER)
-				&& (antec.mentionType == MentionType.NOMINAL || antec.mentionType == MentionType.PROPER)){
-			//given = "ATTRMAT=" + attrMat;// + ", " + "DISTOFSENT=" + distOfSent;
-			given = "ATTRMAT=" + attrMat + ", " + "ANAPHTYPE=" + anaph.mentionType + ", " + "ANTECTYPE=" + antec.mentionType;
-			addFeature("SPMAT=true, HDMAT=true", given, model, fv);
+		String given = null;
+		if(antec.isPronominal()){
+			given = "ANTECTYPE=NOMINAL, COREF";
 		}
+		else{			
+			given= "ANTECTYPE=" + antec.mentionType + ", COREF";
+		}
+		
+		String feat = null;
+		if(anaph.isPronominal()){
+			feat = "ANAPHTYPE=NOMINAL";
+		}
+		else{
+			feat = "ANAPHTYPE=" + anaph.mentionType;
+		}
+		
+		feat = feat + ", " + "GENMAT=true" + ", " + "NUMMAT=true";
+		feat = feat + ", " + "ANIMAT=true";
+		
+		if(antec.isProper() && anaph.isProper()){
+			feat = feat + ", " + "NERMAT=true";
+			
+		}
+		feat = feat + ", " + "SPMAT=true";
+		addFeature(feat, given, model, fv);
 	}
 	
-	public void genPredicativeNominativeFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, CorefModel model, FeatureVector fv){
-		// anaph is predicative nominative to antec 
+	protected void genAttrMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, CorefModel model, FeatureVector fv){
 		//mention type features
-		addFeature("ANAPHTYPE=" + anaph.mentionType, "ANTECTYPE=" + antec.mentionType, model, fv);
-						
-		String given = "ANAPHTYPE=" + anaph.mentionType + ", " + "ANTECTYPE=" + antec.mentionType;
-		//distance of sentences features (only apply for prononimals)
-		if(anaph.mentionType == MentionType.PRONOMINAL || antec.mentionType == MentionType.PRONOMINAL){
+		String feat = "ANAPHTYPE=" + anaph.mentionType;
+		String given = "ANTECTYPE=" + antec.mentionType + ", COREF";
+		
+		//distance of sentences
+		if(anaph.isPronominal() || antec.isPronominal() || !anaph.spanMatch){
 			int distOfSent = anaph.getDistOfSent(antec);
-			addFeature("DISTOFSENT=" + distOfSent, given, model, fv);
-			given = "DISTOFSENT=" + distOfSent + ", " + given;
+			feat = feat + ", " + "DISTOFSENT=" + distOfSent;
 		}
 		
-		//attribute match features
-		boolean attrMat = genAttrMatchFeatures(anaph, antec, given, model, fv);
+//		//distance of mentions (only apply for pronominals)
+//		if(anaph.isPronominal() || antec.isPronominal()){
+//			int distOfMention = anaph.getDistOfMention(antec);
+//			feat = feat + ", " + "DISTOFMENTION=" + distOfMention;
+//		}
 		
-		if((anaph.mentionType == MentionType.NOMINAL || anaph.mentionType == MentionType.PROPER)
-				&& (antec.mentionType == MentionType.NOMINAL || antec.mentionType == MentionType.PROPER)){
-			//given = "ATTRMAT=" + attrMat;// + ", " + "DISTOFSENT=" + distOfSent;
-			given = "ATTRMAT=" + attrMat + ", " + "ANAPHTYPE=" + anaph.mentionType + ", " + "ANTECTYPE=" + antec.mentionType;
-			addFeature("SPMAT=true, HDMAT=true", given, model, fv);
-		}
-	}
-	
-	protected boolean genAttrMatchFeatures(Mention anaph, Mention antec, String given, CorefModel model, FeatureVector fv){
-		boolean allMat = true;
-		String feat;
 		//number match
-		boolean numMat = anaph.numberAgree(antec);
-		if(!numMat){
-			allMat = false;
-		}
-		
+		boolean numMat = anaph.spanMatch ? true : anaph.numberAgree(antec);
+				
 		//gender match
-		boolean genMat = anaph.genderAgree(antec);
-		if(!genMat){
-			allMat = false;
-		}
+		boolean genMat = anaph.spanMatch ? true : anaph.genderAgree(antec);
 		
-		feat = "GENMAT=" + genMat + ", " + "NUMMAT=" + numMat;
+		feat = feat + ", " + "GENMAT=" + genMat + ", " + "NUMMAT=" + numMat;
 		
 		//animacy match (does not apply for pronominal mentions)
-		if(anaph.mentionType != MentionType.PRONOMINAL && antec.mentionType != MentionType.PRONOMINAL){
-			boolean aniMat = anaph.animateAgree(antec);
-			if(!aniMat){
-				allMat = false;
-			}
+		if(!anaph.isPronominal() && !antec.isPronominal()){
+			boolean aniMat = anaph.spanMatch ? true : anaph.animateAgree(antec);
 			feat = feat + ", " + "ANIMAT=" + aniMat;
 		}
 		
 		//person match (only apply for pronominal mentions)
-		if(anaph.mentionType == MentionType.PRONOMINAL && antec.mentionType == MentionType.PRONOMINAL){
+		if(anaph.isPronominal() && antec.isPronominal()){
 			boolean perMat = anaph.personAgree(antec);
-			if(!perMat){
-				allMat = false;
-			}
 			feat = feat + ", " + "PERMAT=" + perMat;
 		}
 		
-		//ner match given gender and animacy match (only apply for proper mentions)
-		if(anaph.mentionType == MentionType.PROPER && antec.mentionType == MentionType.PROPER){
-			boolean nerMat = anaph.NERAgree(antec);
-			if(!nerMat){
-				allMat = false;
-			}
+		//ner match (only apply for proper mentions)
+		if(anaph.isProper() && antec.isProper()){
+			boolean nerMat = anaph.spanMatch ? true : anaph.NERAgree(antec);
 			feat = feat + ", " + "NERMAT=" + nerMat;
 		}
+		
+		//span match features (only apply for nominative and proper mentions)
+		if((anaph.isNominative() || anaph.isProper()) && (antec.isNominative() || antec.isProper())){
+			
+			boolean spanMatch = anaph.spanMatch;
+			boolean headMatch = anaph.spanMatch ? true : antec.headMatch(antecSent, anaph, anaphSent);
+			
+			if(spanMatch){
+				feat = feat + ", " + "SPMAT=true";
+			}
+			else{
+				feat = feat + ", " + "SPMAT=false" + ", " + "HDMAT=" + headMatch;
+			}
+		}
 		addFeature(feat, given, model, fv);
-		
-		return allMat;
-	}
-	
-	protected void genStringMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, boolean attrMat, CorefModel model, FeatureVector fv){
-		boolean wordIncluded = antec.wordsInclude(antecSent, anaph, anaphSent);
-		boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent);
-		boolean relaxMatch = anaph.relaxedSpanMatch(anaphSent, antec, antecSent);
-		
-		String hdMat = Boolean.toString(headMatch);
-		String spMat = Boolean.toString(wordIncluded || relaxMatch);
-		
-		//add head match and span match feature
-		//String given = "ATTRMAT=" + Boolean.toString(attrMat);
-		String given = "ATTRMAT=" + attrMat + ", " + "ANAPHTYPE=" + anaph.mentionType + ", " + "ANTECTYPE=" + antec.mentionType;
-		addFeature("SPMAT=" + spMat + ", " + "HDMAT=" + hdMat, given, model, fv);
 	}
 	
 	public void genNewClusterFeatures(Mention anaph, Sentence anaphSent, CorefModel model, FeatureVector fv){
 		// anaph starts a new cluster
+		//type features
 		String feat = "TYPE=" + anaph.mentionType;
+		String given = "NEWCLUSTER";
+		
 		//attrMat within 5 sentences (only apply for pronominals)
-		if(anaph.mentionType == MentionType.PRONOMINAL){
-			feat = feat + ", " + "LOCATTRMAT=" + anaph.localAttrMatch;
+		if(anaph.isPronominal()){
+			feat = feat + ", " 
+					+ "LOCATTRMATOFSENT=" + anaph.localAttrMatchOfSent + ", " 
+//					+ "LOCATTRMATOFMENTION=" + anaph.localAttrMatchOfMention + ", " 
+					+ "LOCATTRMATTYPE=" + anaph.localAttrMatchType;
 		}
-		else{
-			feat = feat + ", " + "HDMATPOS=" + anaph.closestSpanMatchPos + ", " + "SPMAT=" + anaph.closestSpanMatch;
+		else if(anaph.isNominative() || anaph.isProper()){
+			if(anaph.spanMatch){
+				feat = feat  + ", " + "SPMAT=true" + ", " 
+						+ "SPMATPOS=" + anaph.closestSpanMatchPos + ", " 
+						+ "SPMATTYPE=" + anaph.closestSpanMatchType;
+			}
+			else{
+				feat = feat + ", " + "SPMAT=false";
+			}
 		}
-		addFeature(feat, "NEWCLUSTER", model, fv);
+		addFeature(feat, given, model, fv);
 	}
 	
 	protected final void addFeature(String feat, String given, CorefModel model, FeatureVector fv){

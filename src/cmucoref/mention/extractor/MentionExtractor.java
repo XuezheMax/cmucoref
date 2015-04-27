@@ -19,7 +19,6 @@ import java.util.Set;
 import java.util.Properties;
 
 import edu.stanford.nlp.dcoref.Dictionaries;
-import edu.stanford.nlp.dcoref.Dictionaries.MentionType;
 
 public abstract class MentionExtractor {
 	
@@ -76,6 +75,12 @@ public abstract class MentionExtractor {
 			allMentions.addAll(mentions);
 		}
 		
+		//re-assign mention ID;
+		for(int i = 0; i < allMentions.size(); ++i){
+			Mention mention = allMentions.get(i);
+			mention.mentionID = i;
+		}
+		
 		if(options.useSpanMatch()){
 			findSpanMatchRelation(doc, allMentions);
 		}
@@ -86,32 +91,28 @@ public abstract class MentionExtractor {
 	protected void findSpanMatchRelation(Document doc, List<Mention> allMentions){
 		for(int i = 1; i < allMentions.size(); ++i){
 			Mention anaph = allMentions.get(i);
-			if(anaph.mentionType == MentionType.PRONOMINAL){
+			if(anaph.isPronominal()){
 				for(int j = i - 1; j >=0; --j){
 					Mention antec = allMentions.get(j);
-					int distOfSent = anaph.getDistOfSent(antec);
-					if(distOfSent > 0){
+					if(anaph.attrAgree(antec)){
+						anaph.localAttrMatchOfSent = anaph.getDistOfSent(antec);
+						anaph.localAttrMatchOfMention = anaph.getDistOfMention(antec);
+						anaph.localAttrMatchType = antec.mentionType;
 						break;
-					}
-					else{
-						if(anaph.attrAgree(antec)){
-							anaph.localAttrMatch = true;
-							break;
-						}
 					}
 				}
 			}
-			else if(anaph.mentionType == MentionType.NOMINAL || anaph.mentionType == MentionType.PROPER){				
+			else if(anaph.isNominative() || anaph.isProper()){				
 				for(int j = i - 1; j >=0; --j){
 					Mention antec = allMentions.get(j);
-					if(antec.mentionType != MentionType.NOMINAL && antec.mentionType != MentionType.PROPER){
+					if(!antec.isNominative() && !antec.isProper()){
 						continue;
 					}
 					if(anaph.cover(antec) || antec.cover(anaph)){
 						continue;
 					}
 					
-					if(anaph.headMatch(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID))){
+					if(antec.spanMatch(doc.getSentence(antec.sentID), anaph, doc.getSentence(anaph.sentID))){
 						anaph.addSpanMatch(antec, doc);
 						break;
 					}

@@ -29,7 +29,7 @@ public class Options implements Serializable{
 								THREAD_NUM = "thread-num",
 								DEFAULT_THREAD_NUM = "1",
 								PARAMETER_INITIALIZER = "parameter-initializer",
-								DEFAULT_PARAMETER_INITIALIZER = cmucoref.model.params.PriorKnowledgeInitializer.class.getName(),
+								DEFAULT_PARAMETER_INITIALIZER = cmucoref.model.params.UniformInitializer.class.getName(),
 								MENTION_EXTRACTOR = "mention-extractor",
 								DEFAULT_MENTION_EXTRACTOR_CLASS = cmucoref.mention.extractor.StanfordMentionExtractor.class.getName(),
 								USE_SPAN_MATCH = "use-span-match",
@@ -61,7 +61,7 @@ public class Options implements Serializable{
 	
 	private gnu.trove.map.hash.THashMap<String, String> argToValueMap = null;
 	private HashSet<String> valid_opt_set = null;
-	private final int maxiter = 7;
+	private final int maxiter = 100;
 	private final double stop_eta = 0.000001;
 	private final String train_tmp = "tmp/train.tmp";
 	
