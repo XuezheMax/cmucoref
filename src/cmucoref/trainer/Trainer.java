@@ -11,7 +11,7 @@ import cmucoref.model.CorefModel;
 public abstract class Trainer {
 	public Trainer(){}
 	
-	public abstract void train(CorefManager manager, Decoder decoder, CorefModel model, String trainfile, String logfile, String modelfile) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, CreatingInstanceException;
+	public abstract void train(CorefManager manager, Decoder decoder, CorefModel model, String trainfile, String devfile, String logfile, String modelfile) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, CreatingInstanceException;
 	
 	protected void saveModel(CorefModel model, String file) throws IOException{
 		ObjectWriter out = new ObjectWriter(file);

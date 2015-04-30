@@ -29,7 +29,8 @@ public class CorefSystem {
 			mentionExtractor.createDict(options.getPropFile());
 			CorefManager manager = new CorefManager(mentionExtractor);
 			Decoder decoder = (Decoder) Class.forName(options.getDecoder()).newInstance();
-			trainer.train(manager, decoder, model, options.getTrainingFile(), options.getLogFile(), options.getModelFile());
+			trainer.train(manager, decoder, model, options.getTrainingFile(), options.getDevFile(),
+					options.getLogFile(), options.getModelFile());
 		}
 		else if(options.getMode().equals("test")){
 			// TODO

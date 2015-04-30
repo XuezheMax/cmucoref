@@ -35,10 +35,7 @@ public class Test {
 	 * @throws IOException 
 	 * @throws MentionException 
 	 */
-	public static void main(String[] args) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, MentionException {
-		System.getProperties().list(System.out);
-		System.exit(0);
-		
+	public static void main(String[] args) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, MentionException {		
 		String inputfile = "conll2012.eng.dev.auto.anno";
 		String outputfile = "conll2012.eng.dev.auto-true.conll";
 		PrintStream printer = new PrintStream("mention-conll.txt");

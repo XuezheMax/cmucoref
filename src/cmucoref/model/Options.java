@@ -61,7 +61,8 @@ public class Options implements Serializable{
 								LOGFILE = "log-file",
 								MODELFILE = "model-file",
 								PROPERTYFILE = "property-file",
-								DEFAULT_PROPERTY_FILE = "lib/default.properties";
+								DEFAULT_PROPERTY_FILE = "lib/default.properties",
+								CONLL_SCORER = "conll-scorer";
 	
 	private gnu.trove.map.hash.THashMap<String, String> argToValueMap = null;
 	private HashSet<String> valid_opt_set = null;
@@ -119,6 +120,8 @@ public class Options implements Serializable{
 		//post-processiong
 		valid_opt_set.add(POST_PROCESSING);
 		argToValueMap.put(POST_PROCESSING, DEFAULT_POST_PROCESSING);
+		//conll scorer
+		valid_opt_set.add(CONLL_SCORER);
 		//file name
 		valid_opt_set.add(TRAININGFILE);
 		valid_opt_set.add(TESTFILE);
@@ -295,6 +298,10 @@ public class Options implements Serializable{
 	
 	public String getTrainTmp(){
 		return train_tmp;
+	}
+	
+	public String getCoNLLScorer(){
+		return getArgValue(CONLL_SCORER);
 	}
 	
 	public String getTrainingFile(){

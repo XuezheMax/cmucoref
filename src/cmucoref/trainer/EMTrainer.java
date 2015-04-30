@@ -1,9 +1,7 @@
 package cmucoref.trainer;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
@@ -22,10 +20,13 @@ import cmucoref.mention.Mention;
 import cmucoref.model.CorefModel;
 import cmucoref.model.FeatureVector;
 
+import edu.stanford.nlp.io.StringOutputStream;
+import edu.stanford.nlp.util.SystemUtils;
+
 public class EMTrainer extends Trainer{
 
 	@Override
-	public void train(CorefManager manager, Decoder decoder, CorefModel model, String trainfile, String logfile, String modelfile) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, CreatingInstanceException {
+	public void train(CorefManager manager, Decoder decoder, CorefModel model, String trainfile, String devfile, String logfile, String modelfile) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, CreatingInstanceException {
 		int[] nums = manager.createDocInstance(trainfile, model.options.getTrainTmp(), model);
 		model.createParameters();
 		int threadNum = model.threadNum();
@@ -40,7 +41,7 @@ public class EMTrainer extends Trainer{
 		int nsize = model.featureSize();
 		int gsize = model.givenSize();
 		
-		//PrintWriter logWriter = new PrintWriter(new OutputStreamWriter(new FileOutputStream(logfile)));
+		PrintWriter logWriter = new PrintWriter(new OutputStreamWriter(new FileOutputStream(logfile)));
 		
 		for(int itr = 0; itr < maxIter; ++itr){
 			System.out.print("iter=" + itr + "[   ");
@@ -85,17 +86,17 @@ public class EMTrainer extends Trainer{
 			System.out.println(EMThread.totalTrainInst + "|time=" + (System.currentTimeMillis() /1000 - clock) + "s." + "]");
 			model.displayAlphabet(new PrintStream(new File("feat" + (itr + 1) + ".txt")));
 			
-			BufferedWriter logWriter = new BufferedWriter(new FileWriter(logfile, true));
-			logWriter.write("--------------------------------------------------------------------------");
-			logWriter.write("Iter: " + (itr + 1));
-			logWriter.newLine();
-			logWriter.close();
+			logWriter.println("Iter: " + (itr + 1));
+			evaluateCurrentAcc(manager, decoder, model, devfile, logWriter);
+			logWriter.println("--------------------------------------------------------------------------");
+			logWriter.flush();
 		}
 		
-		//logWriter.close();
+		logWriter.close();
 	}
 	
-	protected void evaluateCurrentAcc(CorefManager manager, Decoder decoder, CorefModel model, String devfile, String logfile) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException{
+	protected void evaluateCurrentAcc(CorefManager manager, Decoder decoder, CorefModel model, 
+			String devfile, PrintWriter logWriter) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException{
 		DocumentReader docReader = DocumentReader.createDocumentReader(model.options.getDocReader());
 		DocumentWriter docWriter = DocumentWriter.createDocumentWriter(CoNLLDocumentWriter.class.getName());
 		
@@ -114,6 +115,28 @@ public class EMTrainer extends Trainer{
 		docReader.close();
 		docWriter.close();
 		
+		String scorer = model.options.getCoNLLScorer();
+		String summary = getConllEvalSummary(scorer, "tmp/conll2012.eng.dev.auto.conll", "tmp/result.tmp");
+		logWriter.println(summary);
+	}
+	
+	protected String getConllEvalSummary(String conllMentionEvalScript,
+		      String goldFile, String predictFile) throws IOException {
+		ProcessBuilder process = new ProcessBuilder(conllMentionEvalScript, "all", goldFile, predictFile, "none");
+	    StringOutputStream errSos = new StringOutputStream();
+	    StringOutputStream outSos = new StringOutputStream();
+	    PrintWriter out = new PrintWriter(outSos);
+	    PrintWriter err = new PrintWriter(errSos);
+	    SystemUtils.run(process, out, err);
+	    out.close();
+	    err.close();
+	    String summary = outSos.toString();
+	    String errStr = errSos.toString();
+	    if ( ! errStr.isEmpty()) {
+	      summary += "\nERROR: " + errStr;
+	    }
+	    
+	    return summary;
 	}
 }
 
