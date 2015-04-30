@@ -24,5 +24,5 @@ public abstract class DocumentWriter {
 		writer.close();
 	}
 	
-	public abstract void writeDocument(Document doc, List<List<Mention>> mentionList) throws IOException;
+	public abstract void writeDocument(Document doc, boolean writeCorefLabel) throws IOException;
 }

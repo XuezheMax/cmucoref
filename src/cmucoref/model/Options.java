@@ -24,6 +24,8 @@ public class Options implements Serializable{
 								DEFAULT_DOC_WRITER_CLASS = cmucoref.io.AnnotatedDocumentWriter.class.getName(),
 								TRAINER = "trainer",
 								DEFAULT_TRAINER_CLASS = cmucoref.trainer.EMTrainer.class.getName(),
+								DECODER = "decoder",
+								DEFAULT_DECODER = cmucoref.decoder.Decoder.class.getName(),
 								MODE = "mode",
 								DEFAULT_MODE = "test",
 								THREAD_NUM = "thread-num",
@@ -48,6 +50,8 @@ public class Options implements Serializable{
 								DEFAULT_RELATIVEPRONOUN_EXTRACTOR = cmucoref.mention.extractor.relationextractor.RelativePronounRelationExtractor.class.getName(),
 								CREATE_TRAININGTMP = "create-tmp",
 								DEFAULT_CREATE_TRAININGTMP = Boolean.FALSE.toString(),
+								POST_PROCESSING = "post-processing",
+								DEFAULT_POST_PROCESSING = Boolean.FALSE.toString(),
 								CONFIGURATION = "config",
 								TRAININGFILE = "train-file",
 								TESTFILE = "test-file",
@@ -83,6 +87,9 @@ public class Options implements Serializable{
 		//trainer
 		valid_opt_set.add(TRAINER);
 		argToValueMap.put(TRAINER, DEFAULT_TRAINER_CLASS);
+		//decoder
+		valid_opt_set.add(DECODER);
+		argToValueMap.put(DECODER, DEFAULT_DECODER);
 		//parameter initializer
 		valid_opt_set.add(PARAMETER_INITIALIZER);
 		argToValueMap.put(PARAMETER_INITIALIZER, DEFAULT_PARAMETER_INITIALIZER);
@@ -109,6 +116,9 @@ public class Options implements Serializable{
 		//training tmp file
 		valid_opt_set.add(CREATE_TRAININGTMP);
 		argToValueMap.put(CREATE_TRAININGTMP, DEFAULT_CREATE_TRAININGTMP);
+		//post-processiong
+		valid_opt_set.add(POST_PROCESSING);
+		argToValueMap.put(POST_PROCESSING, DEFAULT_POST_PROCESSING);
 		//file name
 		valid_opt_set.add(TRAININGFILE);
 		valid_opt_set.add(TESTFILE);
@@ -227,6 +237,10 @@ public class Options implements Serializable{
 		return getArgValue(TRAINER);
 	}
 	
+	public String getDecoder(){
+		return getArgValue(DECODER);
+	}
+	
 	public String getParamInitializer(){
 		return getArgValue(PARAMETER_INITIALIZER);
 	}
@@ -245,6 +259,10 @@ public class Options implements Serializable{
 	
 	public boolean extractMentionRelation(){
 		return Boolean.parseBoolean(getArgValue(EXTRACT_MENTION_RELATION));
+	}
+	
+	public boolean postProcessing(){
+		return Boolean.parseBoolean(getArgValue(POST_PROCESSING));
 	}
 	
 	public String getListMemberRelationExtractor(){

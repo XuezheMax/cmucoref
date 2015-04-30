@@ -111,15 +111,15 @@ public class CoNLLDocumentReader extends DocumentReader{
 		
 		Lexicon[] lexicons = new Lexicon[length + 1];
 		lexicons[0] = new Lexicon(0, "<ROOT-FORM>", "<ROOT-LEMMA>", "<ROOT-CPOS>", "<ROOT-POS>", "<ROOT-NER>",
-				-1, "<no-type>", -1, "<no-type>");
+				-1, "<no-type>", -1, "<no-type>", "-");
 		
 		int i = 1;
 		for(String[] info : lineList){
 			if(readCorefLabel){
-				lexicons[i] = new Lexicon(i++, info[3], null, "_", null, null, 0, null, 0, "erased", info[14]);
+				lexicons[i] = new Lexicon(i++, info[3], null, "_", null, null, 0, null, 0, "erased", info[info.length - 1]);
 			}
 			else{
-				lexicons[i] = new Lexicon(i++, info[3], null, "_", null, null, 0, null, 0, "erased");
+				lexicons[i] = new Lexicon(i++, info[3], null, "_", null, null, 0, null, 0, "erased", "-");
 			}
 		}
 		return new Sentence(lexicons, null, id);

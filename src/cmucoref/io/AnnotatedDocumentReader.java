@@ -64,7 +64,7 @@ public class AnnotatedDocumentReader extends DocumentReader{
 		
 		Lexicon[] lexicons = new Lexicon[length + 1];
 		lexicons[0] = new Lexicon(0, "<ROOT-FORM>", "<ROOT-LEMMA>", "<ROOT-CPOS>", "<ROOT-POS>", "<ROOT-NER>",
-				-1, "<no-type>", -1, "<no-type>");
+				-1, "<no-type>", -1, "<no-type>", "-");
 		
 		int i = 1;
 		for(String[] info : lineList){
@@ -74,7 +74,7 @@ public class AnnotatedDocumentReader extends DocumentReader{
 			}
 			else{
 				lexicons[i] = new Lexicon(i++, info[1], info[2], info[3], info[4], info[9], 
-						Integer.parseInt(info[5]), info[6], Integer.parseInt(info[7]), info[8]);
+						Integer.parseInt(info[5]), info[6], Integer.parseInt(info[7]), info[8], "-");
 			}
 		}
 		

@@ -5,7 +5,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
-public class Pair<T1, T2> implements Serializable{
+public class Pair<T1, T2> implements Comparable<Pair<T1,T2>>, Serializable{
 	/**
 	 * 
 	 */
@@ -57,5 +57,26 @@ public class Pair<T1, T2> implements Serializable{
 	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException{
 		first = (T1) in.readObject();
 		second = (T2) in.readObject();
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public int compareTo(Pair<T1, T2> another) {
+		if (first instanceof Comparable) {
+			int comp = ((Comparable<T1>) first).compareTo(another.first);
+			if (comp != 0) {
+				return comp;
+			}
+		}
+
+		if (second instanceof Comparable) {
+			return ((Comparable<T2>) second).compareTo(another.second);
+		}
+
+		if ((!(first instanceof Comparable)) && (!(second instanceof Comparable))) {
+			throw new AssertionError("Neither element of pair comparable");
+		}
+
+		return 0;
 	}
 }

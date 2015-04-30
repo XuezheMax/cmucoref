@@ -21,7 +21,7 @@ public class CoNLL2AnnotatedDocumentConverter {
 		
 		Document doc = docReader.getNextDocument(true);
 		while(doc != null){
-			docWriter.writeDocument(doc, null);
+			docWriter.writeDocument(doc, true);
 			doc = docReader.getNextDocument(true);
 		}
 		

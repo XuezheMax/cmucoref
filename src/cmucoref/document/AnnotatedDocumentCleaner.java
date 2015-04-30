@@ -87,7 +87,7 @@ public class AnnotatedDocumentCleaner {
 				}
 				
 				System.out.println(doc.getFileName() + " docId " + doc.getDocId() + ": accepted");
-				docWriter.writeDocument(doc, null);
+				docWriter.writeDocument(doc, false);
 				doc = docReader.getNextDocument(false);
 			}
 			docReader.close();

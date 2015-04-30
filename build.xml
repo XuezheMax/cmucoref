@@ -6,6 +6,7 @@
                      <include name="trove.jar"/>
                      <include name="stanford-corenlp-3.4.jar"/>
                      <include name="stanford-corenlp-3.4-models.jar"/>
+                     <include name="coref-scorer.jar"/>
                  </fileset>
              </classpath>
          </javac>

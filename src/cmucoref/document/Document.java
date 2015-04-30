@@ -1,6 +1,14 @@
 package cmucoref.document;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Stack;
+
+import cmucoref.exception.MentionException;
+import cmucoref.mention.Mention;
+import cmucoref.util.Pair;
 
 public class Document {
 	private ArrayList<Sentence> sentences = null;
@@ -51,5 +59,152 @@ public class Document {
 	
 	public void setDocId(int docId){
 		this.docId = docId;
+	}
+	
+	public void assignCorefClustersToDocument(List<List<Mention>> mentionList, boolean postProcessing) {
+		int i = 0;
+		for(List<Mention> mentions : mentionList){
+			Sentence sent = sentences.get(i);
+			for(Lexicon lex : sent.getLexicons()){
+				lex.corefLabel = "-";
+			}
+			
+			Collections.sort(mentions, Mention.postTreeOrderComparator);
+			for(Mention mention : mentions){
+				if(mention.corefCluster == null){
+					continue;
+				}
+				if(postProcessing 
+						&& (mention.isSingleton() 
+								|| (mention.apposTo != null && mention.corefTo(mention.apposTo)) 
+								|| mention.predNomiTo != null && mention.corefTo(mention.predNomiTo))){
+					continue;
+				}
+				
+				int clusterID = mention.corefCluster.clusterID;
+				int startIndex = mention.startIndex;
+				int endIndex = mention.endIndex - 1;
+				if(startIndex == endIndex){
+					Lexicon lexicon = sent.getLexicon(startIndex);
+					if(lexicon.corefLabel.equals("-")){
+						lexicon.corefLabel = "(" + clusterID + ")";
+					}
+					else{
+						System.err.println("order error");
+						System.exit(0);
+					}
+				}
+				else{
+					Lexicon startLex = sent.getLexicon(startIndex);
+					Lexicon endLex = sent.getLexicon(endIndex);
+					if(startLex.corefLabel.equals("-")){
+						startLex.corefLabel = "(" + clusterID;
+					}
+					else{
+						startLex.corefLabel = "(" + clusterID + "|" + startLex.corefLabel;
+					}
+					
+					if(endLex.corefLabel.equals("-")){
+						endLex.corefLabel = clusterID + ")";
+					}
+					else{
+						endLex.corefLabel = endLex.corefLabel + "|" + clusterID + ")";
+					}
+				}
+			}
+			i++;
+		}
+	}
+	
+	public void getCorefClustersFromDocument(List<List<Mention>> mentionList) throws MentionException{
+		HashMap<Integer, Mention> clusterIDMap = new HashMap<Integer, Mention>();
+		int i = 0;
+		for(List<Mention> mentions : mentionList){
+			HashMap<String, Mention> indexMap = new HashMap<String, Mention>();
+			for(Mention mention : mentions){
+				indexMap.put(mention.startIndex + " " + mention.endIndex, mention);
+			}
+			
+			Stack<Pair<Integer, Integer>> clusterStack = new Stack<Pair<Integer, Integer>>();
+			Sentence sent = sentences.get(i);
+			for(Lexicon lex : sent.getLexicons()){
+				if(lex.corefLabel.equals("-")){
+					continue;
+				}
+				
+				String[] tokens = lex.corefLabel.split("\\|");
+				ArrayList<Pair<Integer, Integer>> waitList = new ArrayList<Pair<Integer, Integer>>();
+				for(String token : tokens){
+					if(token.startsWith("(")){
+						if(token.endsWith(")")){
+							int clusterId = Integer.parseInt(token.substring(1, token.length() - 1));
+							Mention current = indexMap.get(lex.id + " " + (lex.id + 1));
+							if(current == null){
+								continue;
+							}
+							Mention antec = clusterIDMap.get(clusterId);
+							if(antec == null){
+								current.setRepres();
+							}
+							else{
+								current.setAntec(antec);
+							}
+							clusterIDMap.put(clusterId, current);
+						}
+						else{
+							int clusterId = Integer.parseInt(token.substring(1));
+							clusterStack.push(new Pair<Integer, Integer>(lex.id, clusterId));
+						}
+					}
+					else if(token.endsWith(")")){
+						int clusterId = Integer.parseInt(token.substring(0, token.length() - 1));
+						Pair<Integer, Integer> pair = null;
+						for(Pair<Integer, Integer> pp : waitList){
+							if(pp.second == clusterId){
+								pair = pp;
+								break;
+							}
+						}
+						if(pair != null){
+							waitList.remove(pair);
+						}
+						else{
+							pair = clusterStack.pop();
+							while(pair.second != clusterId){
+								waitList.add(pair);
+								pair = clusterStack.pop();
+							}
+						}
+						
+						pair.second = lex.id + 1;
+						Mention current = indexMap.get(pair.first + " " + pair.second);
+						if(current == null){
+							continue;
+						}
+						Mention antec = clusterIDMap.get(clusterId);
+						if(antec == null){
+							current.setRepres();
+						}
+						else{
+							current.setAntec(antec);
+						}
+						clusterIDMap.put(clusterId, current);
+					}
+					else{
+						throw new MentionException("coreference label error: " + token+ "\n"
+								+ this.getFileName() + " " + "part: " + this.docId + " sentId: " + i);
+					}
+				}
+				for(int j = waitList.size() - 1; j >= 0; --j){
+					clusterStack.push(waitList.get(j));
+				}
+			}
+			
+			if(!clusterStack.isEmpty()){
+				throw new MentionException("stack is not empty");
+			}
+			
+			i++;
+		}
 	}
 }

@@ -6,6 +6,12 @@ import cmucoref.model.CorefModel;
 import cmucoref.model.FeatureVector;
 import cmucoref.util.Pair;
 
+/**
+ * 
+ * @author Max
+ *
+ */
+
 public class MentionFeatureGenerator {
 	public MentionFeatureGenerator(){}
 	

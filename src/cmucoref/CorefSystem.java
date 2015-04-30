@@ -2,6 +2,7 @@ package cmucoref;
 
 import java.io.IOException;
 
+import cmucoref.decoder.Decoder;
 import cmucoref.exception.CreatingInstanceException;
 import cmucoref.manager.CorefManager;
 import cmucoref.mention.extractor.MentionExtractor;
@@ -27,7 +28,8 @@ public class CorefSystem {
 			MentionExtractor mentionExtractor = (MentionExtractor) Class.forName(options.getMentionExtractor()).newInstance();
 			mentionExtractor.createDict(options.getPropFile());
 			CorefManager manager = new CorefManager(mentionExtractor);
-			trainer.train(manager, model, options.getTrainingFile(), options.getLogFile(), options.getModelFile());
+			Decoder decoder = (Decoder) Class.forName(options.getDecoder()).newInstance();
+			trainer.train(manager, decoder, model, options.getTrainingFile(), options.getLogFile(), options.getModelFile());
 		}
 		else if(options.getMode().equals("test")){
 			// TODO

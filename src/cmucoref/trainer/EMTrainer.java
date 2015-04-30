@@ -1,22 +1,31 @@
 package cmucoref.trainer;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.util.List;
 
+import cmucoref.decoder.Decoder;
+import cmucoref.document.Document;
 import cmucoref.exception.CreatingInstanceException;
+import cmucoref.io.CoNLLDocumentWriter;
+import cmucoref.io.DocumentReader;
+import cmucoref.io.DocumentWriter;
 import cmucoref.io.ObjectReader;
 import cmucoref.manager.CorefManager;
+import cmucoref.mention.Mention;
 import cmucoref.model.CorefModel;
 import cmucoref.model.FeatureVector;
 
 public class EMTrainer extends Trainer{
 
 	@Override
-	public void train(CorefManager manager, CorefModel model, String trainfile, String logfile, String modelfile) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, CreatingInstanceException {
+	public void train(CorefManager manager, Decoder decoder, CorefModel model, String trainfile, String logfile, String modelfile) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, CreatingInstanceException {
 		int[] nums = manager.createDocInstance(trainfile, model.options.getTrainTmp(), model);
 		model.createParameters();
 		int threadNum = model.threadNum();
@@ -30,10 +39,10 @@ public class EMTrainer extends Trainer{
 		String traintmp = model.options.getTrainTmp();
 		int nsize = model.featureSize();
 		int gsize = model.givenSize();
-		PrintWriter logWriter = new PrintWriter(new OutputStreamWriter(new FileOutputStream(logfile)));
+		
+		//PrintWriter logWriter = new PrintWriter(new OutputStreamWriter(new FileOutputStream(logfile)));
 		
 		for(int itr = 0; itr < maxIter; ++itr){
-			model.displayAlphabet(new PrintStream(new File("feat" + itr + ".txt")));
 			System.out.print("iter=" + itr + "[   ");
 			System.out.flush();
 			long clock = System.currentTimeMillis() / 1000;
@@ -74,9 +83,37 @@ public class EMTrainer extends Trainer{
 				model.update(j, val);
 			}
 			System.out.println(EMThread.totalTrainInst + "|time=" + (System.currentTimeMillis() /1000 - clock) + "s." + "]");
+			model.displayAlphabet(new PrintStream(new File("feat" + (itr + 1) + ".txt")));
+			
+			BufferedWriter logWriter = new BufferedWriter(new FileWriter(logfile, true));
+			logWriter.write("--------------------------------------------------------------------------");
+			logWriter.write("Iter: " + (itr + 1));
+			logWriter.newLine();
+			logWriter.close();
 		}
 		
-		logWriter.close();
+		//logWriter.close();
+	}
+	
+	protected void evaluateCurrentAcc(CorefManager manager, Decoder decoder, CorefModel model, String devfile, String logfile) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException{
+		DocumentReader docReader = DocumentReader.createDocumentReader(model.options.getDocReader());
+		DocumentWriter docWriter = DocumentWriter.createDocumentWriter(CoNLLDocumentWriter.class.getName());
+		
+		docReader.startReading(devfile);
+		String tempfile = "tmp/result.tmp";
+		docWriter.startWriting(tempfile);
+		
+		Document doc = docReader.getNextDocument(false);
+		while(doc != null){
+			List<List<Mention>> mentionList = decoder.decode(doc, manager, model);
+			doc.assignCorefClustersToDocument(mentionList, model.options.postProcessing());
+			docWriter.writeDocument(doc, true);
+			
+			doc = docReader.getNextDocument(false);
+		}
+		docReader.close();
+		docWriter.close();
+		
 	}
 }
 

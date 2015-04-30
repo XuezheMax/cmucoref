@@ -18,8 +18,8 @@ import cmucoref.util.Pair;
 
 public class CorefManager {
 	
-	MentionExtractor mentionExtractor = null;
-	MentionFeatureGenerator mentionFeatGen = null;
+	public MentionExtractor mentionExtractor = null;
+	public MentionFeatureGenerator mentionFeatGen = null;
 	
 	public CorefManager(MentionExtractor mentionExtractor){
 		this.mentionExtractor = mentionExtractor;

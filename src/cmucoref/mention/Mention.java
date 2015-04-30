@@ -62,8 +62,9 @@ public class Mention implements Serializable{
 	
 	public int sentID = -1;
 	
-	public int originalRef = -1;
-	public int corefClusterID = -1;
+	public Mention antecedent = null;
+	public MentionCluster corefCluster = null;
+	public boolean isRepresentative = false;
 	
 	public Mention(){
 		
@@ -73,12 +74,18 @@ public class Mention implements Serializable{
 		this.mentionID = mentionID;
 		this.startIndex = startIndex;
 		this.endIndex = endIndex;
+		
 		closestSpanMatchPos = -1;
 		closestSpanMatchType = null;
 		spanMatch = false;
+		
 		localAttrMatchOfSent = -1;
 		localAttrMatchOfMention = -1;
 		localAttrMatchType = null;
+		
+		antecedent = null;
+		this.corefCluster = null;
+		this.isRepresentative = false;
 	}
 	
 	public Mention(int mentionID, int startIndex, int endIndex, int headIndex, int sentID){
@@ -107,6 +114,27 @@ public class Mention implements Serializable{
 		else{
 			return false;
 		}
+	}
+	
+	public void setRepres(){
+		this.isRepresentative = true;
+		this.corefCluster = new MentionCluster(this);
+	}
+	
+	public void setAntec(Mention antec){
+		this.antecedent = antec;
+		this.corefCluster = antec.corefCluster;
+		this.corefCluster.add(this);
+	}
+	
+	public boolean isSingleton(){
+		return this.corefCluster == null || this.corefCluster.isSingleton();
+	}
+	
+	public boolean corefTo(Mention mention){
+		return this.corefCluster != null 
+				&& mention.corefCluster != null 
+				&& this.corefCluster.clusterID == mention.corefCluster.clusterID;
 	}
 	
 	public boolean isNominative(){
@@ -842,6 +870,7 @@ public class Mention implements Serializable{
 		printer.println("#Begin Mention " + this.mentionID);
 		printer.println("sent ID: " + this.sentID);
 		printer.println("mention ID: " + this.mentionID);
+		printer.println("cluster ID: " + (this.corefCluster == null ? -1 : this.corefCluster.clusterID));
 		printer.println(this.startIndex + " " + this.endIndex + " " + this.getSpan(sent));
 		printer.println("headIndex: " + this.headIndex);
 		printer.println("headString: " + this.headString);
