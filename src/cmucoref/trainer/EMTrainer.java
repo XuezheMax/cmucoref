@@ -11,7 +11,7 @@ import java.util.List;
 import cmucoref.decoder.Decoder;
 import cmucoref.document.Document;
 import cmucoref.exception.CreatingInstanceException;
-import cmucoref.io.CoNLLDocumentWriter;
+import cmucoref.io.CoNLLXDocumentWriter;
 import cmucoref.io.DocumentReader;
 import cmucoref.io.DocumentWriter;
 import cmucoref.io.ObjectReader;
@@ -93,12 +93,16 @@ public class EMTrainer extends Trainer{
 		}
 		
 		logWriter.close();
+		System.out.print("Saving Model...");
+		long clock = System.currentTimeMillis() / 1000;
+		saveModel(model, modelfile);
+		System.out.println("Done. Took: " + (System.currentTimeMillis() / 1000 - clock) + "s.");
 	}
 	
 	protected void evaluateCurrentAcc(CorefManager manager, Decoder decoder, CorefModel model, 
 			String devfile, PrintWriter logWriter) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException{
 		DocumentReader docReader = DocumentReader.createDocumentReader(model.options.getDocReader());
-		DocumentWriter docWriter = DocumentWriter.createDocumentWriter(CoNLLDocumentWriter.class.getName());
+		DocumentWriter docWriter = DocumentWriter.createDocumentWriter(CoNLLXDocumentWriter.class.getName());
 		
 		docReader.startReading(devfile);
 		String tempfile = "tmp/result.tmp";
@@ -116,7 +120,7 @@ public class EMTrainer extends Trainer{
 		docWriter.close();
 		
 		String scorer = model.options.getCoNLLScorer();
-		String summary = getConllEvalSummary(scorer, "tmp/conll2012.eng.dev.auto.conll", "tmp/result.tmp");
+		String summary = getConllEvalSummary(scorer, devfile, "tmp/result.tmp");
 		logWriter.println(summary);
 	}
 	

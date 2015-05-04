@@ -37,7 +37,7 @@ import edu.stanford.nlp.util.Filter;
 import edu.stanford.nlp.util.Filters;
 import edu.stanford.nlp.util.Generics;
 
-public class CoNLLDocumentReader extends DocumentReader{
+public class CoNLLRawTextDocumentReader extends DocumentReader{
 
 	private WhitespaceTokenizerAnnotator tokenAnnotator = null;
 	private POSTaggerAnnotator posAnnotator = null;
@@ -45,7 +45,7 @@ public class CoNLLDocumentReader extends DocumentReader{
 	NERCombinerAnnotator nerAnnotator = null;
 	ParserAnnotator parserAnnotator = null;
 	
-	public CoNLLDocumentReader() {
+	public CoNLLRawTextDocumentReader() {
 		super();
 		try {
 			Properties properties = new Properties();
@@ -64,6 +64,7 @@ public class CoNLLDocumentReader extends DocumentReader{
 			System.exit(0);
 		}
 	}
+	
 	@Override
 	public Document getNextDocument(boolean readCorefLabel) throws IOException, ClassNotFoundException {
 		String line = inputReader.readLine();
@@ -114,7 +115,16 @@ public class CoNLLDocumentReader extends DocumentReader{
 				-1, "<no-type>", -1, "<no-type>", "-");
 		
 		int i = 1;
+		String speaker = null;
 		for(String[] info : lineList){
+			if(speaker == null){
+				speaker = info[9];
+			}
+			else {
+				if(!speaker.equals(info[9])){
+					throw new IOException("speaker info error: " + speaker + " " + info[9]);
+				}
+			}
 			if(readCorefLabel){
 				lexicons[i] = new Lexicon(i++, info[3], null, "_", null, null, 0, null, 0, "erased", info[info.length - 1]);
 			}
@@ -122,7 +132,7 @@ public class CoNLLDocumentReader extends DocumentReader{
 				lexicons[i] = new Lexicon(i++, info[3], null, "_", null, null, 0, null, 0, "erased", "-");
 			}
 		}
-		return new Sentence(lexicons, null, id);
+		return new Sentence(lexicons, null, speaker, id);
 	}
 
 	protected boolean getTitle(String titleLine, Document doc){

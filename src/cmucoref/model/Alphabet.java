@@ -130,9 +130,17 @@ public class Alphabet implements Serializable{
 	private static final int CURRENT_SERIAL_VERSION = 0;
 	
 	private void writeObject(ObjectOutputStream out) throws IOException {
+		//write version
 		out.writeInt(CURRENT_SERIAL_VERSION);
+		//write feature map
 		out.writeInt(numEntries);
 		out.writeObject(map);
+		//write given map
+		out.writeInt(numGivens);
+		out.writeObject(givenMap);
+		//write id to gid list
+		out.writeObject(idToGid);
+		//write growthStopped
 		out.writeBoolean(growthStopped);
 	}
 
@@ -145,8 +153,15 @@ public class Alphabet implements Serializable{
 			System.err.println("model version: " + version);
 			System.exit(1);
 		}
+		//read feature map
 		numEntries = in.readInt();
 		map = (TCustomHashMap<String, TObjectIntHashMap<String>>) in.readObject();
+		//read given map
+		numGivens = in.readInt();
+		givenMap = (TObjectIntHashMap<String>) in.readObject();
+		//read id to gid list
+		idToGid = (TIntArrayList) in.readObject();
+		//read growthStopped
 		growthStopped = in.readBoolean();
 	}
 

@@ -4,10 +4,8 @@ import java.io.BufferedWriter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.util.List;
 
 import cmucoref.document.Document;
-import cmucoref.mention.Mention;
 
 public abstract class DocumentWriter {
 	protected BufferedWriter writer;

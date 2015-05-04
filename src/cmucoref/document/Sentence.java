@@ -3,6 +3,7 @@ package cmucoref.document;
 public class Sentence {
 	private int id = 0;
 	private String pennTree = null;
+	private String speaker = null;
 	private Lexicon[] lexicons = null;
 	
 	public Sentence(){}
@@ -12,9 +13,10 @@ public class Sentence {
 		this.id = id;
 	}
 	
-	public Sentence(Lexicon[] lexicons, String pennTree, int id){
+	public Sentence(Lexicon[] lexicons, String pennTree, String speaker, int id){
 		this.lexicons = lexicons;
 		this.pennTree = pennTree;
+		this.speaker = speaker;
 		this.id = id;
 	}
 	
@@ -34,6 +36,10 @@ public class Sentence {
 		return pennTree;
 	}
 	
+	public String getSpeaker(){
+		return speaker;
+	}
+	
 	public Lexicon getLexicon(int index){
 		return lexicons[index];
 	}
@@ -48,6 +54,10 @@ public class Sentence {
 	
 	public void setPennTree(String pennTree){
 		this.pennTree = pennTree;
+	}
+	
+	public void setSpeaker(String speaker){
+		this.speaker = speaker;
 	}
 	
 	public void setLexicons(Lexicon[] lexicons){

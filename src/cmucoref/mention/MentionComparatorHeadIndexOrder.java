@@ -6,7 +6,13 @@ public class MentionComparatorHeadIndexOrder implements Comparator<Mention> {
 
 	@Override
 	public int compare(Mention m1, Mention m2) {
-		if(m1.headIndex < m2.headIndex){
+		if(m2.apposTo == m1 || m2.predNomiTo == m1){
+			return -1;
+		}
+		else if(m1.apposTo == m2 || m1.predNomiTo == m2){
+			return 1;
+		}
+		else if(m1.headIndex < m2.headIndex){
 			return -1;
 		}
 		else if(m1.headIndex == m2.headIndex){

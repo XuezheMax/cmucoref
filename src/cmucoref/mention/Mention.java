@@ -8,6 +8,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import cmucoref.document.Document;
@@ -52,10 +53,10 @@ public class Mention implements Serializable{
 	public Mention predNomiTo = null;
 	public List<Mention> relativePronouns = null;
 	public Mention relPronTo = null;
-	public List<Mention> spanMatchs = null;
-	public int closestSpanMatchPos = -1;
-	public MentionType closestSpanMatchType = null;
-	public boolean spanMatch = false;
+	public List<Mention> preciseMatchs = null;
+	public int closestPreciseMatchPos = -1;
+	public MentionType closestPreciseMatchType = null;
+	public boolean preciseMatch = false;
 	public int localAttrMatchOfSent = -1;
 	public int localAttrMatchOfMention = -1;
 	public MentionType localAttrMatchType = null;
@@ -75,9 +76,9 @@ public class Mention implements Serializable{
 		this.startIndex = startIndex;
 		this.endIndex = endIndex;
 		
-		closestSpanMatchPos = -1;
-		closestSpanMatchType = null;
-		spanMatch = false;
+		closestPreciseMatchPos = -1;
+		closestPreciseMatchType = null;
+		preciseMatch = false;
 		
 		localAttrMatchOfSent = -1;
 		localAttrMatchOfMention = -1;
@@ -153,6 +154,20 @@ public class Mention implements Serializable{
 		return this.mentionType == MentionType.LIST;
 	}
 	
+	public boolean ruleout(Mention antec, Dictionaries dict){
+//		if(!antec.attrAgree(this, dict) && (this.apposTo != antec) && (this.predNomiTo != antec)) {
+//			return true;
+//		}
+//		
+		if(!antec.isPronominal() && !this.isPronominal() 
+				&& (antec.cover(this) || this.cover(antec))
+				&& (this.apposTo != antec)
+				&& (this.predNomiTo != antec)){
+			return true;
+		}
+		return false;
+	}
+	
 	public int getDistOfMention(Mention mention){
 //		int distOfSent = this.getDistOfSent(mention);
 //		int lowerbound = distOfSent * 10;
@@ -170,18 +185,25 @@ public class Mention implements Serializable{
 	}
 	
 	public int getDistOfSent(Mention mention){
-		int distOfSent = (this.sentID - mention.sentID) / 4;
+		int distOfSent = this.sentID - mention.sentID;
 		
-		if(distOfSent > 9){
-			distOfSent = 9;
+		if(!this.isPronominal() && !mention.isPronominal()){
+			distOfSent = distOfSent / 4;
+			if(distOfSent > 9){
+				distOfSent = 9;
+			}
 		}
+		else{
+			distOfSent = distOfSent / 4;
+			if(distOfSent > 9){
+				distOfSent = 9;
+			}
+		}
+		
 		return distOfSent;
 	}
 	
 	public boolean numberAgree(Mention mention){
-//		if(this.mentionType == MentionType.LIST && mention.mentionType == MentionType.LIST){
-//			return true;
-//		}
 		
 		if(this.number != Number.UNKNOWN && mention.number != Number.UNKNOWN){
 			return this.number == mention.number ? true : false;
@@ -218,29 +240,55 @@ public class Mention implements Serializable{
 		}
 	}
 	
-	public boolean NERAgree(Mention mention){
-		if(this.headword.ner.equals("O") || mention.headword.ner.equals("O")){			
-			return true;
+	public boolean NERAgree(Mention mention, Dictionaries dict){
+		if(this.isPronominal()){
+			if(mention.headword.ner.equals("O")){
+				return true;
+			}
+			else if(mention.headword.ner.equals("MISC")){
+				return true;
+			}
+			else if(mention.headword.ner.equals("ORGANIZATION")){
+				return dict.organizationPronouns.contains(headString);
+			}
+			else if(mention.headword.ner.equals("PERSON")){
+				return dict.personPronouns.contains(headString);
+			}
+			else if(mention.headword.ner.equals("LOCATION")){
+				return dict.locationPronouns.contains(headString);
+			}
+			else if(mention.headword.ner.equals("DATE") || mention.headword.ner.equals("TIME")){
+				return dict.dateTimePronouns.contains(headString);
+			}
+			else if(mention.headword.ner.equals("MONEY") || mention.headword.ner.equals("PERCENT") || mention.headword.ner.equals("NUMBER")){
+				return dict.moneyPercentNumberPronouns.contains(headString);
+			}
+			else{
+				return false;
+			}
 		}
-		else{
-			return this.headword.ner.equals(mention.headword.ner) ? true : false;
+		else if(mention.isPronominal()){
+			return mention.NERAgree(this, dict);
 		}
+		
+		return this.headword.ner.equals("O") || mention.headword.ner.equals("O")
+				|| this.headword.ner.equals(mention.headword.ner);
 	}
 	
-	public boolean attrAgree(Mention mention){
+	public boolean attrAgree(Mention mention, Dictionaries dict){
 		if(!(this.numberAgree(mention))){
 			return false;
 		}
 		else if(!(this.genderAgree(mention))){
 			return false;
 		}
-		else if(!this.isPronominal() && !mention.isPronominal() && !(this.animateAgree(mention))){
+		else if(!(this.animateAgree(mention))){
+			return false;
+		}
+		else if(!(this.NERAgree(mention, dict))){
 			return false;
 		}
 		else if(this.isPronominal() && mention.isPronominal() && !(this.personAgree(mention))){
-			return false;
-		}
-		else if(this.isProper() && mention.isProper() && !(this.NERAgree(mention))){
 			return false;
 		}
 		else{
@@ -280,17 +328,30 @@ public class Mention implements Serializable{
 		return belongTo == null ? false : this.belongTo.equals(m);
 	}
 	
-	public void addSpanMatch(Mention spanMatch, Document doc){
-		if(this.spanMatchs == null){
-			this.spanMatchs = new ArrayList<Mention>();
+	public boolean preciseMatch(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict) {
+		if(this.apposTo == antec){
+			return true;
 		}
-		if(spanMatch.spanMatchs != null){
-			this.spanMatchs.addAll(spanMatch.spanMatchs);
+		else if(this.predNomiTo == antec){
+			return true;
 		}
-		this.spanMatchs.add(spanMatch);
-		this.spanMatch = true;
-		this.closestSpanMatchPos = this.getDistOfSent(spanMatch);
-		this.closestSpanMatchType = spanMatch.mentionType;
+		else if(!this.isPronominal() && !antec.isPronominal()){
+			return this.spanMatch(sent, antec, antecSent, dict);
+		}
+		else{
+			return false;
+		}
+	}
+	
+	public void addPreciseMatch(Mention preciseMatch, Document doc){
+		if(this.preciseMatchs == null){
+			this.preciseMatchs = new ArrayList<Mention>();
+		}
+		
+		this.preciseMatchs.add(preciseMatch);
+		this.preciseMatch = true;
+		this.closestPreciseMatchPos = this.getDistOfSent(preciseMatch);
+		this.closestPreciseMatchType = preciseMatch.mentionType;
 	}
 	
 	public void addApposition(Mention appo) throws MentionException{
@@ -333,15 +394,17 @@ public class Mention implements Serializable{
 	}
 	
 	private static final List<String> entityWordsToExclude =
-			Arrays.asList(new String[]{ "the","this", "mr.", "miss", "mrs.", "dr.", "ms.", "inc.", "ltd.", "corp.", "'s"});
+			Arrays.asList(new String[]{ "the", "this", "mr.", "miss", "mrs.", "dr.", "ms.", "inc.", "ltd.", "corp.", "'s"});
 	
-	public boolean spanMatch(Sentence sent, Mention mention, Sentence sentOfM){
+	public boolean spanMatch(Sentence sent, Mention mention, Sentence sentOfM, Dictionaries dict){
 		if(this.isPronominal() || mention.isPronominal()){
-			System.err.println("error: head matching does not apply for pronominals");
+			System.err.println("error: span matching does not apply for pronominals");
 			System.exit(0);
 		}
 		return this.headMatch(sent, mention, sentOfM)
-				&& (this.wordsInclude(sent, mention, sentOfM) || this.relaxedSpanMatch(sent, mention, sentOfM));
+				&& (this.wordsInclude(sent, mention, sentOfM, dict) 
+						|| this.relaxedSpanMatch(sent, mention, sentOfM)
+						|| this.isDemonym(sent, mention, sentOfM, dict));
 	}
 	
 	public boolean headMatch(Sentence sent, Mention mention, Sentence sentOfM){
@@ -365,7 +428,7 @@ public class Mention implements Serializable{
 			return false;
 		}
 	}
-	public boolean wordsInclude(Sentence sent, Mention mention, Sentence sentOfM){
+	public boolean wordsInclude(Sentence sent, Mention mention, Sentence sentOfM, Dictionaries dict){
 		if(this.isPronominal() || mention.isPronominal()){
 			System.err.println("error: word including does not apply for pronominals");
 			System.exit(0);
@@ -381,7 +444,7 @@ public class Mention implements Serializable{
 			wordsExceptStopWords.add(sentOfM.getLexicon(i).form.toLowerCase());
 		}
 		wordsExceptStopWords.removeAll(entityWordsToExclude);
-		//wordsExceptStopWords.remove(mention.headString);
+		wordsExceptStopWords.removeAll(dict.determiners);
 		
 		if(wordsOfThis.containsAll(wordsExceptStopWords)){
 			return true;
@@ -392,6 +455,41 @@ public class Mention implements Serializable{
 		else{
 			return false;
 		}
+	}
+	
+	public boolean isDemonym(Sentence sent, Mention mention, Sentence sentOfM, Dictionaries dict) {
+		if(this.isPronominal() || mention.isPronominal()){
+			System.err.println("error: exact matching does not apply for pronominals");
+			System.exit(0);
+		}
+		
+		String anaphSpan = this.getSpan(sent);
+		String antecSpan = mention.getSpan(sentOfM);
+		
+		// The US state matching part (only) is done cased
+		String thisNormed = dict.lookupCanonicalAmericanStateName(anaphSpan);
+		String antNormed = dict.lookupCanonicalAmericanStateName(antecSpan);
+		if (thisNormed != null && thisNormed.equals(antNormed)) {
+			return true;
+		}
+		
+		// The rest is done uncased
+		anaphSpan = anaphSpan.toLowerCase(Locale.ENGLISH);
+		antecSpan = antecSpan.toLowerCase(Locale.ENGLISH);
+		
+		if (anaphSpan.startsWith("the ")) {
+			anaphSpan = anaphSpan.substring(4);
+		}
+		if (antecSpan.startsWith("the ")) {
+			antecSpan = antecSpan.substring(4);
+		}
+
+		Set<String> anaphDemonyms = dict.getDemonyms(anaphSpan);
+		Set<String> antecDemonyms = dict.getDemonyms(antecSpan);
+		if (anaphDemonyms.contains(antecSpan) || antecDemonyms.contains(anaphSpan)) {
+			return true;
+		}
+		return false;
 	}
 	
 	public boolean isAcronymTo(Mention mention, Sentence sent){
@@ -547,6 +645,10 @@ public class Mention implements Serializable{
 	private static final String [] commonNESuffixes = {
 		"Corp", "Co", "Inc", "Ltd"
 	};
+	
+	private static final Set<String> pluralDeterminers = new HashSet<String>(Arrays.asList("these", "those"));
+	
+	private static final Set<String> singularDeterminers = new HashSet<String>(Arrays.asList("this"));
 
 	private static boolean knownSuffix(String s) {
 		if(s.endsWith(".")) {
@@ -562,8 +664,10 @@ public class Mention implements Serializable{
 	
 	private void setType(Sentence sent, Dictionaries dict){
 		if(headword.postag.startsWith("PRP") || 
-				( (endIndex - startIndex) == 1 && headword.ner.equals("O") && 
-				( dict.allPronouns.contains(headString) || dict.relativePronouns.contains(headString) ))){
+				((endIndex - startIndex) == 1 && headword.ner.equals("O") && 
+				(dict.allPronouns.contains(headString) 
+					|| dict.relativePronouns.contains(headString)
+					|| dict.determiners.contains(headString)))){
 			mentionType = MentionType.PRONOMINAL;
 		}
 		else if(!headword.ner.equals("O") || headword.postag.startsWith("NNP")){
@@ -576,10 +680,10 @@ public class Mention implements Serializable{
 	
 	private void setNumber(Sentence sent, Dictionaries dict){
 		if(this.isPronominal()){
-			if (dict.pluralPronouns.contains(headString)) {
+			if (dict.pluralPronouns.contains(headString) || pluralDeterminers.contains(headString)) {
 				number = Number.PLURAL;
 			}
-			else if(dict.singularPronouns.contains(headString)){
+			else if(dict.singularPronouns.contains(headString) || singularDeterminers.contains(headString)){
 				number = Number.SINGULAR;
 			}
 			else{
@@ -721,7 +825,7 @@ public class Mention implements Serializable{
 			if(dict.animatePronouns.contains(headString)) {
 				animacy = Animacy.ANIMATE;
 			}
-			else if(dict.inanimatePronouns.contains(headString)) {
+			else if(dict.inanimatePronouns.contains(headString) || dict.determiners.contains(headString)) {
 				animacy = Animacy.INANIMATE;
 			}
 			else{
@@ -731,10 +835,22 @@ public class Mention implements Serializable{
 		else if(headword.ner.equals("PERSON") || headword.ner.equals("PER")){
 			animacy = Animacy.ANIMATE;
 		}
+		else if(headword.ner.equals("GPE")){
+			animacy = Animacy.INANIMATE;
+		}
 		else if(headword.ner.equals("LOCATION") || headword.ner.startsWith("LOC")){
 			animacy = Animacy.INANIMATE;
 		}
 		else if(headword.ner.equals("MONEY")){
+			animacy = Animacy.INANIMATE;
+		}
+		else if(headword.ner.equals("CARDINAL")){
+			animacy = Animacy.INANIMATE;
+		}
+		else if(headword.ner.equals("ORDINAL")){
+			animacy = Animacy.INANIMATE;
+		}
+		else if(headword.ner.equals("QUANTITY")){
 			animacy = Animacy.INANIMATE;
 		}
 		else if(headword.ner.equals("NUMBER")){
@@ -749,22 +865,37 @@ public class Mention implements Serializable{
 		else if(headword.ner.equals("TIME")){
 			animacy = Animacy.INANIMATE;
 		}
-		else if(headword.ner.equals("MISC")){
-			animacy = Animacy.UNKNOWN;
+		else if(headword.ner.equals("NORP")){
+			animacy = Animacy.INANIMATE;
 		}
-		else if(headword.ner.equals("VEH")){
+		else if(headword.ner.equals("LANGUAGE")){
+			animacy = Animacy.INANIMATE;
+		}
+		else if(headword.ner.equals("MISC")){
 			animacy = Animacy.UNKNOWN;
 		}
 		else if(headword.ner.equals("FAC")){
 			animacy = Animacy.INANIMATE;
 		}
-		else if(headword.ner.equals("GPE")){
-			animacy = Animacy.INANIMATE;
+		else if(headword.ner.equals("VEH")){
+			animacy = Animacy.UNKNOWN;
 		}
 		else if(headword.ner.equals("WEA")){
 			animacy = Animacy.INANIMATE;
 		}
+		else if(headword.ner.equals("PRODUCT")){
+			animacy = Animacy.INANIMATE;
+		}
 		else if(headword.ner.equals("ORG")){
+			animacy = Animacy.INANIMATE;
+		}
+		else if(headword.ner.equals("LAW")){
+			animacy = Animacy.INANIMATE;
+		}
+		else if(headword.ner.equals("EVENT")){
+			animacy = Animacy.INANIMATE;
+		}
+		else if(headword.ner.equals("WORK_OF_ART")){
 			animacy = Animacy.INANIMATE;
 		}
 		else{

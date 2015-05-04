@@ -15,6 +15,7 @@ import cmucoref.mention.featgen.MentionFeatureGenerator;
 import cmucoref.model.CorefModel;
 import cmucoref.model.FeatureVector;
 import cmucoref.util.Pair;
+import edu.stanford.nlp.dcoref.Dictionaries;
 
 public class CorefManager {
 	
@@ -24,6 +25,10 @@ public class CorefManager {
 	public CorefManager(MentionExtractor mentionExtractor){
 		this.mentionExtractor = mentionExtractor;
 		this.mentionFeatGen = new MentionFeatureGenerator();
+	}
+	
+	public Dictionaries getDict(){
+		return mentionExtractor.getDict();
 	}
 	
 	public int[] createDocInstance(String trainfile, String traintmp, CorefModel model) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, CreatingInstanceException{
@@ -78,7 +83,7 @@ public class CorefManager {
 			}
 		}
 		else if(file.isFile()){
-			DocumentReader docReader = DocumentReader.createDocumentReader(model.options.getDocReader());
+			DocumentReader docReader = DocumentReader.createDocumentReader(model.options.getTrainReader());
 			docReader.startReading(file.getAbsolutePath());
 			Document doc = docReader.getNextDocument(false);
 			while(doc != null){
@@ -88,36 +93,21 @@ public class CorefManager {
 				
 				for(int i = 0; i < allMentions.size(); ++i){
 					Mention anaph = allMentions.get(i);
-					if(anaph.spanMatchs != null){
-						for(Mention antec : anaph.spanMatchs){
-							mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
+					if(anaph.preciseMatchs != null){
+						for(Mention antec : anaph.preciseMatchs){
+							mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), getDict(), model, null);
 						}
 						mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), model, null);
-						continue;
-					}
-					
-					if(anaph.apposTo != null){
-						Mention antec = anaph.apposTo;
-						mentionFeatGen.genSpecialCasesFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
-						continue;
-					}
-					
-					if(anaph.predNomiTo != null){
-						Mention antec = anaph.predNomiTo;
-						mentionFeatGen.genSpecialCasesFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
 						continue;
 					}
 					
 					for(int j = 0; j <= i; ++j){
 						if(j < i){
 							Mention antec = allMentions.get(j);
-							if(antec.cover(anaph) || anaph.cover(antec)){
+							if(anaph.ruleout(antec, getDict())){
 								continue;
 							}
-							if(antec.isPronominal() && (anaph.isNominative() || anaph.isProper())){
-								continue;
-							}
-							mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, null);
+							mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), getDict(), model, null);
 						}
 						else{
 							mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), model, null);
@@ -146,14 +136,14 @@ public class CorefManager {
 			int[][] keys = null;
 			int[][] gids = null;
 			
-			if(anaph.spanMatchs != null) {
-				keys = new int[anaph.spanMatchs.size() + 1][];
-				gids = new int[anaph.spanMatchs.size() + 1][];
-				for(int j = 0; j <= anaph.spanMatchs.size(); ++j){
-					if(j < anaph.spanMatchs.size()){
-						Mention antec = anaph.spanMatchs.get(j);
+			if(anaph.preciseMatchs != null) {
+				keys = new int[anaph.preciseMatchs.size() + 1][];
+				gids = new int[anaph.preciseMatchs.size() + 1][];
+				for(int j = 0; j <= anaph.preciseMatchs.size(); ++j){
+					if(j < anaph.preciseMatchs.size()){
+						Mention antec = anaph.preciseMatchs.get(j);
 						FeatureVector fv = new FeatureVector();
-						mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, fv);
+						mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), getDict(), model, fv);
 						Pair<int[], int[]> res = fv.keys();
 						keys[j] = res.first;
 						gids[j] = res.second;
@@ -171,51 +161,18 @@ public class CorefManager {
 				continue;
 			}
 			
-			if(anaph.apposTo != null){
-				keys = new int[1][];
-				gids = new int[1][];
-				Mention antec = anaph.apposTo;
-				FeatureVector fv = new FeatureVector();
-				mentionFeatGen.genSpecialCasesFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, fv);
-				Pair<int[], int[]> res = fv.keys();
-				keys[0] = res.first;
-				gids[0] = res.second;
-				out.writeObject(keys);
-				out.writeObject(gids);
-				continue;
-			}
-			
-			if(anaph.predNomiTo != null){
-				keys = new int[1][];
-				gids = new int[1][];
-				Mention antec = anaph.predNomiTo;
-				FeatureVector fv = new FeatureVector();
-				mentionFeatGen.genSpecialCasesFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, fv);
-				Pair<int[], int[]> res = fv.keys();
-				keys[0] = res.first;
-				gids[0] = res.second;
-				out.writeObject(keys);
-				out.writeObject(gids);
-				continue;
-			}
-			
 			keys = new int[i + 1][];
 			gids = new int[i + 1][];
 			for(int j = 0; j <= i; ++j){
 				if(j < i){
 					Mention antec = allMentions.get(j);
-					if(antec.cover(anaph) || anaph.cover(antec)){
-						keys[j] = null;
-						gids[j] = null;
-						continue;
-					}
-					if(antec.isPronominal() && (anaph.isNominative() || anaph.isProper())){
+					if(anaph.ruleout(antec, getDict())){
 						keys[j] = null;
 						gids[j] = null;
 						continue;
 					}
 					FeatureVector fv = new FeatureVector();
-					mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), model, fv);
+					mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), getDict(), model, fv);
 					Pair<int[], int[]> res = fv.keys();
 					keys[j] = res.first;
 					gids[j] = res.second;
@@ -265,7 +222,7 @@ class CreateTrainingTmpThread extends Thread {
 		}
 		else if(file.isFile()){
 			boolean createTmpFile = model.options.createTrainingTmp();
-			DocumentReader docReader = DocumentReader.createDocumentReader(model.options.getDocReader());
+			DocumentReader docReader = DocumentReader.createDocumentReader(model.options.getTrainReader());
 			docReader.startReading(file.getAbsolutePath());
 			Document doc = docReader.getNextDocument(false);
 			int num = 0;

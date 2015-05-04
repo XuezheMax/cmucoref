@@ -36,6 +36,10 @@ public class Test {
 	 * @throws MentionException 
 	 */
 	public static void main(String[] args) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, MentionException {		
+		String str = "(NP) ";
+		System.out.println(str.replaceAll("NP", "*"));
+		System.exit(0);
+		
 		String inputfile = "conll2012.eng.dev.auto.anno";
 		String outputfile = "conll2012.eng.dev.auto-true.conll";
 		PrintStream printer = new PrintStream("mention-conll.txt");
@@ -46,7 +50,7 @@ public class Test {
 		System.out.println("post-processing: " + options.postProcessing());
 		
 		DocumentReader docReader = DocumentReader.createDocumentReader(AnnotatedDocumentReader.class.getName());
-		DocumentWriter docWriter = DocumentWriter.createDocumentWriter(CoNLLDocumentWriter.class.getName());
+		DocumentWriter docWriter = DocumentWriter.createDocumentWriter(CoNLLXDocumentWriter.class.getName());
 		
 		docReader.startReading(inputfile);
 		docWriter.startWriting(outputfile);

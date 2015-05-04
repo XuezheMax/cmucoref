@@ -2,22 +2,22 @@ package cmucoref.document;
 
 import java.io.IOException;
 
-import cmucoref.io.AnnotatedDocumentWriter;
-import cmucoref.io.CoNLLDocumentReader;
+import cmucoref.io.CoNLLRawTextDocumentReader;
+import cmucoref.io.CoNLLXDocumentWriter;
 import cmucoref.io.DocumentReader;
 import cmucoref.io.DocumentWriter;
 
-public class CoNLL2AnnotatedDocumentConverter {
+public class CoNLLRawText2CoNLLXDocumentConverter {
 
 	public static void main(String[] args) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException {
 		String conllfile = args[0];
-		String annotatedfile = args[1];
+		String conllxfile = args[1];
 		
-		DocumentReader docReader = DocumentReader.createDocumentReader(CoNLLDocumentReader.class.getName());
-		DocumentWriter docWriter = DocumentWriter.createDocumentWriter(AnnotatedDocumentWriter.class.getName());
+		DocumentReader docReader = DocumentReader.createDocumentReader(CoNLLRawTextDocumentReader.class.getName());
+		DocumentWriter docWriter = DocumentWriter.createDocumentWriter(CoNLLXDocumentWriter.class.getName());
 		
 		docReader.startReading(conllfile);		
-		docWriter.startWriting(annotatedfile);
+		docWriter.startWriting(conllxfile);
 		
 		Document doc = docReader.getNextDocument(true);
 		while(doc != null){

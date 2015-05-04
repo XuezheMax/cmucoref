@@ -21,13 +21,13 @@ public class Decoder {
 			double score = Double.NEGATIVE_INFINITY;
 			Mention anaph = allMentions.get(i);
 			
-			if(anaph.spanMatchs != null){
-				int length = anaph.spanMatchs.size();
+			if(anaph.preciseMatchs != null){
+				int length = anaph.preciseMatchs.size();
 				for(int j = length - 1; j >= 0; --j){
-					Mention antec = anaph.spanMatchs.get(j);
+					Mention antec = anaph.preciseMatchs.get(j);
 					FeatureVector fv = new FeatureVector();
 					manager.mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), 
-							antec, doc.getSentence(antec.sentID), model, fv);
+							antec, doc.getSentence(antec.sentID), manager.getDict(), model, fv);
 					double prob = model.getScore(fv);
 					if(prob > score){
 						score = prob;
@@ -41,40 +41,28 @@ public class Decoder {
 					antecedent = null;
 				}
 			}
-			else if(anaph.apposTo != null){
-				antecedent = anaph.apposTo;
-			}
-			else if(anaph.predNomiTo != null){
-				antecedent = anaph.predNomiTo;
-			}
 			else{
-				for(int j = 0; j <= i; ++j){
-					if(j < i){
-						Mention antec = allMentions.get(j);
-						if(antec.cover(anaph) || anaph.cover(antec)){
-							continue;
-						}
-						if(antec.isPronominal() && (anaph.isNominative() || anaph.isProper())){
-							continue;
-						}
-						FeatureVector fv = new FeatureVector();
-						manager.mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), 
-								antec, doc.getSentence(antec.sentID), model, fv);
-						
-						double prob = model.getScore(fv);
-						if(prob > score){
-							score = prob;
-							antecedent = antec;
-						}
+				for(int j = i - 1; j >= 0; --j){
+					Mention antec = allMentions.get(j);
+					if(anaph.ruleout(antec, manager.getDict())) {
+						continue;
 					}
-					else{
-						FeatureVector fv = new FeatureVector();
-						manager.mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), model, fv);
-						double prob = model.getScore(fv);
-						if(prob > score){
-							antecedent = null;
-						}
+					
+					FeatureVector fv = new FeatureVector();
+					manager.mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), 
+							antec, doc.getSentence(antec.sentID), manager.getDict(), model, fv);
+					
+					double prob = model.getScore(fv);
+					if(prob > score){
+						score = prob;
+						antecedent = antec;
 					}
+				}
+				FeatureVector fv = new FeatureVector();
+				manager.mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), model, fv);
+				double prob = model.getScore(fv);
+				if(prob > score){
+					antecedent = null;
 				}
 			}
 			

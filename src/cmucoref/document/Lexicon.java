@@ -14,6 +14,7 @@ public class Lexicon {
 	public String collapsed_deprel = null;
 	
 	public String ner = null;
+	public String pennBit = null;
 	
 	public String corefLabel = null;
 	

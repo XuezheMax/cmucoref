@@ -13,6 +13,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -30,6 +31,10 @@ public abstract class MentionExtractor {
 		Properties props = new Properties();
 		props.load(new FileInputStream(propfile));
 		this.dict = new Dictionaries(props);
+	}
+	
+	public Dictionaries getDict(){
+		return dict;
 	}
 	
 	public abstract List<List<Mention>> extractPredictedMentions(Document doc, Options options) throws IOException;
@@ -59,9 +64,11 @@ public abstract class MentionExtractor {
 		
 		//remove single number named entity mentions
 		remove.clear();
+		String[] NUMBERS = {"NUMBER", "ORDINAL", "CARDINAL", "MONEY", "QUANTITY"};
+		HashSet<String> numberNER = new HashSet<String>(Arrays.asList(NUMBERS));
 		for(Mention mention : mentions){
 			if(mention.endIndex - mention.startIndex == 1){
-				if(mention.headword.ner.equals("NUMBER") || mention.headword.ner.equals("ORDINAL") || mention.headword.ner.equals("CARDINAL")){
+				if(numberNER.contains(mention.headword.ner)){
 					remove.add(mention);
 				}
 			}
@@ -81,41 +88,39 @@ public abstract class MentionExtractor {
 			mention.mentionID = i;
 		}
 		
-		if(options.useSpanMatch()){
-			findSpanMatchRelation(doc, allMentions);
+		if(options.usePreciseMatch()){
+			findPreciseMatchRelation(doc, allMentions);
 		}
 		
 		return allMentions;
 	}
 	
-	protected void findSpanMatchRelation(Document doc, List<Mention> allMentions){
+	protected void findPreciseMatchRelation(Document doc, List<Mention> allMentions){
 		for(int i = 1; i < allMentions.size(); ++i){
 			Mention anaph = allMentions.get(i);
-			if(anaph.isPronominal()){
-				for(int j = i - 1; j >=0; --j){
-					Mention antec = allMentions.get(j);
-					if(anaph.attrAgree(antec)){
-						anaph.localAttrMatchOfSent = anaph.getDistOfSent(antec);
-						anaph.localAttrMatchOfMention = anaph.getDistOfMention(antec);
-						anaph.localAttrMatchType = antec.mentionType;
-						break;
-					}
+			//find local attribute match
+			for(int j = i - 1; j >=0; --j){
+				Mention antec = allMentions.get(j);
+				if(anaph.ruleout(antec, dict)){
+					continue;
+				}
+					
+				if(anaph.attrAgree(antec, dict)){
+					anaph.localAttrMatchOfSent = anaph.getDistOfSent(antec);
+					anaph.localAttrMatchOfMention = anaph.getDistOfMention(antec);
+					anaph.localAttrMatchType = antec.mentionType;
+					break;
 				}
 			}
-			else if(anaph.isNominative() || anaph.isProper()){				
-				for(int j = i - 1; j >=0; --j){
-					Mention antec = allMentions.get(j);
-					if(!antec.isNominative() && !antec.isProper()){
-						continue;
-					}
-					if(anaph.cover(antec) || antec.cover(anaph)){
-						continue;
-					}
-					
-					if(antec.spanMatch(doc.getSentence(antec.sentID), anaph, doc.getSentence(anaph.sentID))){
-						anaph.addSpanMatch(antec, doc);
-						break;
-					}
+			//find precise match
+			for(int j = 0; j < i; ++j){
+				Mention antec = allMentions.get(j);
+				if(anaph.ruleout(antec, dict)){
+					continue;
+				}
+				
+				if(antec.preciseMatch(doc.getSentence(antec.sentID), anaph, doc.getSentence(anaph.sentID), dict)){
+					anaph.addPreciseMatch(antec, doc);
 				}
 			}
 		}
