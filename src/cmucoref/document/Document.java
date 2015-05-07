@@ -76,8 +76,8 @@ public class Document {
 				}
 				if(postProcessing 
 						&& (mention.isSingleton() 
-								|| (mention.apposTo != null && mention.corefTo(mention.apposTo)) 
-								|| mention.predNomiTo != null && mention.corefTo(mention.predNomiTo))){
+								|| mention.corefTo(mention.getApposTo()) 
+								|| mention.corefTo(mention.getPredNomiTo()))){
 					continue;
 				}
 				

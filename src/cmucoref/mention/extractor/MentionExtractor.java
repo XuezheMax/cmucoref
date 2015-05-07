@@ -104,13 +104,14 @@ public abstract class MentionExtractor {
 				if(anaph.ruleout(antec, dict)){
 					continue;
 				}
-					
-				if(anaph.attrAgree(antec, dict)){
-					anaph.localAttrMatchOfSent = anaph.getDistOfSent(antec);
-					anaph.localAttrMatchOfMention = anaph.getDistOfMention(antec);
-					anaph.localAttrMatchType = antec.mentionType;
-					break;
+				if(!anaph.attrAgree(antec, dict)){
+					continue;
 				}
+				
+				anaph.localAttrMatchOfSent = anaph.getDistOfSent(antec);
+				anaph.localAttrMatchOfMention = anaph.getDistOfMention(antec);
+				anaph.localAttrMatchType = antec.mentionType;
+				break;
 			}
 			//find precise match
 			for(int j = 0; j < i; ++j){
@@ -119,7 +120,7 @@ public abstract class MentionExtractor {
 					continue;
 				}
 				
-				if(antec.preciseMatch(doc.getSentence(antec.sentID), anaph, doc.getSentence(anaph.sentID), dict)){
+				if(anaph.preciseMatch(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)){
 					anaph.addPreciseMatch(antec, doc);
 				}
 			}

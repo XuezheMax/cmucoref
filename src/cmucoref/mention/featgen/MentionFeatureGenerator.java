@@ -6,6 +6,7 @@ import cmucoref.model.CorefModel;
 import cmucoref.model.FeatureVector;
 import cmucoref.util.Pair;
 import edu.stanford.nlp.dcoref.Dictionaries;
+import edu.stanford.nlp.dcoref.Dictionaries.MentionType;
 
 /**
  * 
@@ -24,14 +25,22 @@ public class MentionFeatureGenerator {
 	}
 	
 	protected void genAttrMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, Dictionaries dict, CorefModel model, FeatureVector fv){
+		
+		//if anaph is pronominal and precise, change anaph and antec to nominal.
+//		MentionType antecType = (antec.isPronominal() && anaph.preciseMatch) ? MentionType.NOMINAL : antec.mentionType;
+//		MentionType anaphType = (anaph.isPronominal() && anaph.preciseMatch) ? MentionType.NOMINAL : anaph.mentionType;
+//		
 		//mention type features
-		String feat = "ANAPHTYPE=" + anaph.mentionType;
-		String given = "ANTECTYPE=" + antec.mentionType + ", COREF";
+		String feat = "ANAPHTYPE=" + ((anaph.isPronominal() && anaph.preciseMatch) ? MentionType.NOMINAL : anaph.mentionType);
+		String given = "ANTECTYPE=" +  antec.mentionType + ", COREF";
 		
 		//distance of sentences
-		if(anaph.isPronominal() || antec.isPronominal() || !anaph.preciseMatch){
+		if(!anaph.preciseMatch){
 			int distOfSent = anaph.getDistOfSent(antec);
 			feat = feat + ", " + "DISTOFSENT=" + distOfSent;
+		}
+		else{
+			feat = feat + ", " + "DISTOFSENT=-1";
 		}
 		
 		//number match
@@ -47,8 +56,8 @@ public class MentionFeatureGenerator {
 		feat = feat + ", " + "ANIMAT=" + aniMat;
 		
 		//person match (only apply for pronominal mentions)
-		if(anaph.isPronominal() && antec.isPronominal()){
-			boolean perMat = anaph.personAgree(antec);
+		if((anaph.isPronominal() && !anaph.preciseMatch) && antec.isPronominal()){
+			boolean perMat = anaph.preciseMatch ? true : anaph.personAgree(antec);
 			feat = feat + ", " + "PERMAT=" + perMat;
 		}
 		
@@ -56,42 +65,36 @@ public class MentionFeatureGenerator {
 		boolean nerMat = anaph.preciseMatch ? true : anaph.NERAgree(antec, dict);
 		feat = feat + ", " + "NERMAT=" + nerMat;
 		
-		//precise match features (only apply for nominative and proper mentions)
-		if((anaph.isNominative() || anaph.isProper()) && (antec.isNominative() || antec.isProper())){
-			
-			boolean preciseMatch = anaph.preciseMatch;
-			boolean headMatch = anaph.preciseMatch ? true : antec.headMatch(antecSent, anaph, anaphSent);
-			
-			if(preciseMatch){
-				feat = feat + ", " + "PRECMAT=true";
-			}
-			else{
-				feat = feat + ", " + "PRECMAT=false" + ", " + "HDMAT=" + headMatch;
-			}
+		boolean preciseMatch = anaph.preciseMatch;
+		
+		//string match features (only apply for nominative or proper mentions)
+		if((anaph.isNominative() || anaph.isProper() || (anaph.isPronominal() && anaph.preciseMatch)) 
+				&& (antec.isNominative() || antec.isProper())) {
+			boolean headMatch = preciseMatch ? true : antec.headMatch(antecSent, anaph, anaphSent);
+			feat = feat + ", " + "HDMAT=" + headMatch;
 		}
+		
+		//precise match features
+		feat = feat + ", " + "PRECMAT=" + preciseMatch;
+		
 		addFeature(feat, given, model, fv);
 	}
 	
 	public void genNewClusterFeatures(Mention anaph, Sentence anaphSent, CorefModel model, FeatureVector fv){
 		// anaph starts a new cluster
 		//type features
-		String feat = "TYPE=" + anaph.mentionType;
+		MentionType anaphType = (anaph.isPronominal() && anaph.preciseMatch) ? MentionType.NOMINAL : anaph.mentionType;
+		String feat = "TYPE=" + anaphType;
 		String given = "NEWCLUSTER";
 		
-		if(anaph.isPronominal() || anaph.preciseMatch){
-			feat = feat + ", " 
-					+ "LOCATTRMATOFSENT=" + anaph.localAttrMatchOfSent + ", " 
+		if(anaphType == MentionType.PRONOMINAL){
+			feat = feat + ", " + "LOCATTRMATOFSENT=" + anaph.localAttrMatchOfSent + ", " 
 					+ "LOCATTRMATTYPE=" + anaph.localAttrMatchType;
 		}
 		
-		if(anaph.preciseMatch){
-			feat = feat  + ", " + "SPMAT=true" + ", " 
-					+ "PRECMATPOS=" + anaph.closestPreciseMatchPos + ", " 
-					+ "PRECMATTYPE=" + anaph.closestPreciseMatchType;
-		}
-		else{
-			feat = feat + ", " + "PRECMAT=false";
-		}
+		feat = feat  + ", " + "PRECMATPOS=" + anaph.closestPreciseMatchPos + ", " 
+						+ "PRECMATTYPE=" + anaph.closestPreciseMatchType;
+		
 		addFeature(feat, given, model, fv);
 	}
 	

@@ -15,13 +15,13 @@ public class PredicateNominativeDepExtractor extends RelationExtractor{
 		Set<Pair<Integer, Integer>> relationSet = new HashSet<Pair<Integer, Integer>>();
 		for(Mention mention1 : mentions){
 			//ignore list member mentions
-			if(mention1.belongTo != null){
+			if(mention1.getBelognTo() != null){
 				continue;
 			}
 			
 			for(Mention mention2 : mentions){
 				//ignore list member mentions
-				if(mention2.belongTo != null){
+				if(mention2.getBelognTo() != null){
 					continue;
 				}
 				

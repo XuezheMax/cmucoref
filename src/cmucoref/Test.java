@@ -36,43 +36,29 @@ public class Test {
 	 * @throws MentionException 
 	 */
 	public static void main(String[] args) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, MentionException {		
-		String str = "(NP) ";
-		System.out.println(str.replaceAll("NP", "*"));
-		System.exit(0);
+		String inputfile = "data/dev/original/conllx/conll2012.eng.dev.stanford.all.conllx";
+		String outputfile = "mention-conllx-stanford.txt";
 		
-		String inputfile = "conll2012.eng.dev.auto.anno";
-		String outputfile = "conll2012.eng.dev.auto-true.conll";
-		PrintStream printer = new PrintStream("mention-conll.txt");
-		
-		
-		Options options = new Options(args);
-		
-		System.out.println("post-processing: " + options.postProcessing());
-		
-		DocumentReader docReader = DocumentReader.createDocumentReader(AnnotatedDocumentReader.class.getName());
-		DocumentWriter docWriter = DocumentWriter.createDocumentWriter(CoNLLXDocumentWriter.class.getName());
+		DocumentReader docReader = DocumentReader.createDocumentReader(CoNLLXDocumentReader.class.getName());
 		
 		docReader.startReading(inputfile);
-		docWriter.startWriting(outputfile);
+		PrintStream printer = new PrintStream(new File(outputfile));
 		
 		StanfordMentionExtractor mentionExtractor = new StanfordMentionExtractor();
+		Options options = new Options();
 		mentionExtractor.createDict(options.getPropFile());
 		
-		Document doc = docReader.getNextDocument(true);
+		Document doc = docReader.getNextDocument(false);
 		while(doc != null){
 			List<List<Mention>> mentionList = mentionExtractor.extractPredictedMentions(doc, options);
 			mentionExtractor.getSingleMentionList(doc, mentionList, options);
-			doc.getCorefClustersFromDocument(mentionList);
-			doc.assignCorefClustersToDocument(mentionList, options.postProcessing());
-			docWriter.writeDocument(doc, true);
 			mentionExtractor.displayMentions(doc, mentionList, printer);
 			printer.flush();
-			doc = docReader.getNextDocument(true);
+			doc = docReader.getNextDocument(false);
 		}
 		
 		printer.close();
 		docReader.close();
-		docWriter.close();
 	}
 
 }

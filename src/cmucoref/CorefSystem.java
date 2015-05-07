@@ -65,6 +65,7 @@ public class CorefSystem {
 			
 			Document doc = docReader.getNextDocument(false);
 			while(doc != null){
+				System.out.println("Processing Doc: " + doc.getFileName() + " part: " + doc.getDocId());
 				List<List<Mention>> mentionList = decoder.decode(doc, manager, model);
 				doc.assignCorefClustersToDocument(mentionList, model.options.postProcessing());
 				docWriter.writeDocument(doc, true);
