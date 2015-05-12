@@ -36,8 +36,8 @@ public class Test {
 	 * @throws MentionException 
 	 */
 	public static void main(String[] args) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, MentionException {		
-		String inputfile = "data/dev/original/conllx/conll2012.eng.dev.stanford.all.conllx";
-		String outputfile = "mention-conllx-stanford.txt";
+		String inputfile = "data/dev/original/conllx/conll2012.eng.dev.auto.all.conllx";
+		String outputfile = "mention-conllx.txt";
 		
 		DocumentReader docReader = DocumentReader.createDocumentReader(CoNLLXDocumentReader.class.getName());
 		

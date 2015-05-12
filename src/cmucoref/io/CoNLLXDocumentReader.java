@@ -92,8 +92,6 @@ public class CoNLLXDocumentReader extends DocumentReader {
 						Integer.parseInt(info[8]), info[9], Integer.parseInt(info[10]), info[11], "-");
 			}
 		}
-		//change (TOP to (ROOT
-		pennTree.replace(0, 4, "(ROOT");
 		
 		return new Sentence(lexicons, formatPennTreeString(pennTree.toString()), speaker, id);
 	}

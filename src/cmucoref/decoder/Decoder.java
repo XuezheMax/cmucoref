@@ -21,6 +21,10 @@ public class Decoder {
 			double score = Double.NEGATIVE_INFINITY;
 			Mention anaph = allMentions.get(i);
 			
+//			System.out.println("anaph:");
+//			anaph.display(doc.getSentence(anaph.sentID), System.out);
+//			System.out.println("--------------------------------------------");
+			
 			if(anaph.preciseMatchs != null){
 				int length = anaph.preciseMatchs.size();
 				for(int j = length - 1; j >= 0; --j){
@@ -44,7 +48,11 @@ public class Decoder {
 			else{
 				for(int j = i - 1; j >= 0; --j){
 					Mention antec = allMentions.get(j);
-					if(anaph.ruleout(antec, manager.getDict())) {
+					if(anaph.ruleout(antec, manager.getDict(), true)) {
+						continue;
+					}
+					
+					if(anaph.isPronominal() && antec.isPronominal() && anaph.getDistOfSent(antec) > 1) {
 						continue;
 					}
 					
@@ -53,17 +61,29 @@ public class Decoder {
 							antec, doc.getSentence(antec.sentID), manager.getDict(), model, fv);
 					
 					double prob = model.getScore(fv);
+//					antec.display(doc.getSentence(antec.sentID), System.out);
+//					System.out.println(prob);
 					if(prob > score){
 						score = prob;
 						antecedent = antec;
+//						System.out.println("current best");
 					}
+//					System.out.println("================================");
 				}
 				FeatureVector fv = new FeatureVector();
 				manager.mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), model, fv);
 				double prob = model.getScore(fv);
+//				System.out.println("NEW CLUSTER");
+//				System.out.println(prob);
 				if(prob > score){
 					antecedent = null;
+//					System.out.println("current best");
 				}
+//				System.out.println("================================");
+//				System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+//				if(anaph.headString.equals("it") && anaph.headIndex == 1){
+//					System.exit(0);
+//				}
 			}
 			
 			if(antecedent == null){

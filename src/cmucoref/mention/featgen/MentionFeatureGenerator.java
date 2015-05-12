@@ -26,12 +26,10 @@ public class MentionFeatureGenerator {
 	
 	protected void genAttrMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, Dictionaries dict, CorefModel model, FeatureVector fv){
 		
-		//if anaph is pronominal and precise, change anaph and antec to nominal.
-//		MentionType antecType = (antec.isPronominal() && anaph.preciseMatch) ? MentionType.NOMINAL : antec.mentionType;
-//		MentionType anaphType = (anaph.isPronominal() && anaph.preciseMatch) ? MentionType.NOMINAL : anaph.mentionType;
-//		
+		//if anaph is pronominal and precise, change anaph to proper.
+		
 		//mention type features
-		String feat = "ANAPHTYPE=" + ((anaph.isPronominal() && anaph.preciseMatch) ? MentionType.NOMINAL : anaph.mentionType);
+		String feat = "ANAPHTYPE=" + ((anaph.isPronominal() && anaph.preciseMatch) ? MentionType.PROPER : anaph.mentionType);
 		String given = "ANTECTYPE=" +  antec.mentionType + ", COREF";
 		
 		//distance of sentences
@@ -43,27 +41,27 @@ public class MentionFeatureGenerator {
 			feat = feat + ", " + "DISTOFSENT=-1";
 		}
 		
-		//number match
-		boolean numMat = anaph.preciseMatch ? true : anaph.numberAgree(antec);
-				
-		//gender match
-		boolean genMat = anaph.preciseMatch ? true : anaph.genderAgree(antec);
-		
-		feat = feat + ", " + "GENMAT=" + genMat + ", " + "NUMMAT=" + numMat;
-		
-		//animacy match
-		boolean aniMat = anaph.preciseMatch ? true : anaph.animateAgree(antec);
-		feat = feat + ", " + "ANIMAT=" + aniMat;
-		
-		//person match (only apply for pronominal mentions)
-		if((anaph.isPronominal() && !anaph.preciseMatch) && antec.isPronominal()){
-			boolean perMat = anaph.preciseMatch ? true : anaph.personAgree(antec);
-			feat = feat + ", " + "PERMAT=" + perMat;
-		}
-		
-		//ner match
-		boolean nerMat = anaph.preciseMatch ? true : anaph.NERAgree(antec, dict);
-		feat = feat + ", " + "NERMAT=" + nerMat;
+//		//number match
+//		boolean numMat = anaph.preciseMatch ? true : anaph.numberAgree(antec);
+//				
+//		//gender match
+//		boolean genMat = anaph.preciseMatch ? true : anaph.genderAgree(antec);
+//		
+//		feat = feat + ", " + "GENMAT=" + genMat + ", " + "NUMMAT=" + numMat;
+//		
+//		//animacy match
+//		boolean aniMat = anaph.preciseMatch ? true : anaph.animateAgree(antec);
+//		feat = feat + ", " + "ANIMAT=" + aniMat;
+//		
+//		//person match (only apply for pronominal mentions)
+//		if((anaph.isPronominal() && !anaph.preciseMatch) && antec.isPronominal()){
+//			boolean perMat = anaph.preciseMatch ? true : anaph.personAgree(antec);
+//			feat = feat + ", " + "PERMAT=" + perMat;
+//		}
+//		
+//		//ner match
+//		boolean nerMat = anaph.preciseMatch ? true : anaph.NERAgree(antec, dict);
+//		feat = feat + ", " + "NERMAT=" + nerMat;
 		
 		boolean preciseMatch = anaph.preciseMatch;
 		
@@ -83,17 +81,18 @@ public class MentionFeatureGenerator {
 	public void genNewClusterFeatures(Mention anaph, Sentence anaphSent, CorefModel model, FeatureVector fv){
 		// anaph starts a new cluster
 		//type features
-		MentionType anaphType = (anaph.isPronominal() && anaph.preciseMatch) ? MentionType.NOMINAL : anaph.mentionType;
+		MentionType anaphType = (anaph.isPronominal() && anaph.preciseMatch) ? MentionType.PROPER : anaph.mentionType;
 		String feat = "TYPE=" + anaphType;
 		String given = "NEWCLUSTER";
 		
-		if(anaphType == MentionType.PRONOMINAL){
-			feat = feat + ", " + "LOCATTRMATOFSENT=" + anaph.localAttrMatchOfSent + ", " 
-					+ "LOCATTRMATTYPE=" + anaph.localAttrMatchType;
+		if(anaphType == MentionType.PRONOMINAL) {
+			feat = feat + ", " + "LOCATTRMATOFSENT=" + anaph.localAttrMatchOfSent; 
+//			+ ", " + "LOCATTRMATTYPE=" + anaph.localAttrMatchType;
 		}
-		
-		feat = feat  + ", " + "PRECMATPOS=" + anaph.closestPreciseMatchPos + ", " 
+		else {
+			feat = feat  + ", " + "PRECMATPOS=" + anaph.closestPreciseMatchPos + ", " 
 						+ "PRECMATTYPE=" + anaph.closestPreciseMatchType;
+		}
 		
 		addFeature(feat, given, model, fv);
 	}

@@ -45,6 +45,7 @@ public class Mention implements Serializable{
 	public Gender gender;
 	public Animacy animacy;
 	public Person person;
+	public SpeakerInfo speakerInfo = null;
 	
 	private List<Mention> listMember = null;
 	private Mention belongTo = null;
@@ -52,7 +53,7 @@ public class Mention implements Serializable{
 	private Mention apposTo = null;
 	private List<Mention> predicateNominatives = null;
 	private Mention predNomiTo = null;
-	private List<Mention> relativePronouns = null;
+	//private List<Mention> relativePronouns = null;
 	private Mention relPronTo = null;
 	public List<Mention> preciseMatchs = null;
 	public int closestPreciseMatchPos = -1;
@@ -191,14 +192,14 @@ public class Mention implements Serializable{
 		return this.mentionType == MentionType.LIST;
 	}
 	
-	public boolean ruleout(Mention antec, Dictionaries dict){
+	public boolean ruleout(Mention antec, Dictionaries dict, boolean strict){
 		if(this.apposTo(antec) || this.predNomiTo(antec)) {
 			return false;
 		}
 		
-//		if(!antec.attrAgree(this, dict)) {
-//			return true;
-//		}
+		if(strict && !antec.attrAgree(this, dict)) {
+			return true;
+		}
 		
 		if(!antec.isPronominal() && !this.isPronominal() 
 				&& (antec.cover(this) || this.cover(antec))){
@@ -207,35 +208,35 @@ public class Mention implements Serializable{
 		return false;
 	}
 	
-	public int getDistOfMention(Mention mention){
-//		int distOfSent = this.getDistOfSent(mention);
-//		int lowerbound = distOfSent * 10;
-//		int upperbound = (distOfSent + 1) * 10 - 1;
-//		
-//		int distOfMention = (this.mentionID - mention.mentionID) / 5;
-//		if(distOfMention < lowerbound){
-//			distOfMention = lowerbound;
-//		}
-//		if(distOfMention > upperbound){
-//			distOfMention = upperbound;
-//		}
-//		return distOfMention;
-		return this.mentionID - mention.mentionID;
-	}
+//	public int getDistOfMention(Mention mention){
+////		int distOfSent = this.getDistOfSent(mention);
+////		int lowerbound = distOfSent * 10;
+////		int upperbound = (distOfSent + 1) * 10 - 1;
+////		
+////		int distOfMention = (this.mentionID - mention.mentionID) / 5;
+////		if(distOfMention < lowerbound){
+////			distOfMention = lowerbound;
+////		}
+////		if(distOfMention > upperbound){
+////			distOfMention = upperbound;
+////		}
+////		return distOfMention;
+//		return this.mentionID - mention.mentionID;
+//	}
 	
 	public int getDistOfSent(Mention mention){
 		int distOfSent = this.sentID - mention.sentID;
 		
 		if(!this.isPronominal() && !mention.isPronominal()){
-			distOfSent = distOfSent / 4;
-			if(distOfSent > 9){
-				distOfSent = 9;
+			distOfSent = distOfSent / 3;
+			if(distOfSent > 19){
+				distOfSent = 19;
 			}
 		}
 		else{
-			distOfSent = distOfSent / 4;
-			if(distOfSent > 9){
-				distOfSent = 9;
+			distOfSent = distOfSent / 3;
+			if(distOfSent > 19){
+				distOfSent = 19;
 			}
 		}
 		
@@ -243,9 +244,8 @@ public class Mention implements Serializable{
 	}
 	
 	public boolean numberAgree(Mention mention){
-		
 		if(this.number != Number.UNKNOWN && mention.number != Number.UNKNOWN){
-			return this.number == mention.number ? true : false;
+			return this.number == mention.number;
 		}
 		else{
 			return true;
@@ -254,7 +254,7 @@ public class Mention implements Serializable{
 	
 	public boolean genderAgree(Mention mention){
 		if(this.gender != Gender.UNKNOWN && mention.gender != Gender.UNKNOWN){
-			return this.gender == mention.gender ? true : false;
+			return this.gender == mention.gender;
 		}
 		else{
 			return true;
@@ -266,20 +266,24 @@ public class Mention implements Serializable{
 			return true;
 		}
 		else{
-			return this.animacy == mention.animacy ? true : false;
+			return this.animacy == mention.animacy;
 		}
 	}
 	
-	public boolean personAgree(Mention mention){
-		if(this.person == Person.UNKNOWN || mention.person == Person.UNKNOWN){
+	public boolean personAgree(Mention mention) {
+		if((this.person == Person.I || this.person == Person.WE || this.person == Person.YOU)
+			|| (mention.person == Person.I || mention.person == Person.WE || mention.person == Person.YOU)) {
+			return (this.person == mention.person) && (this.speakerInfo.equals(mention.speakerInfo));
+		}
+		else if(this.person == Person.UNKNOWN || mention.person == Person.UNKNOWN) {
 			return true;
 		}
-		else{
-			return this.person == mention.person ? true : false;
+		else {
+			return this.person == mention.person;
 		}
 	}
 	
-	public boolean NERAgree(Mention mention, Dictionaries dict){
+	public boolean NERAgree(Mention mention, Dictionaries dict) {
 		if(this.isPronominal()){
 			if(mention.headword.ner.equals("O")){
 				return true;
@@ -343,7 +347,7 @@ public class Mention implements Serializable{
 		else if(!(this.NERAgree(mention, dict))){
 			return false;
 		}
-		else if(this.isPronominal() && mention.isPronominal() && !(this.personAgree(mention))){
+		else if(!(this.personAgree(mention))){
 			return false;
 		}
 		else{
@@ -377,6 +381,25 @@ public class Mention implements Serializable{
 		member.belongTo = this;
 		//this.mentionType = MentionType.LIST;
 		this.number = Number.PLURAL;
+		if(this.person == Person.I) {
+			this.person = Person.WE;
+		}
+		else if(this.person == Person.HE || this.person == Person.SHE || this.person == Person.IT) {
+			this.person = Person.THEY;
+		}
+		else if(this.person == Person.UNKNOWN) {
+			this.person = Person.THEY;
+		}
+		
+		
+		if(member.person == Person.I || member.person == Person.WE) {
+			this.person = Person.WE;
+		}
+		else if(member.person == Person.YOU) {
+			if(this.person == Person.THEY) {
+				this.person = Person.YOU;
+			}
+		}
 	}
 	
 	public boolean preciseMatch(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict) {
@@ -403,6 +426,42 @@ public class Mention implements Serializable{
 		this.preciseMatch = true;
 		this.closestPreciseMatchPos = this.getDistOfSent(preciseMatch);
 		this.closestPreciseMatchType = preciseMatch.mentionType;
+	}
+	
+	public int apposOrder(Mention mention) {
+		if(this.isProper()) {
+			if(mention.isProper()) {
+				return this.headIndex < mention.headIndex ? -1 : (this.headIndex == mention.headIndex ? 0 : 1);
+			}
+			else {
+				return -1;
+			}
+		}
+		else if (this.isPronominal()) {
+			if(mention.isProper()){
+				return 1;
+			}
+			else if(mention.isPronominal()) {
+				return this.headIndex < mention.headIndex ? -1 : (this.headIndex == mention.headIndex ? 0 : 1);
+			}
+			else if(mention.isNominative()) {
+				return -1;
+			}
+			else {
+				throw new RuntimeException("mention type error: " + mention.mentionType);
+			}
+		}
+		else if(this.isNominative()){
+			if(mention.isNominative()) {
+				return this.headIndex < mention.headIndex ? -1 : (this.headIndex == mention.headIndex ? 0 : 1);
+			}
+			else {
+				return 1;
+			}
+		}
+		else {
+			throw new RuntimeException("mention type error: " + this.mentionType);
+		}
 	}
 	
 	public void addApposition(Mention appo) throws MentionException{
@@ -967,9 +1026,30 @@ public class Mention implements Serializable{
 	}
 	
 	private void setPerson(Sentence sent, Dictionaries dict){
-		// only do for pronoun
 		if(!this.isPronominal()){
-			person = Person.UNKNOWN;
+			if(this.number == Number.UNKNOWN) {
+				person = Person.UNKNOWN;
+			}
+			if(this.number == Number.PLURAL) {
+				person = Person.THEY;
+			}
+			else if(this.gender == Gender.MALE) {
+				person = Person.HE;
+			}
+			else if(this.gender == Gender.FEMALE) {
+				person = Person.SHE;
+			}
+			else if(this.gender == Gender.NEUTRAL) {
+				person = Person.IT;
+			}
+			else {
+				if(this.animacy == Animacy.INANIMATE) {
+					person = Person.IT;
+				}
+				else {
+					person = Person.UNKNOWN;
+				}
+			}
 			return;
 		}
 		
@@ -1061,6 +1141,7 @@ public class Mention implements Serializable{
 		printer.println("mention animacy: " + this.animacy);
 		printer.println("mention person: " + this.person);
 		printer.println("mention ner: " + this.headword.ner);
+		printer.println("mention speaker: " + this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerName());
 		printer.println("#end Mention " + this.mentionID);
 		printer.println("===================================");
 		printer.flush();
@@ -1080,6 +1161,7 @@ public class Mention implements Serializable{
 		printer.println("mention animacy: " + this.animacy);
 		printer.println("mention person: " + this.person);
 		printer.println("mention ner: " + this.headword.ner);
+		printer.println("mention speaker: " + this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerName());
 		printer.println("#end Mention " + this.mentionID);
 		printer.println("===================================");
 		printer.flush();

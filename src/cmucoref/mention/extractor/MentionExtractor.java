@@ -1,12 +1,14 @@
 package cmucoref.mention.extractor;
 
 import cmucoref.document.Document;
+import cmucoref.document.Lexicon;
 import cmucoref.document.Sentence;
 import cmucoref.exception.MentionException;
 import cmucoref.mention.Mention;
 import cmucoref.mention.extractor.relationextractor.*;
 import cmucoref.model.Options;
 import cmucoref.util.Pair;
+import cmucoref.mention.SpeakerInfo;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -14,8 +16,10 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Properties;
 
@@ -47,15 +51,6 @@ public abstract class MentionExtractor {
 				for(Mention mention2 : mentions){
 					if(mention1.overlap(mention2)){
 						remove.add(mention1);
-						
-//						if(mention1.startIndex > mention2.startIndex){
-//							mention2.endIndex = mention1.endIndex;
-//						}
-//						else{
-//							mention2.startIndex = mention1.startIndex;
-//							mention2.headIndex = mention1.headIndex;
-//							mention2.process(sent, dict);
-//						}
 					}
 				}
 			}
@@ -88,6 +83,9 @@ public abstract class MentionExtractor {
 			mention.mentionID = i;
 		}
 		
+		//find speaker for each mention
+		findSpeakers(doc, allMentions, mentionList);
+		
 		if(options.usePreciseMatch()){
 			findPreciseMatchRelation(doc, allMentions);
 		}
@@ -95,28 +93,84 @@ public abstract class MentionExtractor {
 		return allMentions;
 	}
 	
-	protected void findPreciseMatchRelation(Document doc, List<Mention> allMentions){
+	/**
+	 * 
+	 * @param doc
+	 * @param allMentions
+	 */
+	protected void findSpeakers(Document doc, List<Mention> allMentions, List<List<Mention>> mentionList) {
+		SpeakerInfo.reset();
+		Map<String, SpeakerInfo> speakersMap = new HashMap<String, SpeakerInfo>();
+		speakersMap.put("<DEFAULT_SPEAKER>", new SpeakerInfo("<DEFAULT_SPEAKER>"));
+		// find default speakers from the speaker tags of document doc
+		findDefaultSpeakers(doc, allMentions, speakersMap);
+		
+	}
+	
+	protected SpeakerInfo findQuotationSpeaker(Sentence sent, List<Mention> mentions, 
+			int startIndex, int endIndex, Dictionaries dict) {
+		for(int i = endIndex - 1; i >= startIndex; --i) {
+			String lemma = sent.getLexicon(i).lemma;
+			if(dict.reportVerb.contains(lemma)) {
+				int reportVerbPos = i;
+				for(int j = startIndex; j < endIndex; ++j) {
+					Lexicon lex = sent.getLexicon(j);
+					if(lex.collapsed_head == reportVerbPos && lex.collapsed_deprel.equals("nsubj")) {
+						int speakerHeadIndex = j;
+						for(Mention mention : mentions) {
+							if(mention.headIndex == speakerHeadIndex 
+								&& mention.startIndex >= startIndex && mention.endIndex < endIndex) {
+								SpeakerInfo speakerInfo = new SpeakerInfo(mention.getSpan(sent));
+								speakerInfo.setMainMention(mention);
+								return speakerInfo;
+							}
+						}
+						return new SpeakerInfo(sent.getLexicon(speakerHeadIndex).form);
+					}
+				}
+			}
+		}
+		return null;
+	}
+	
+	/**
+	 * find default speakers from the speaker tags of document
+	 * @param doc
+	 * @param allMentions
+	 * @param speakersMap
+	 */
+	protected void findDefaultSpeakers(Document doc, List<Mention> allMentions, Map<String, SpeakerInfo> speakersMap) {
+		for(Mention mention : allMentions) {
+			Sentence sent = doc.getSentence(mention.sentID);
+			String speaker = sent.getSpeaker().equals("-") ? "<DEFAULT_SPEAKER>" : sent.getSpeaker();
+			SpeakerInfo speakerInfo = speakersMap.get(speaker);
+			if(speakerInfo == null) {
+				speakerInfo = new SpeakerInfo(speaker);
+				speakersMap.put(speaker, speakerInfo);
+			}
+			mention.speakerInfo = speakerInfo;
+		}
+	}
+	
+	protected void findPreciseMatchRelation(Document doc, List<Mention> allMentions) {
 		for(int i = 1; i < allMentions.size(); ++i){
 			Mention anaph = allMentions.get(i);
 			//find local attribute match
 			for(int j = i - 1; j >=0; --j){
 				Mention antec = allMentions.get(j);
-				if(anaph.ruleout(antec, dict)){
-					continue;
-				}
-				if(!anaph.attrAgree(antec, dict)){
+				if(anaph.ruleout(antec, dict, true)){
 					continue;
 				}
 				
-				anaph.localAttrMatchOfSent = anaph.getDistOfSent(antec);
-				anaph.localAttrMatchOfMention = anaph.getDistOfMention(antec);
+				int distOfSent = anaph.getDistOfSent(antec);
+				anaph.localAttrMatchOfSent = distOfSent;
 				anaph.localAttrMatchType = antec.mentionType;
 				break;
 			}
 			//find precise match
 			for(int j = 0; j < i; ++j){
 				Mention antec = allMentions.get(j);
-				if(anaph.ruleout(antec, dict)){
+				if(anaph.ruleout(antec, dict, false)){
 					continue;
 				}
 				
@@ -226,23 +280,6 @@ public abstract class MentionExtractor {
 			printer.println("----------------------------------------");
 		}
 		printer.println("end document");
-		printer.flush();
-	}
-	
-	public void displayMention(Mention mention, PrintStream printer) {
-		printer.println("#Begin Mention " + mention.mentionID);
-		printer.println("sent ID: " + mention.sentID);
-		printer.println("mention ID: " + mention.mentionID);
-		printer.println(mention.startIndex + " " + mention.endIndex);
-		printer.println("headIndex: " + mention.headIndex);
-		printer.println("headString: " + mention.headString);
-		printer.println("mention type: " + mention.mentionType);
-		printer.println("mention gender: " + mention.gender);
-		printer.println("mention number: " + mention.number);
-		printer.println("mention animacy: " + mention.animacy);
-		printer.println("mention person: " + mention.person);
-		printer.println("#end Mention " + mention.mentionID);
-		printer.println("===================================");
 		printer.flush();
 	}
 	

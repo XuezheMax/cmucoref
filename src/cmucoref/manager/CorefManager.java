@@ -104,7 +104,7 @@ public class CorefManager {
 					for(int j = 0; j <= i; ++j){
 						if(j < i){
 							Mention antec = allMentions.get(j);
-							if(anaph.ruleout(antec, getDict())){
+							if(anaph.ruleout(antec, getDict(), true)){
 								continue;
 							}
 							mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), getDict(), model, null);
@@ -166,7 +166,7 @@ public class CorefManager {
 			for(int j = 0; j <= i; ++j){
 				if(j < i){
 					Mention antec = allMentions.get(j);
-					if(anaph.ruleout(antec, getDict())){
+					if(anaph.ruleout(antec, getDict(), true)){
 						keys[j] = null;
 						gids[j] = null;
 						continue;
