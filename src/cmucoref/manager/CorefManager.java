@@ -7,6 +7,7 @@ import java.util.List;
 
 import cmucoref.io.ObjectWriter;
 import cmucoref.document.Document;
+import cmucoref.document.Sentence;
 import cmucoref.exception.CreatingInstanceException;
 import cmucoref.io.DocumentReader;
 import cmucoref.mention.Mention;
@@ -82,35 +83,37 @@ public class CorefManager {
 				numInst += createAlphabet(subFile, model);
 			}
 		}
-		else if(file.isFile()){
+		else if(file.isFile()) {
 			DocumentReader docReader = DocumentReader.createDocumentReader(model.options.getTrainReader());
 			docReader.startReading(file.getAbsolutePath());
 			Document doc = docReader.getNextDocument(false);
-			while(doc != null){
+			while(doc != null) {
 				numInst++;
 				List<List<Mention>> mentionList = mentionExtractor.extractPredictedMentions(doc, model.options);
 				List<Mention> allMentions = mentionExtractor.getSingleMentionList(doc, mentionList, model.options);
 				
-				for(int i = 0; i < allMentions.size(); ++i){
+				for(int i = 0; i < allMentions.size(); ++i) {
 					Mention anaph = allMentions.get(i);
-					if(anaph.preciseMatchs != null){
-						for(Mention antec : anaph.preciseMatchs){
-							mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), getDict(), model, null);
+					Sentence anaphSent = doc.getSentence(anaph.sentID);
+					if(anaph.preciseMatchs != null) {
+						for(Mention antec : anaph.preciseMatchs) {
+							Sentence antecSent = doc.getSentence(antec.sentID);
+							mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, getDict(), model, null);
 						}
-						mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), model, null);
-						continue;
 					}
 					
-					for(int j = 0; j <= i; ++j){
-						if(j < i){
+					for(int j = 0; j <= i; ++j) {
+						if(j < i) {
 							Mention antec = allMentions.get(j);
-							if(anaph.ruleout(antec, getDict(), true)){
+							Sentence antecSent = doc.getSentence(antec.sentID);
+							if(anaph.ruleout(anaphSent, antec, antecSent, getDict())) {
 								continue;
 							}
-							mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), getDict(), model, null);
+							
+							mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, getDict(), model, null);
 						}
-						else{
-							mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), model, null);
+						else {
+							mentionFeatGen.genNewClusterFeatures(anaph, anaphSent, model, null);
 						}
 					}
 				}
@@ -131,30 +134,24 @@ public class CorefManager {
 		out.writeInt(-4);
 		out.reset();
 		
-		for(int i = 0; i < allMentions.size(); ++i){
+		for(int i = 0; i < allMentions.size(); ++i) {
 			Mention anaph = allMentions.get(i);
+			Sentence anaphSent = doc.getSentence(anaph.sentID);
 			int[][] keys = null;
 			int[][] gids = null;
 			
 			if(anaph.preciseMatchs != null) {
-				keys = new int[anaph.preciseMatchs.size() + 1][];
-				gids = new int[anaph.preciseMatchs.size() + 1][];
-				for(int j = 0; j <= anaph.preciseMatchs.size(); ++j){
-					if(j < anaph.preciseMatchs.size()){
-						Mention antec = anaph.preciseMatchs.get(j);
-						FeatureVector fv = new FeatureVector();
-						mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), getDict(), model, fv);
-						Pair<int[], int[]> res = fv.keys();
-						keys[j] = res.first;
-						gids[j] = res.second;
-					}
-					else{
-						FeatureVector fv = new FeatureVector();
-						mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), model, fv);
-						Pair<int[], int[]> res = fv.keys();
-						keys[j] = res.first;
-						gids[j] = res.second;
-					}
+				keys = new int[anaph.preciseMatchs.size()][];
+				gids = new int[anaph.preciseMatchs.size()][];
+				int j = 0;
+				for(Mention antec : anaph.preciseMatchs) {
+					Sentence antecSent = doc.getSentence(antec.sentID);
+					FeatureVector fv = new FeatureVector();
+					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, getDict(), model, fv);
+					Pair<int[], int[]> res = fv.keys();
+					keys[j] = res.first;
+					gids[j] = res.second;
+					j++;
 				}
 				out.writeObject(keys);
 				out.writeObject(gids);
@@ -163,23 +160,25 @@ public class CorefManager {
 			
 			keys = new int[i + 1][];
 			gids = new int[i + 1][];
-			for(int j = 0; j <= i; ++j){
-				if(j < i){
+			for(int j = 0; j <= i; ++j) {
+				if(j < i) {
 					Mention antec = allMentions.get(j);
-					if(anaph.ruleout(antec, getDict(), true)){
+					Sentence antecSent = doc.getSentence(antec.sentID);
+					if(anaph.ruleout(anaphSent, antec, antecSent, getDict())) {
 						keys[j] = null;
 						gids[j] = null;
 						continue;
 					}
+					
 					FeatureVector fv = new FeatureVector();
-					mentionFeatGen.genCoreferentFeatures(anaph, doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), getDict(), model, fv);
+					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, getDict(), model, fv);
 					Pair<int[], int[]> res = fv.keys();
 					keys[j] = res.first;
 					gids[j] = res.second;
 				}
-				else{
+				else {
 					FeatureVector fv = new FeatureVector();
-					mentionFeatGen.genNewClusterFeatures(anaph, doc.getSentence(anaph.sentID), model, fv);
+					mentionFeatGen.genNewClusterFeatures(anaph, anaphSent, model, fv);
 					Pair<int[], int[]> res = fv.keys();
 					keys[j] = res.first;
 					gids[j] = res.second;

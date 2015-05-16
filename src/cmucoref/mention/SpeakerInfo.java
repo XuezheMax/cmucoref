@@ -4,14 +4,12 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import edu.stanford.nlp.dcoref.Dictionaries;
-
 public class SpeakerInfo {
 	private String speakerId;
 	private String speakerName;
 	private String speakerDesc;
 	private String[] speakerNameStrings; // tokenized speaker name
-	private Mention mainMention = null;
+	private Mention speaker = null;
 	private Set<Mention> mentions = new LinkedHashSet<Mention>();  // Mentions that corresponds to the speaker...
 	
 	private static final Pattern DEFAULT_SPEAKER_PATTERN = Pattern.compile("PER\\d+");
@@ -45,12 +43,16 @@ public class SpeakerInfo {
 		numOfSpeaker = 0;
 	}
 	
-	public void setMainMention(Mention mention) {
-		this.mainMention = mention;
+	public void setSpeaker(Mention mention) {
+		this.speaker = mention;
 	}
 	
 	public int numOfSpeaker() {
 		return numOfSpeaker;
+	}
+	
+	public Mention getSpeaker() {
+		return speaker;
 	}
 	
 	public String getSpeakerName() {

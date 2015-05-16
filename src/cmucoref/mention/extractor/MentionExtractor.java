@@ -71,6 +71,24 @@ public abstract class MentionExtractor {
 		mentions.removeAll(remove);
 	}
 	
+	protected void deleteSpuriousPronominalMentions(List<Mention> mentions, Sentence sent) {
+		//remove you know mentions
+		Set<Mention> remove = new HashSet<Mention>();
+		for(Mention mention : mentions) {
+			if(mention.isPronominal() 
+				&& (mention.endIndex - mention.startIndex == 1) 
+				&& mention.headString.equals("you")) {
+				if(mention.headIndex + 1 < sent.length()) {
+					Lexicon lex = sent.getLexicon(mention.headIndex + 1);
+					if(lex.form.equals("know")) {
+						remove.add(mention);
+					}
+				}
+			}
+		}
+		mentions.removeAll(remove);
+	}
+	
 	public List<Mention> getSingleMentionList(Document doc, List<List<Mention>> mentionList, Options options){
 		List<Mention> allMentions = new ArrayList<Mention>();
 		for(List<Mention> mentions : mentionList){
@@ -107,8 +125,30 @@ public abstract class MentionExtractor {
 		
 	}
 	
+	protected void findQuotationSpeakers(Document doc, List<Mention> allMentions, List<List<Mention>> mentionList, 
+			Dictionaries dict, Map<String, SpeakerInfo> speakersMap, 
+			Pair<Integer, Integer> beginQuotation, Pair<Integer, Integer> endQuotation) {
+		Sentence sent = doc.getSentence(beginQuotation.first);
+		List<Mention> mentions = mentionList.get(beginQuotation.first);
+		SpeakerInfo speakerInfo = findQuotationSpeaker(sent, mentions, 1, beginQuotation.second, dict, speakersMap);
+		if(speakerInfo != null) {
+			
+			return;
+		}
+		
+		sent = doc.getSentence(endQuotation.first);
+		mentions = mentionList.get(endQuotation.first);
+		speakerInfo = findQuotationSpeaker(sent, mentions, endQuotation.second + 1, sent.length(), dict, speakersMap);
+		if(speakerInfo != null) {
+			
+			return;
+		}
+		
+		
+	}
+	
 	protected SpeakerInfo findQuotationSpeaker(Sentence sent, List<Mention> mentions, 
-			int startIndex, int endIndex, Dictionaries dict) {
+			int startIndex, int endIndex, Dictionaries dict, Map<String, SpeakerInfo> speakersMap) {
 		for(int i = endIndex - 1; i >= startIndex; --i) {
 			String lemma = sent.getLexicon(i).lemma;
 			if(dict.reportVerb.contains(lemma)) {
@@ -120,9 +160,14 @@ public abstract class MentionExtractor {
 						for(Mention mention : mentions) {
 							if(mention.headIndex == speakerHeadIndex 
 								&& mention.startIndex >= startIndex && mention.endIndex < endIndex) {
-								SpeakerInfo speakerInfo = new SpeakerInfo(mention.getSpan(sent));
-								speakerInfo.setMainMention(mention);
-								return speakerInfo;
+								if(mention.utteranceInfo == null) {
+									String speakerKey = mention.getSpan(sent);
+									SpeakerInfo speakerInfo = new SpeakerInfo(speakerKey);
+									speakersMap.put(speakerKey, speakerInfo);
+									speakerInfo.setSpeaker(mention);
+									mention.utteranceInfo = speakerInfo;
+								}
+								return mention.utteranceInfo;
 							}
 						}
 						return new SpeakerInfo(sent.getLexicon(speakerHeadIndex).form);
@@ -149,6 +194,7 @@ public abstract class MentionExtractor {
 				speakersMap.put(speaker, speakerInfo);
 			}
 			mention.speakerInfo = speakerInfo;
+			speakerInfo.addMention(mention);
 		}
 	}
 	
@@ -158,19 +204,23 @@ public abstract class MentionExtractor {
 			//find local attribute match
 			for(int j = i - 1; j >=0; --j){
 				Mention antec = allMentions.get(j);
-				if(anaph.ruleout(antec, dict, true)){
+				if(anaph.ruleout(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)){
 					continue;
 				}
 				
-				int distOfSent = anaph.getDistOfSent(antec);
-				anaph.localAttrMatchOfSent = distOfSent;
-				anaph.localAttrMatchType = antec.mentionType;
+				if(anaph.getDistOfSent(antec) > 1) {
+					continue;
+				}
+				
+				anaph.localAttrMatch = antec;
 				break;
 			}
+			
 			//find precise match
 			for(int j = 0; j < i; ++j){
 				Mention antec = allMentions.get(j);
-				if(anaph.ruleout(antec, dict, false)){
+				
+				if(anaph.ruleout(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)){
 					continue;
 				}
 				

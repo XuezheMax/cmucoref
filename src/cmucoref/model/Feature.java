@@ -12,20 +12,28 @@ public class Feature extends TLinkableAdapter{
 	public int index;
 
 	public int gid;
+	
+	public double val;
 
-	public Feature(int i, int gid) {
+	
+	public Feature(int i, int gid, double val) {
 		index = i;
 		this.gid = gid;
+		this.val = val;
 	}
 
+	public Feature(int i, int gid) {
+		this(i, gid, 1.0);
+	}
+	
 	@Override
 	public final Feature clone() {
-		return new Feature(index, gid);
+		return new Feature(index, gid, val);
 	}
 
 	@Override
 	public final String toString() {
-		return index + "|" + gid;
+		return index + "|" + gid + ":" + val;
 	}
 }
 

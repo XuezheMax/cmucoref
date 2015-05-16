@@ -82,7 +82,9 @@ public class StanfordMentionExtractor extends MentionExtractor{
 				mentions.add(mention);
 			}
 			
+			//remove spurious mentions
 			deleteSpuriousNamedEntityMentions(mentions, sent);
+			deleteSpuriousPronominalMentions(mentions, sent);
 			
 			Collections.sort(mentions, Mention.postTreeOrderComparator);
 			

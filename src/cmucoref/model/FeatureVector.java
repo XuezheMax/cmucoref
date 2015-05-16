@@ -16,8 +16,13 @@ public class FeatureVector extends TLinkedList {
 	}
 	
 	@SuppressWarnings("unchecked")
+	public void addFeature(int index, int gid, double val){
+		this.add(new Feature(index, gid, val));
+	}
+	
+	@SuppressWarnings("unchecked")
 	public void addFeature(int index, int gid){
-		this.add(new Feature(index, gid));
+		this.add(new Feature(index, gid, 1.0));
 	}
 
 	public Pair<int[], int[]> keys(){
@@ -42,7 +47,7 @@ public class FeatureVector extends TLinkedList {
 		
 		for(Object b : this){
 			Feature f = (Feature)(b);
-			score *= params[f.index];
+			score *= params[f.index] * f.val;
 		}
 		return score;
 	}

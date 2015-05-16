@@ -28,6 +28,9 @@ public class Mention implements Serializable{
 	/**
 	 * 
 	 */
+	
+	public static enum Definiteness {DEFINITE, GENERIC};
+	
 	private static final long serialVersionUID = 1L;
 	
 	public static final Comparator<Mention> headIndexOrderComparator = new MentionComparatorHeadIndexOrder();
@@ -45,7 +48,10 @@ public class Mention implements Serializable{
 	public Gender gender;
 	public Animacy animacy;
 	public Person person;
+	public Definiteness definite;
 	public SpeakerInfo speakerInfo = null;
+	public SpeakerInfo utteranceInfo = null; // the utterances with this mention as speaker;
+	public SpeakerInfo nextSpeakerInfo = null; //TODO
 	
 	private List<Mention> listMember = null;
 	private Mention belongTo = null;
@@ -56,12 +62,10 @@ public class Mention implements Serializable{
 	//private List<Mention> relativePronouns = null;
 	private Mention relPronTo = null;
 	public List<Mention> preciseMatchs = null;
-	public int closestPreciseMatchPos = -1;
-	public MentionType closestPreciseMatchType = null;
+//	public int closestPreciseMatchPos = -1;
+//	public MentionType closestPreciseMatchType = null;
 	public boolean preciseMatch = false;
-	public int localAttrMatchOfSent = -1;
-	public int localAttrMatchOfMention = -1;
-	public MentionType localAttrMatchType = null;
+	public Mention localAttrMatch = null;
 	
 	public int sentID = -1;
 	
@@ -78,13 +82,11 @@ public class Mention implements Serializable{
 		this.startIndex = startIndex;
 		this.endIndex = endIndex;
 		
-		closestPreciseMatchPos = -1;
-		closestPreciseMatchType = null;
+//		closestPreciseMatchPos = -1;
+//		closestPreciseMatchType = null;
 		preciseMatch = false;
 		
-		localAttrMatchOfSent = -1;
-		localAttrMatchOfMention = -1;
-		localAttrMatchType = null;
+		localAttrMatch = null;
 		
 		antecedent = null;
 		this.corefCluster = null;
@@ -176,6 +178,11 @@ public class Mention implements Serializable{
 		return this.relPronTo == null ? false : this.relPronTo.equals(antec);
 	}
 	
+	public boolean speakerTo(Mention anaph) {
+		Mention anaphSpeaker = anaph.speakerInfo.getSpeaker();
+		return anaphSpeaker == null ? false : this.equals(anaphSpeaker);
+	}
+	
 	public boolean isNominative(){
 		return this.mentionType == MentionType.NOMINAL;
 	}
@@ -192,19 +199,56 @@ public class Mention implements Serializable{
 		return this.mentionType == MentionType.LIST;
 	}
 	
-	public boolean ruleout(Mention antec, Dictionaries dict, boolean strict){
-		if(this.apposTo(antec) || this.predNomiTo(antec)) {
+	public boolean isDefinite() {
+		return this.definite == Definiteness.DEFINITE;
+	}
+	
+	//some rule out case should be treated specially
+	public boolean specialRuleout(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict) {
+		/*anaph has precise match and anaph is not pronominal, special 
+		 rule out proper or nominal antec that does not precise and span match with anaph
+		 */
+		if((this.isProper() || this.isNominative()) && this.preciseMatch) {
+			if(antec.isProper() || antec.isNominative()) {
+				if(!(this.spanMatch(sent, antec, antecSent, dict)) 
+					&& !(this.preciseMatch(sent, antec, antecSent, dict))) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	
+	public boolean ruleout(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict) {
+		// precise match ---> not rule out
+		if(this.preciseMatch(sent, antec, antecSent, dict)) {
 			return false;
 		}
 		
-		if(strict && !antec.attrAgree(this, dict)) {
+		//attribute does not match ---> rule out
+		if(!antec.attrAgree(this, dict)) {
 			return true;
 		}
 		
+		//cover ---> rule out
 		if(!antec.isPronominal() && !this.isPronominal() 
 				&& (antec.cover(this) || this.cover(antec))){
 			return true;
 		}
+		
+		//<I>s, <YOU>s or <WE>s with different speakers ---> rule out
+		if(((this.person == Person.I && antec.person == Person.I) 
+				|| (this.person == Person.YOU && antec.person == Person.YOU)
+				|| (this.person == Person.WE && antec.person == Person.WE))
+				&& !(this.speakerInfo.equals(antec.speakerInfo))) {
+			return true;
+		}
+		
+		//speakers and !<I> mentions in its utterance
+		if(antec.speakerTo(this) && this.person != Person.I) {
+			return true;
+		}
+		
 		return false;
 	}
 	
@@ -227,17 +271,12 @@ public class Mention implements Serializable{
 	public int getDistOfSent(Mention mention){
 		int distOfSent = this.sentID - mention.sentID;
 		
-		if(!this.isPronominal() && !mention.isPronominal()){
-			distOfSent = distOfSent / 3;
-			if(distOfSent > 19){
-				distOfSent = 19;
-			}
+		if(distOfSent == 0 && (this.isPronominal() || mention.isPronominal())) {
+			distOfSent = 1;
 		}
-		else{
-			distOfSent = distOfSent / 3;
-			if(distOfSent > 19){
-				distOfSent = 19;
-			}
+		
+		if(distOfSent > 49) {
+			distOfSent = 49;
 		}
 		
 		return distOfSent;
@@ -271,11 +310,7 @@ public class Mention implements Serializable{
 	}
 	
 	public boolean personAgree(Mention mention) {
-		if((this.person == Person.I || this.person == Person.WE || this.person == Person.YOU)
-			|| (mention.person == Person.I || mention.person == Person.WE || mention.person == Person.YOU)) {
-			return (this.person == mention.person) && (this.speakerInfo.equals(mention.speakerInfo));
-		}
-		else if(this.person == Person.UNKNOWN || mention.person == Person.UNKNOWN) {
+		if(this.person == Person.UNKNOWN || mention.person == Person.UNKNOWN) {
 			return true;
 		}
 		else {
@@ -406,15 +441,28 @@ public class Mention implements Serializable{
 		if(this.apposTo(antec)){
 			return true;
 		}
-		else if(this.predNomiTo(antec)){
+		
+		if(this.predNomiTo(antec)){
 			return true;
 		}
-		else if(!this.isPronominal() && !antec.isPronominal()){
+		
+		if(!this.isPronominal() && !antec.isPronominal()
+				&& !this.isListMemberOf(antec) && !antec.isListMemberOf(this)
+				&& this.isDefinite()){
 			return this.spanMatch(sent, antec, antecSent, dict);
 		}
-		else{
-			return false;
+		
+		if(((this.person == Person.I && antec.person == Person.I) 
+				|| (this.person == Person.YOU && antec.person == Person.YOU))
+				&& (this.speakerInfo.equals(antec.speakerInfo))) {
+			return true;
 		}
+		
+		if(this.person == Person.I && antec.speakerTo(this)) {
+			return true;
+		}
+		
+		return false;
 	}
 	
 	public void addPreciseMatch(Mention preciseMatch, Document doc){
@@ -424,8 +472,8 @@ public class Mention implements Serializable{
 		
 		this.preciseMatchs.add(preciseMatch);
 		this.preciseMatch = true;
-		this.closestPreciseMatchPos = this.getDistOfSent(preciseMatch);
-		this.closestPreciseMatchType = preciseMatch.mentionType;
+//		this.closestPreciseMatchPos = this.getDistOfSent(preciseMatch);
+//		this.closestPreciseMatchType = preciseMatch.mentionType;
 	}
 	
 	public int apposOrder(Mention mention) {
@@ -513,6 +561,7 @@ public class Mention implements Serializable{
 		return this.headMatch(sent, antec, antecSent)
 				&& (antec.wordsInclude(antecSent, this, sent, dict) 
 						|| this.relaxedSpanMatch(sent, antec, antecSent)
+						|| this.exactSpanMatch(sent, antec, antecSent)
 						|| this.isDemonym(sent, antec, antecSent, dict));
 	}
 	
@@ -741,6 +790,7 @@ public class Mention implements Serializable{
 	public void process(Sentence sent, Dictionaries dict){
 		getHeadword(sent);
 		setType(sent, dict);
+		setDefiniteness(sent, dict);
 		setNumber(sent, dict);
 		setAnimacy(sent, dict);
 		setGender(sent, dict, getGender(sent, dict));
@@ -780,6 +830,22 @@ public class Mention implements Serializable{
 		}
 		else{
 			mentionType = MentionType.NOMINAL;
+		}
+	}
+	
+	private void setDefiniteness(Sentence sent, Dictionaries dict) {
+		if(this.isNominative()) {
+			this.definite = Definiteness.GENERIC;
+			for(int i = this.startIndex; i <= this.headIndex; ++i) {
+				String word = sent.getLexicon(i).form.toLowerCase();
+				if(word.equals("its") || dict.determiners.contains(word)) {
+					this.definite = Definiteness.DEFINITE;
+					return;
+				}
+			}
+		}
+		else {
+			this.definite = Definiteness.DEFINITE;
 		}
 	}
 	

@@ -36,13 +36,13 @@ public class Test {
 	 * @throws MentionException 
 	 */
 	public static void main(String[] args) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, MentionException {		
-		String inputfile = "data/dev/original/conllx/conll2012.eng.dev.auto.all.conllx";
-		String outputfile = "mention-conllx.txt";
+		String inputfile = "tmp.conllx";
+		//String outputfile = "mention-conllx.txt";
 		
 		DocumentReader docReader = DocumentReader.createDocumentReader(CoNLLXDocumentReader.class.getName());
 		
 		docReader.startReading(inputfile);
-		PrintStream printer = new PrintStream(new File(outputfile));
+		//PrintStream printer = new PrintStream(new File(outputfile));
 		
 		StanfordMentionExtractor mentionExtractor = new StanfordMentionExtractor();
 		Options options = new Options();
@@ -51,13 +51,30 @@ public class Test {
 		Document doc = docReader.getNextDocument(false);
 		while(doc != null){
 			List<List<Mention>> mentionList = mentionExtractor.extractPredictedMentions(doc, options);
-			mentionExtractor.getSingleMentionList(doc, mentionList, options);
-			mentionExtractor.displayMentions(doc, mentionList, printer);
-			printer.flush();
+			List<Mention> allMentions = mentionExtractor.getSingleMentionList(doc, mentionList, options);
+			mentionExtractor.displayMentions(doc, mentionList, System.out);
+			System.out.println("--------------------------");
+			for(int i = 0; i < allMentions.size(); ++i) {
+				Mention anaph = allMentions.get(i);
+				System.out.println("anaph mention:");
+				anaph.display(doc.getSentence(anaph.sentID), System.out);
+				for(int j = 0; j < i; ++j) {
+					System.out.println("antec mention:");
+					Mention antec = allMentions.get(j);
+					antec.display(doc.getSentence(antec.sentID), System.out);
+					System.out.println(anaph.ruleout(doc.getSentence(anaph.sentID), antec, 
+							doc.getSentence(antec.sentID), mentionExtractor.getDict()));
+					
+					System.out.println(anaph.preciseMatch(doc.getSentence(anaph.sentID), antec, 
+							doc.getSentence(antec.sentID), mentionExtractor.getDict()));
+				}
+				System.out.println("--------------------------");
+			}
+			//printer.flush();
 			doc = docReader.getNextDocument(false);
 		}
 		
-		printer.close();
+		//printer.close();
 		docReader.close();
 	}
 
