@@ -15,7 +15,6 @@ import cmucoref.mention.extractor.MentionExtractor;
 import cmucoref.mention.featgen.MentionFeatureGenerator;
 import cmucoref.model.CorefModel;
 import cmucoref.model.FeatureVector;
-import cmucoref.util.Pair;
 import edu.stanford.nlp.dcoref.Dictionaries;
 
 public class CorefManager {
@@ -137,55 +136,40 @@ public class CorefManager {
 		for(int i = 0; i < allMentions.size(); ++i) {
 			Mention anaph = allMentions.get(i);
 			Sentence anaphSent = doc.getSentence(anaph.sentID);
-			int[][] keys = null;
-			int[][] gids = null;
+			
+			FeatureVector[] fvs = null;
 			
 			if(anaph.preciseMatchs != null) {
-				keys = new int[anaph.preciseMatchs.size()][];
-				gids = new int[anaph.preciseMatchs.size()][];
+				fvs = new FeatureVector[anaph.preciseMatchs.size()];
 				int j = 0;
 				for(Mention antec : anaph.preciseMatchs) {
 					Sentence antecSent = doc.getSentence(antec.sentID);
-					FeatureVector fv = new FeatureVector();
-					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, getDict(), model, fv);
-					Pair<int[], int[]> res = fv.keys();
-					keys[j] = res.first;
-					gids[j] = res.second;
+					fvs[j] = new FeatureVector();;
+					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, getDict(), model, fvs[j]);
 					j++;
 				}
-				out.writeObject(keys);
-				out.writeObject(gids);
+				out.writeObject(fvs);
 				continue;
 			}
 			
-			keys = new int[i + 1][];
-			gids = new int[i + 1][];
+			fvs = new FeatureVector[i + 1];
 			for(int j = 0; j <= i; ++j) {
 				if(j < i) {
 					Mention antec = allMentions.get(j);
 					Sentence antecSent = doc.getSentence(antec.sentID);
 					if(anaph.ruleout(anaphSent, antec, antecSent, getDict())) {
-						keys[j] = null;
-						gids[j] = null;
 						continue;
 					}
 					
-					FeatureVector fv = new FeatureVector();
-					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, getDict(), model, fv);
-					Pair<int[], int[]> res = fv.keys();
-					keys[j] = res.first;
-					gids[j] = res.second;
+					fvs[j] = new FeatureVector();
+					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, getDict(), model, fvs[j]);
 				}
 				else {
-					FeatureVector fv = new FeatureVector();
-					mentionFeatGen.genNewClusterFeatures(anaph, anaphSent, model, fv);
-					Pair<int[], int[]> res = fv.keys();
-					keys[j] = res.first;
-					gids[j] = res.second;
+					fvs[j] = new FeatureVector();
+					mentionFeatGen.genNewClusterFeatures(anaph, anaphSent, model, fvs[j]);
 				}
 			}
-			out.writeObject(keys);
-			out.writeObject(gids);
+			out.writeObject(fvs);
 		}
 		out.writeInt(-3);
 	}

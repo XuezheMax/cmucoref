@@ -44,14 +44,33 @@ public class MentionFeatureGenerator {
 		//definiteness features
 //		feat = feat + ", " + "DEFINITE=" + anaph.definite;
 		
+		//precise match features
+		feat = feat + ", " + "PRECMAT=" + preciseMatch;
+		
 		//string match features (only apply for nominative or proper mentions)
 		if((anaph.isNominative() || anaph.isProper()) && (antec.isNominative() || antec.isProper())) {
 			boolean headMatch = preciseMatch ? true : antec.headMatch(antecSent, anaph, anaphSent);
 			feat = feat + ", " + "HDMAT=" + headMatch;
+			boolean specialRelation = preciseMatch && !anaph.spanMatch(anaphSent, antec, antecSent, dict);
+			
+			//Acronym or Demonym
+			boolean ADNYM = specialRelation || anaph.isDemonym(anaphSent, antec, antecSent, dict);
+			if(!ADNYM && anaph.isProper() && antec.isProper()) {
+				ADNYM = anaph.acronymMatch(anaphSent, antec, antecSent);
+			}
+			
+			//wordInclude
+			boolean wordIncluded = ADNYM || antec.wordsInclude(antecSent, anaph, anaphSent, dict);
+			feat = feat + ", " + "WDIND=" + wordIncluded;
+			//exact match
+			boolean exactMatch = ADNYM || anaph.exactSpanMatch(anaphSent, antec, antecSent);
+			//relaxed match
+			boolean relaxedMatch = exactMatch || anaph.relaxedSpanMatch(anaphSent, antec, antecSent);
+			
+			feat = feat + ", " + "RLXMAT=" + relaxedMatch;
+			//feat = feat + ", " + "EXTMAT=" + exactMatch;
 		}
 		
-		//precise match features
-		feat = feat + ", " + "PRECMAT=" + preciseMatch;
 		
 		addFeature(feat, given, model, fv);
 	}
@@ -85,7 +104,7 @@ public class MentionFeatureGenerator {
 	protected final void addFeature(String feat, String given, CorefModel model, FeatureVector fv){
 		Pair<Integer, Integer> ids = model.getFeatureIndex(feat, given);
 		if(fv != null && ids != null){
-			fv.addFeature(ids.first, ids.second);
+			fv.addFeature(ids.first, ids.second, 1.0);
 		}
 	}
 }

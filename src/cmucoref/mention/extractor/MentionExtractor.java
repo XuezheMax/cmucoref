@@ -208,8 +208,16 @@ public abstract class MentionExtractor {
 					continue;
 				}
 				
-				if(anaph.getDistOfSent(antec) > 1) {
-					continue;
+				int distOfSent = anaph.getDistOfSent(antec);
+				if(antec.isPronominal()) {
+					if(distOfSent > 5) {
+						continue;
+					}
+				}
+				else {
+					if(distOfSent > 1) {
+						continue;
+					}
 				}
 				
 				anaph.localAttrMatch = antec;

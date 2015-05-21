@@ -1,10 +1,13 @@
-package cmucoref.document;
+package cmucoref.document.clean;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import cmucoref.document.Document;
+import cmucoref.document.Lexicon;
+import cmucoref.document.Sentence;
 import cmucoref.io.AnnotatedDocumentReader;
 import cmucoref.io.AnnotatedDocumentWriter;
 import cmucoref.io.DocumentReader;

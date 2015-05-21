@@ -1,26 +1,20 @@
-package cmucoref.document;
+package cmucoref.document.convert;
 
 import java.io.IOException;
 
-import cmucoref.io.CoNLLAnnotationDocumentReader;
+import cmucoref.document.Document;
+import cmucoref.io.CoNLLRawTextDocumentReader;
 import cmucoref.io.CoNLLXDocumentWriter;
 import cmucoref.io.DocumentReader;
 import cmucoref.io.DocumentWriter;
 
-public class CoNLLAnnotation2CoNLLXDocumentConverter {
+public class CoNLLRawText2CoNLLXDocumentConverter {
 
-	/**
-	 * @param args
-	 * @throws ClassNotFoundException 
-	 * @throws IllegalAccessException 
-	 * @throws InstantiationException 
-	 * @throws IOException 
-	 */
 	public static void main(String[] args) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException {
 		String conllfile = args[0];
 		String conllxfile = args[1];
 		
-		DocumentReader docReader = DocumentReader.createDocumentReader(CoNLLAnnotationDocumentReader.class.getName());
+		DocumentReader docReader = DocumentReader.createDocumentReader(CoNLLRawTextDocumentReader.class.getName());
 		DocumentWriter docWriter = DocumentWriter.createDocumentWriter(CoNLLXDocumentWriter.class.getName());
 		
 		docReader.startReading(conllfile);		
@@ -35,5 +29,4 @@ public class CoNLLAnnotation2CoNLLXDocumentConverter {
 		docReader.close();
 		docWriter.close();
 	}
-
 }

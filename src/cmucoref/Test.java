@@ -18,8 +18,11 @@ import cmucoref.document.Sentence;
 import cmucoref.exception.MentionException;
 import cmucoref.io.*;
 import cmucoref.mention.Mention;
+import cmucoref.mention.extractor.CMUMentionExtractor;
 import cmucoref.mention.extractor.MentionExtractor;
 import cmucoref.mention.extractor.StanfordMentionExtractor;
+import cmucoref.model.Feature;
+import cmucoref.model.FeatureVector;
 import cmucoref.model.Options;
 import cmucoref.util.Pair;
 
@@ -36,46 +39,35 @@ public class Test {
 	 * @throws MentionException 
 	 */
 	public static void main(String[] args) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, MentionException {		
-		String inputfile = "tmp.conllx";
-		//String outputfile = "mention-conllx.txt";
+		Options options = new Options(args);
 		
-		DocumentReader docReader = DocumentReader.createDocumentReader(CoNLLXDocumentReader.class.getName());
+		DocumentReader reader = new CoNLLXDocumentReader();
+		DocumentWriter writer = new CoNLLXDocumentWriter();
 		
-		docReader.startReading(inputfile);
-		//PrintStream printer = new PrintStream(new File(outputfile));
+		reader.startReading("data/dev/original/conllx/conll2012.eng.dev.auto.all.conllx");
+		writer.startWriting("outfile/tmp.base1.conllx");
 		
-		StanfordMentionExtractor mentionExtractor = new StanfordMentionExtractor();
-		Options options = new Options();
+		PrintStream printer = new PrintStream(new File("mention.base1.txt"));
+		
+		Document doc = reader.getNextDocument(true);
+		
+		MentionExtractor mentionExtractor = new CMUMentionExtractor();
+		
 		mentionExtractor.createDict(options.getPropFile());
 		
-		Document doc = docReader.getNextDocument(false);
-		while(doc != null){
+		while(doc != null) {
 			List<List<Mention>> mentionList = mentionExtractor.extractPredictedMentions(doc, options);
-			List<Mention> allMentions = mentionExtractor.getSingleMentionList(doc, mentionList, options);
-			mentionExtractor.displayMentions(doc, mentionList, System.out);
-			System.out.println("--------------------------");
-			for(int i = 0; i < allMentions.size(); ++i) {
-				Mention anaph = allMentions.get(i);
-				System.out.println("anaph mention:");
-				anaph.display(doc.getSentence(anaph.sentID), System.out);
-				for(int j = 0; j < i; ++j) {
-					System.out.println("antec mention:");
-					Mention antec = allMentions.get(j);
-					antec.display(doc.getSentence(antec.sentID), System.out);
-					System.out.println(anaph.ruleout(doc.getSentence(anaph.sentID), antec, 
-							doc.getSentence(antec.sentID), mentionExtractor.getDict()));
-					
-					System.out.println(anaph.preciseMatch(doc.getSentence(anaph.sentID), antec, 
-							doc.getSentence(antec.sentID), mentionExtractor.getDict()));
-				}
-				System.out.println("--------------------------");
-			}
-			//printer.flush();
-			doc = docReader.getNextDocument(false);
+			mentionExtractor.getSingleMentionList(doc, mentionList, options);
+			mentionExtractor.displayMentions(doc, mentionList, printer);
+			doc.getCorefClustersFromDocument(mentionList);
+			doc.assignCorefClustersToDocument(mentionList, false);
+			writer.writeDocument(doc, true);
+			doc = reader.getNextDocument(true);
 		}
 		
-		//printer.close();
-		docReader.close();
+		printer.close();
+		reader.close();
+		writer.close();
 	}
 
 }

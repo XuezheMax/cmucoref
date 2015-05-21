@@ -18,6 +18,7 @@ import cmucoref.io.ObjectReader;
 import cmucoref.manager.CorefManager;
 import cmucoref.mention.Mention;
 import cmucoref.model.CorefModel;
+import cmucoref.model.Feature;
 import cmucoref.model.FeatureVector;
 
 import edu.stanford.nlp.io.StringOutputStream;
@@ -164,8 +165,8 @@ class EMThread extends Thread {
 		givenC = new double[model.givenSize()];
 	}
 	
-	private void EMupdate(ObjectReader in, CorefModel model, CorefManager manager) throws IOException, ClassNotFoundException{
-		for(int i = 0; i < numTrainInst; ++i){
+	private void EMupdate(ObjectReader in, CorefModel model, CorefManager manager) throws IOException, ClassNotFoundException {
+		for(int i = 0; i < numTrainInst; ++i) {
 			if(i > 0 && i % 500 == 0){
 				currentNum += 500;
 				int percent = currentNum * 100 / totalTrainInst;
@@ -178,27 +179,23 @@ class EMThread extends Thread {
 				throw new IOException("last number is not equal to -4");
 			}
 			
-			for(int j = 0; j < sizeOfMention; ++j){
-				int[][] keys = (int[][]) in.readObject();
-				int[][] gids = (int[][]) in.readObject();
-				double[] probs = new double[keys.length];
+			for(int j = 0; j < sizeOfMention; ++j) {
+				FeatureVector[] fvs = (FeatureVector[]) in.readObject();
+				double[] probs = new double[fvs.length];
 				double sumProb = 0.0;
-				for(int k = 0; k < keys.length; ++k){
-					if(keys[k] == null){
-						probs[k] = 0.0;
-						continue;
-					}
-					probs[k] = model.getScore(new FeatureVector(keys[k], gids[k]));
+				for(int k = 0; k < fvs.length; ++k) {
+					probs[k] = fvs[k] == null ? 0.0 : model.getScore(fvs[k]);
 					sumProb += probs[k];
 				}
-				for(int k = 0; k < keys.length; ++k){
-					if(keys[k] == null){
+				for(int k = 0; k < fvs.length; ++k) {
+					if(fvs[k] == null) {
 						continue;
 					}
 					double val = probs[k] / sumProb;
-					for(int l = 0; l < keys[k].length; ++l){
-						featC[keys[k][l]] += val;
-						givenC[gids[k][l]] += val;
+					for(Object obj : fvs[k]) {
+						Feature f = (Feature) obj;
+						featC[f.index] += val;
+						givenC[f.gid] += val;
 					}
 				}
 			}

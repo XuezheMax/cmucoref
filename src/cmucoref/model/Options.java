@@ -35,7 +35,7 @@ public class Options implements Serializable{
 								PARAMETER_INITIALIZER = "parameter-initializer",
 								DEFAULT_PARAMETER_INITIALIZER = cmucoref.model.params.UniformInitializer.class.getName(),
 								MENTION_EXTRACTOR = "mention-extractor",
-								DEFAULT_MENTION_EXTRACTOR_CLASS = cmucoref.mention.extractor.StanfordMentionExtractor.class.getName(),
+								DEFAULT_MENTION_EXTRACTOR_CLASS = cmucoref.mention.extractor.CMUMentionExtractor.class.getName(),
 								USE_PRECISE_MATCH = "use-span-match",
 								DEFAULT_USE_PRECISE_MATCH = Boolean.TRUE.toString(),
 								EXTRACT_MENTION_ATTRIBUTE = "extract-mention-attribute",

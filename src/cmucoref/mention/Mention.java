@@ -447,7 +447,7 @@ public class Mention implements Serializable{
 		}
 		
 		if(!this.isPronominal() && !antec.isPronominal()
-				&& !this.isListMemberOf(antec) && !antec.isListMemberOf(this)
+				&& !this.cover(antec) && !antec.cover(this)
 				&& this.isDefinite()){
 			return this.spanMatch(sent, antec, antecSent, dict);
 		}
@@ -560,9 +560,10 @@ public class Mention implements Serializable{
 		}
 		return this.headMatch(sent, antec, antecSent)
 				&& (antec.wordsInclude(antecSent, this, sent, dict) 
-						|| this.relaxedSpanMatch(sent, antec, antecSent)
-						|| this.exactSpanMatch(sent, antec, antecSent)
-						|| this.isDemonym(sent, antec, antecSent, dict));
+					|| this.relaxedSpanMatch(sent, antec, antecSent)
+					|| this.exactSpanMatch(sent, antec, antecSent)
+					|| this.acronymMatch(sent, antec, antecSent)
+					|| this.isDemonym(sent, antec, antecSent, dict));
 	}
 	
 	public boolean headMatch(Sentence sent, Mention mention, Sentence sentOfM){
@@ -578,8 +579,8 @@ public class Mention implements Serializable{
 		else if(this.relaxedSpanMatch(sent, mention, sentOfM)){
 			return true;
 		}
-		else if(this.isProper() && mention.isProper()){
-			return this.isAcronymTo(mention, sentOfM) || mention.isAcronymTo(this, sent);
+		else if(this.acronymMatch(sent, mention, sentOfM)) {
+			return true;
 		}
 		else{
 			return false;
@@ -606,9 +607,6 @@ public class Mention implements Serializable{
 		
 		if(wordsOfThis.containsAll(wordsExceptStopWords)){
 			return true;
-		}
-		else if(this.isProper() && anaph.isProper()){
-			return this.isAcronymTo(anaph, anaphSent) || anaph.isAcronymTo(this, sent);
 		}
 		else{
 			return false;
@@ -647,6 +645,10 @@ public class Mention implements Serializable{
 			return true;
 		}
 		return false;
+	}
+	
+	public boolean acronymMatch(Sentence sent, Mention mention, Sentence sentOfM) {
+		return this.isProper() && mention.isProper() && (this.isAcronymTo(mention, sentOfM) || mention.isAcronymTo(this, sent));
 	}
 	
 	public boolean isAcronymTo(Mention mention, Sentence sent){
