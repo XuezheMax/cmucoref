@@ -10,9 +10,10 @@ import cmucoref.model.Options;
 import cmucoref.util.Pair;
 import cmucoref.mention.SpeakerInfo;
 
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,7 +34,8 @@ public abstract class MentionExtractor {
 	
 	public void createDict(String propfile) throws FileNotFoundException, IOException{
 		Properties props = new Properties();
-		props.load(new FileInputStream(propfile));
+		InputStream in = MentionExtractor.class.getClassLoader().getResourceAsStream(propfile);
+		props.load(new InputStreamReader(in));
 		this.dict = new Dictionaries(props);
 	}
 	
@@ -61,11 +63,20 @@ public abstract class MentionExtractor {
 		remove.clear();
 		String[] NUMBERS = {"NUMBER", "ORDINAL", "CARDINAL", "MONEY", "QUANTITY"};
 		HashSet<String> numberNER = new HashSet<String>(Arrays.asList(NUMBERS));
-		for(Mention mention : mentions){
-			if(mention.endIndex - mention.startIndex == 1){
-				if(numberNER.contains(mention.headword.ner)){
+		for(Mention mention : mentions) {
+			if(mention.endIndex - mention.startIndex == 1) {
+				if(numberNER.contains(mention.headword.ner)) {
 					remove.add(mention);
 				}
+			}
+		}
+		mentions.removeAll(remove);
+		
+		//remove NORP mentions as modifiers
+		remove.clear();
+		for(Mention mention : mentions) {
+			if(mention.headword.ner.equals("NORP") && mention.headword.postag.equals("JJ")) {
+				remove.add(mention);
 			}
 		}
 		mentions.removeAll(remove);
@@ -201,7 +212,20 @@ public abstract class MentionExtractor {
 	protected void findPreciseMatchRelation(Document doc, List<Mention> allMentions) {
 		for(int i = 1; i < allMentions.size(); ++i){
 			Mention anaph = allMentions.get(i);
-			//find local attribute match
+			
+			//find precise match
+			for(int j = 0; j < i; ++j){
+				Mention antec = allMentions.get(j);
+				
+				if(anaph.preciseMatch(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)){
+					anaph.addPreciseMatch(antec, doc);
+				}
+			}
+			
+			//find local attribute match (only for pronominal)
+			if(!anaph.isPronominal()) {
+				continue;
+			}
 			for(int j = i - 1; j >=0; --j){
 				Mention antec = allMentions.get(j);
 				if(anaph.ruleout(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)){
@@ -222,19 +246,6 @@ public abstract class MentionExtractor {
 				
 				anaph.localAttrMatch = antec;
 				break;
-			}
-			
-			//find precise match
-			for(int j = 0; j < i; ++j){
-				Mention antec = allMentions.get(j);
-				
-				if(anaph.ruleout(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)){
-					continue;
-				}
-				
-				if(anaph.preciseMatch(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)){
-					anaph.addPreciseMatch(antec, doc);
-				}
 			}
 		}
 	}
@@ -303,7 +314,7 @@ public abstract class MentionExtractor {
 				else if(relation.equals("PREDICATE_NOMINATIVE")){
 					for(Pair<Integer, Integer> pair : foundPairs){
 						if(pair.first == mention1.mentionID && pair.second == mention2.mentionID){
-							mention2.addPredicativeNominative(mention1);
+							mention2.addPredicativeNominative(mention1, dict);
 						}
 					}
 				}
@@ -311,7 +322,7 @@ public abstract class MentionExtractor {
 					for(Pair<Integer, Integer> pair : foundPairs){
 						if(pair.first == mention1.headIndex && pair.second == mention2.headIndex){
 							if(relation.equals("APPOSITION")){
-								mention2.addApposition(mention1);
+								mention2.addApposition(mention1, dict);
 							}
 							else if(relation.equals("RELATIVE_PRONOUN")){
 								mention2.addRelativePronoun(mention1);

@@ -83,8 +83,8 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 			}
 
 			// bareNPRule
-			if (headPOS.equals("NN") && !dict.temporals.contains(m.headString) && (m.originalSpan.size()==1 
-					|| m.originalSpan.get(0).get(CoreAnnotations.PartOfSpeechAnnotation.class).equals("JJ"))) {
+			if (headPOS.equals("NN") && !dict.temporals.contains(m.headString)  
+				&& (m.originalSpan.size()==1 || m.originalSpan.get(0).get(CoreAnnotations.PartOfSpeechAnnotation.class).equals("JJ"))) {
 				remove.add(m);
 			}
 

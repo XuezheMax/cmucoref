@@ -4,6 +4,7 @@
              <classpath>
                  <fileset dir="lib">
                      <include name="trove.jar"/>
+                     <include name="cmucoref-models.jar"/>
                      <include name="stanford-corenlp-3.4.jar"/>
                      <include name="stanford-corenlp-3.4-models.jar"/>
                  </fileset>

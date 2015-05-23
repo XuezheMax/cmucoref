@@ -44,10 +44,10 @@ public class Test {
 		DocumentReader reader = new CoNLLXDocumentReader();
 		DocumentWriter writer = new CoNLLXDocumentWriter();
 		
-		reader.startReading("data/dev/original/conllx/conll2012.eng.dev.auto.all.conllx");
-		writer.startWriting("outfile/tmp.base1.conllx");
+		reader.startReading("data/dev/original/conllx/gold/conll2012.eng.dev.gold.all.conllx");
+		writer.startWriting("outfile/oracle.all.conllx");
 		
-		PrintStream printer = new PrintStream(new File("mention.base1.txt"));
+		PrintStream printer = new PrintStream(new File("mention.dev.txt"));
 		
 		Document doc = reader.getNextDocument(true);
 		

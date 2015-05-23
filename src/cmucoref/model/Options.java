@@ -63,7 +63,7 @@ public class Options implements Serializable{
 								LOGFILE = "log-file",
 								MODELFILE = "model-file",
 								PROPERTYFILE = "property-file",
-								DEFAULT_PROPERTY_FILE = "lib/default.properties",
+								DEFAULT_PROPERTY_FILE = "cmucoref_models/properties/default.properties",
 								CONLL_SCORER = "conll-scorer",
 								MAX_ITER = "maxIter",
 								DEFAULE_MAX_ITER = "1000";

@@ -62,9 +62,8 @@ public class Mention implements Serializable{
 	//private List<Mention> relativePronouns = null;
 	private Mention relPronTo = null;
 	public List<Mention> preciseMatchs = null;
-//	public int closestPreciseMatchPos = -1;
-//	public MentionType closestPreciseMatchType = null;
 	public boolean preciseMatch = false;
+	
 	public Mention localAttrMatch = null;
 	
 	public int sentID = -1;
@@ -82,10 +81,7 @@ public class Mention implements Serializable{
 		this.startIndex = startIndex;
 		this.endIndex = endIndex;
 		
-//		closestPreciseMatchPos = -1;
-//		closestPreciseMatchType = null;
 		preciseMatch = false;
-		
 		localAttrMatch = null;
 		
 		antecedent = null;
@@ -220,11 +216,6 @@ public class Mention implements Serializable{
 	}
 	
 	public boolean ruleout(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict) {
-		// precise match ---> not rule out
-		if(this.preciseMatch(sent, antec, antecSent, dict)) {
-			return false;
-		}
-		
 		//attribute does not match ---> rule out
 		if(!antec.attrAgree(this, dict)) {
 			return true;
@@ -472,8 +463,6 @@ public class Mention implements Serializable{
 		
 		this.preciseMatchs.add(preciseMatch);
 		this.preciseMatch = true;
-//		this.closestPreciseMatchPos = this.getDistOfSent(preciseMatch);
-//		this.closestPreciseMatchType = preciseMatch.mentionType;
 	}
 	
 	public int apposOrder(Mention mention) {
@@ -512,7 +501,11 @@ public class Mention implements Serializable{
 		}
 	}
 	
-	public void addApposition(Mention appo) throws MentionException{
+	public void addApposition(Mention appo, Dictionaries dict) throws MentionException{
+		if(!appo.attrAgree(this, dict)) {
+			return;
+		}
+		
 		if(appo.apposTo != null){
 			if(appo.apposTo(this) || appo.apposTo.isListMemberOf(this)) {
 				return;
@@ -534,7 +527,11 @@ public class Mention implements Serializable{
 		appo.apposTo = this;
 	}
 	
-	public void addPredicativeNominative(Mention predMomi) throws MentionException{
+	public void addPredicativeNominative(Mention predMomi, Dictionaries dict) throws MentionException{
+		if(!predMomi.attrAgree(this, dict)) {
+			return;
+		}
+		
 		if(predMomi.predNomiTo != null){
 			return;
 		}
@@ -550,9 +547,6 @@ public class Mention implements Serializable{
 	public void addRelativePronoun(Mention relPron) throws MentionException{
 		throw new MentionException(relPron.headString + " is relative pronoun to mention " + this.headString);
 	}
-	
-	private static final List<String> entityWordsToExclude =
-			Arrays.asList(new String[]{ "the", "this", "mr.", "miss", "mrs.", "dr.", "ms.", "inc.", "ltd.", "corp.", "'s"});
 	
 	public boolean spanMatch(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict){
 		if(this.isPronominal() || antec.isPronominal()){
@@ -587,6 +581,9 @@ public class Mention implements Serializable{
 		}
 	}
 	
+	private static final List<String> entityWordsToExclude =
+			Arrays.asList(new String[]{ "the", "this", "that", "those", "these", "our", "my", "mr.", "miss", "mrs.", "dr.", "ms.", "inc.", "ltd.", "corp.", "'s"});
+	
 	//this mention includes all words in anaph
 	public boolean wordsInclude(Sentence sent, Mention anaph, Sentence anaphSent, Dictionaries dict){
 		if(this.isPronominal() || anaph.isPronominal()){
@@ -603,7 +600,6 @@ public class Mention implements Serializable{
 			wordsExceptStopWords.add(anaphSent.getLexicon(i).form.toLowerCase());
 		}
 		wordsExceptStopWords.removeAll(entityWordsToExclude);
-		wordsExceptStopWords.removeAll(dict.determiners);
 		
 		if(wordsOfThis.containsAll(wordsExceptStopWords)){
 			return true;
@@ -1098,7 +1094,7 @@ public class Mention implements Serializable{
 			if(this.number == Number.UNKNOWN) {
 				person = Person.UNKNOWN;
 			}
-			if(this.number == Number.PLURAL) {
+			else if(this.number == Number.PLURAL) {
 				person = Person.THEY;
 			}
 			else if(this.gender == Gender.MALE) {

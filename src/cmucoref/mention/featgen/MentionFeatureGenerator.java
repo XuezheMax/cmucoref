@@ -26,7 +26,7 @@ public class MentionFeatureGenerator {
 		
 		//mention type features
 		String given = "ANTECTYPE=" +  antec.mentionType;
-//		given = given + ", DEFINITE=" + antec.definite;
+		given = given + ", DEFINITE=" + antec.definite;
 		given = given + ", COREF";
 		
 		String feat = "ANAPHTYPE=" + anaph.mentionType;
@@ -42,7 +42,7 @@ public class MentionFeatureGenerator {
 		}
 		
 		//definiteness features
-//		feat = feat + ", " + "DEFINITE=" + anaph.definite;
+		feat = feat + ", " + "DEFINITE=" + anaph.definite;
 		
 		//precise match features
 		feat = feat + ", " + "PRECMAT=" + preciseMatch;
@@ -68,7 +68,7 @@ public class MentionFeatureGenerator {
 			boolean relaxedMatch = exactMatch || anaph.relaxedSpanMatch(anaphSent, antec, antecSent);
 			
 			feat = feat + ", " + "RLXMAT=" + relaxedMatch;
-			//feat = feat + ", " + "EXTMAT=" + exactMatch;
+			feat = feat + ", " + "EXTMAT=" + exactMatch;
 		}
 		
 		
@@ -86,16 +86,16 @@ public class MentionFeatureGenerator {
 //				+ "PRECMATTYPE=" + anaph.closestPreciseMatchType;
 		
 		//definiteness features
-//		feat = feat + ", " + "DEFINITE=" + anaph.definite;
+		feat = feat + ", " + "DEFINITE=" + anaph.definite;
 		
 		if(anaph.isPronominal()) {
 			int localAttrMatchOfSent = anaph.localAttrMatch == null ? -1 : anaph.getDistOfSent(anaph.localAttrMatch);
 			String localAttrMatchType = anaph.localAttrMatch == null ? null : anaph.localAttrMatch.mentionType.toString();
-//			String localAttrMatchDefinite = anaph.localAttrMatch == null ? null : anaph.localAttrMatch.definite.toString();
+			String localAttrMatchDefinite = anaph.localAttrMatch == null ? null : anaph.localAttrMatch.definite.toString();
 			
 			feat = feat + ", " + "LOCATTRMATOFSENT=" + localAttrMatchOfSent;
 			feat = feat + ", " + "LOCATTRMATTYPE=" + localAttrMatchType; 
-//			feat = feat + ", " + "LOCATTRMATDEFINITE=" + localAttrMatchDefinite;
+			feat = feat + ", " + "LOCATTRMATDEFINITE=" + localAttrMatchDefinite;
 		}
 		
 		addFeature(feat, given, model, fv);
