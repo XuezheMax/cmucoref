@@ -9,16 +9,20 @@ import cmucoref.document.Sentence;
 import cmucoref.mention.Mention;
 import cmucoref.util.Pair;
 
-public class AppositionRelationDepExtractor extends RelationExtractor {
+public class RoleAppositionDepExtractor extends RelationExtractor {
 
 	@Override
 	public Set<Pair<Integer, Integer>> extractRelation(Sentence sent, List<Mention> mentions) {
 		Set<Pair<Integer, Integer>> relationSet = new HashSet<Pair<Integer, Integer>>();
-		for(Mention mention : mentions){
-			Lexicon headword = mention.headword;
-			if(headword.basic_deprel.equals("appos")){
-				if(mention.headIndex > headword.basic_head){
-					relationSet.add(new Pair<Integer, Integer>(mention.headIndex, headword.basic_head));
+		for(Mention mention1 : mentions) {
+			Lexicon hw1 = mention1.headword;
+			if(hw1.basic_deprel.equals("nn")) {
+				for(Mention mention2 : mentions) {
+					if(mention2.headIndex == hw1.basic_head 
+						&& mention2.startIndex == mention1.startIndex
+						&& mention2.cover(mention1)) {
+						relationSet.add(new Pair<Integer, Integer>(mention1.mentionID, mention2.mentionID));
+					}
 				}
 			}
 		}

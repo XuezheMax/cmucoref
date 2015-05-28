@@ -61,7 +61,51 @@ public class Document {
 		this.docId = docId;
 	}
 	
+	private void postProcessing(List<List<Mention>> mentionList) {
+		for(List<Mention> mentions : mentionList) {
+			for(Mention mention : mentions) {
+				boolean removed = false;
+				//remove appositives
+				if(mention.corefTo(mention.getApposTo())) {
+					Mention antec = mention.getApposTo();
+					antec.corefCluster.remove(mention);
+					removed = true;
+				}
+				
+				//remove predicate nominatives
+				if(mention.corefTo(mention.getPredNomiTo())) {
+					Mention antec = mention.getPredNomiTo();
+					antec.corefCluster.remove(mention);
+					removed = true;
+				}
+				
+				//remove role appositives
+				if(mention.corefTo(mention.getRoleApposTo())) {
+					Mention antec = mention.getRoleApposTo();
+					antec.corefCluster.remove(mention);
+					removed = true;
+				}
+				
+				if(removed) {
+					mention.setSingleton();
+				}
+			}
+		}
+		
+		for(List<Mention> mentions : mentionList) {
+			for(Mention mention : mentions) {
+				if(mention.isSingleton()) {
+					mention.corefCluster = null;
+				}
+			}
+		}
+	}
+	
 	public void assignCorefClustersToDocument(List<List<Mention>> mentionList, boolean postProcessing) {
+		if(postProcessing) {
+			postProcessing(mentionList);
+		}
+		
 		int i = 0;
 		for(List<Mention> mentions : mentionList){
 			Sentence sent = sentences.get(i);
@@ -70,14 +114,9 @@ public class Document {
 			}
 			
 			Collections.sort(mentions, Mention.postTreeOrderComparator);
-			for(Mention mention : mentions){
-				if(mention.corefCluster == null){
-					continue;
-				}
-				if(postProcessing 
-						&& (mention.isSingleton() 
-								|| mention.corefTo(mention.getApposTo()) 
-								|| mention.corefTo(mention.getPredNomiTo()))){
+			
+			for(Mention mention : mentions) {
+				if(mention.corefCluster == null) {
 					continue;
 				}
 				
@@ -116,7 +155,7 @@ public class Document {
 		}
 	}
 	
-	public void getCorefClustersFromDocument(List<List<Mention>> mentionList) throws MentionException{
+	public void getCorefClustersFromDocument(List<List<Mention>> mentionList) throws MentionException {
 		HashMap<Integer, Mention> clusterIDMap = new HashMap<Integer, Mention>();
 		int i = 0;
 		for(List<Mention> mentions : mentionList){

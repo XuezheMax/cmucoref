@@ -1,6 +1,8 @@
 package cmucoref.mention.extractor;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -52,13 +54,16 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 		return predictedMentions;
 	}
 	
+	private static final Set<String> nonWords = new HashSet<String>(Arrays.asList("mm", "hmm", "ahem", "um", "uh", "%mm", "%hmm", "%ahem", "%um", "%uh"));
+	private static final Set<String> bareNNs = new HashSet<String>(Arrays.asList("something", "nothing", "everything", "anything", 
+			"somebody", "everybody", "nobody", "anybody", "everyone", "someone", "anyone"));
+	
 	protected static void removeSpuriousMentions(CoreMap s, List<Mention> mentions, Dictionaries dict) {
 		Tree tree = s.get(TreeCoreAnnotations.TreeAnnotation.class);
 		List<CoreLabel> sent = s.get(CoreAnnotations.TokensAnnotation.class);
 		Set<Mention> remove = Generics.newHashSet();
 		
 		for(Mention m : mentions) {
-			String headPOS = m.headWord.get(CoreAnnotations.PartOfSpeechAnnotation.class);
 			String headNE = m.headWord.get(CoreAnnotations.NamedEntityTagAnnotation.class);
 			// pleonastic it
 			if(isPleonastic(m, tree)) {
@@ -66,14 +71,13 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 			}
 
 			// non word such as 'hmm'
-			if(dict.nonWords.contains(m.headString) 
-				|| (m.headString.startsWith("%") && dict.nonWords.contains(m.headString.substring(1)))) {
+			if(nonWords.contains(m.headString)) {
 				remove.add(m);
 			}
 
 			// quantRule : not starts with 'any', 'all' etc
 			if (m.originalSpan.size() > 0 
-					&& dict.quantifiers.contains(m.originalSpan.get(0).get(CoreAnnotations.TextAnnotation.class).toLowerCase(Locale.ENGLISH))) {
+				&& dict.quantifiers.contains(m.originalSpan.get(0).get(CoreAnnotations.TextAnnotation.class).toLowerCase(Locale.ENGLISH))) {
 				remove.add(m);
 			}
 
@@ -81,11 +85,12 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 			if (partitiveRule(m, sent, dict)) {
 				remove.add(m);
 			}
-
+			
+			String headPOS = m.headWord.get(CoreAnnotations.PartOfSpeechAnnotation.class);
 			// bareNPRule
-			if (headPOS.equals("NN") && !dict.temporals.contains(m.headString)  
-				&& (m.originalSpan.size()==1 || m.originalSpan.get(0).get(CoreAnnotations.PartOfSpeechAnnotation.class).equals("JJ"))) {
-				remove.add(m);
+			if(headPOS.equals("NN") && !dict.temporals.contains(m.headString) && !m.headString.equals("today")
+					&& !bareNNs.contains(m.headString) && m.originalSpan.size() == 1) {
+//				remove.add(m);
 			}
 
 			if (m.headString.equals("%")) {

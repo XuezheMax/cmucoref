@@ -33,6 +33,7 @@ public class CorefSystem {
 		Options options = new Options(args);
 		if(options.getMode().equals("train")){
 			CorefModel model = new CorefModel(options);
+			Mention.options = options;
 			Trainer trainer = (Trainer) Class.forName(options.getTrainer()).newInstance();
 			MentionExtractor mentionExtractor = (MentionExtractor) Class.forName(options.getMentionExtractor()).newInstance();
 			mentionExtractor.createDict(options.getPropFile());
@@ -48,13 +49,14 @@ public class CorefSystem {
 			System.out.println("Done. Took: " + (System.currentTimeMillis() / 1000 - clock) + "s.");
 			
 			clock = System.currentTimeMillis() / 1000;
+			Mention.options = model.options;
 			Decoder decoder = (Decoder) Class.forName(options.getDecoder()).newInstance();
 			model.options.putDocReader(options.getDocReader());
 			model.options.putDocWriter(options.getDocWriter());
 			model.options.setPostProcessing(options.postProcessing());
 			
-			MentionExtractor mentionExtractor = (MentionExtractor) Class.forName(options.getMentionExtractor()).newInstance();
-			mentionExtractor.createDict(options.getPropFile());
+			MentionExtractor mentionExtractor = (MentionExtractor) Class.forName(model.options.getMentionExtractor()).newInstance();
+			mentionExtractor.createDict(model.options.getPropFile());
 			CorefManager manager = new CorefManager(mentionExtractor);
 			
 			DocumentReader docReader = DocumentReader.createDocumentReader(model.options.getDocReader());
@@ -74,6 +76,7 @@ public class CorefSystem {
 			}
 			docReader.close();
 			docWriter.close();
+			System.out.println("Done. Took: " + (System.currentTimeMillis() / 1000 - clock) + "s.");
 			
 			String scorer = options.getCoNLLScorer();
 			String goldfile = options.getGoldFile();

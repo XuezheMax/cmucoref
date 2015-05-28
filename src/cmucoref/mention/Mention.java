@@ -15,6 +15,7 @@ import cmucoref.document.Document;
 import cmucoref.document.Lexicon;
 import cmucoref.document.Sentence;
 import cmucoref.exception.MentionException;
+import cmucoref.model.Options;
 
 import edu.stanford.nlp.dcoref.Dictionaries;
 import edu.stanford.nlp.dcoref.Dictionaries.Animacy;
@@ -35,6 +36,8 @@ public class Mention implements Serializable{
 	
 	public static final Comparator<Mention> headIndexOrderComparator = new MentionComparatorHeadIndexOrder();
 	public static final Comparator<Mention> postTreeOrderComparator = new MentionComparatorPostTreeOrder();
+	
+	public static Options options = null;
 	
 	public int startIndex;
 	public int endIndex;
@@ -59,10 +62,15 @@ public class Mention implements Serializable{
 	private Mention apposTo = null;
 	private List<Mention> predicateNominatives = null;
 	private Mention predNomiTo = null;
-	//private List<Mention> relativePronouns = null;
+	private List<Mention> relativePronouns = null;
 	private Mention relPronTo = null;
+	private List<Mention> roleAppositions = null;
+	private Mention roleApposTo = null;
+	
 	public List<Mention> preciseMatchs = null;
 	public boolean preciseMatch = false;
+	public List<Mention> stringMatchs = null;
+	public boolean stringMatch = false;
 	
 	public Mention localAttrMatch = null;
 	
@@ -82,6 +90,7 @@ public class Mention implements Serializable{
 		this.endIndex = endIndex;
 		
 		preciseMatch = false;
+		stringMatch = false;
 		localAttrMatch = null;
 		
 		antecedent = null;
@@ -117,15 +126,21 @@ public class Mention implements Serializable{
 		}
 	}
 	
-	public void setRepres(){
+	public void setRepres() {
 		this.isRepresentative = true;
 		this.corefCluster = new MentionCluster(this);
 	}
 	
-	public void setAntec(Mention antec){
+	public void setAntec(Mention antec) {
 		this.antecedent = antec;
 		this.corefCluster = antec.corefCluster;
 		this.corefCluster.add(this);
+	}
+	
+	public void setSingleton() {
+		this.isRepresentative = true;
+		this.corefCluster = new MentionCluster(this);
+		this.antecedent = null;
 	}
 	
 	public boolean isSingleton(){
@@ -158,20 +173,28 @@ public class Mention implements Serializable{
 		return relPronTo;
 	}
 	
-	public boolean isListMemberOf(Mention m){
+	public Mention getRoleApposTo() {
+		return roleApposTo;
+	}
+	
+	public boolean isListMemberOf(Mention m) {
 		return belongTo == null ? false : this.belongTo.equals(m);
 	}
 	
-	public boolean apposTo(Mention antec){
+	public boolean apposTo(Mention antec) {
 		return this.apposTo == null ? false : this.apposTo.equals(antec);
 	}
 	
-	public boolean predNomiTo(Mention antec){
+	public boolean predNomiTo(Mention antec) {
 		return this.predNomiTo == null ? false : this.predNomiTo.equals(antec);
 	}
 	
-	public boolean relPronTo(Mention antec){
+	public boolean relPronTo(Mention antec) {
 		return this.relPronTo == null ? false : this.relPronTo.equals(antec);
+	}
+	
+	public boolean roleApposTo(Mention antec) {
+		return this.roleApposTo == null ? false : this.roleApposTo.equals(antec);
 	}
 	
 	public boolean speakerTo(Mention anaph) {
@@ -180,39 +203,23 @@ public class Mention implements Serializable{
 	}
 	
 	public boolean isNominative(){
-		return this.mentionType == MentionType.NOMINAL;
+		return !isList() && (this.mentionType == MentionType.NOMINAL);
 	}
 	
 	public boolean isProper(){
-		return this.mentionType == MentionType.PROPER;
+		return !isList() && (this.mentionType == MentionType.PROPER);
 	}
 	
 	public boolean isPronominal(){
-		return this.mentionType == MentionType.PRONOMINAL;
+		return !isList() && (this.mentionType == MentionType.PRONOMINAL);
 	}
 	
 	public boolean isList(){
-		return this.mentionType == MentionType.LIST;
+		return this.listMember != null;
 	}
 	
 	public boolean isDefinite() {
 		return this.definite == Definiteness.DEFINITE;
-	}
-	
-	//some rule out case should be treated specially
-	public boolean specialRuleout(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict) {
-		/*anaph has precise match and anaph is not pronominal, special 
-		 rule out proper or nominal antec that does not precise and span match with anaph
-		 */
-		if((this.isProper() || this.isNominative()) && this.preciseMatch) {
-			if(antec.isProper() || antec.isNominative()) {
-				if(!(this.spanMatch(sent, antec, antecSent, dict)) 
-					&& !(this.preciseMatch(sent, antec, antecSent, dict))) {
-					return true;
-				}
-			}
-		}
-		return false;
 	}
 	
 	public boolean ruleout(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict) {
@@ -428,43 +435,6 @@ public class Mention implements Serializable{
 		}
 	}
 	
-	public boolean preciseMatch(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict) {
-		if(this.apposTo(antec)){
-			return true;
-		}
-		
-		if(this.predNomiTo(antec)){
-			return true;
-		}
-		
-		if(!this.isPronominal() && !antec.isPronominal()
-				&& !this.cover(antec) && !antec.cover(this)
-				&& this.isDefinite()){
-			return this.spanMatch(sent, antec, antecSent, dict);
-		}
-		
-		if(((this.person == Person.I && antec.person == Person.I) 
-				|| (this.person == Person.YOU && antec.person == Person.YOU))
-				&& (this.speakerInfo.equals(antec.speakerInfo))) {
-			return true;
-		}
-		
-		if(this.person == Person.I && antec.speakerTo(this)) {
-			return true;
-		}
-		
-		return false;
-	}
-	
-	public void addPreciseMatch(Mention preciseMatch, Document doc){
-		if(this.preciseMatchs == null){
-			this.preciseMatchs = new ArrayList<Mention>();
-		}
-		
-		this.preciseMatchs.add(preciseMatch);
-		this.preciseMatch = true;
-	}
-	
 	public int apposOrder(Mention mention) {
 		if(this.isProper()) {
 			if(mention.isProper()) {
@@ -501,25 +471,25 @@ public class Mention implements Serializable{
 		}
 	}
 	
-	public void addApposition(Mention appo, Dictionaries dict) throws MentionException{
+	public void addApposition(Mention appo, Dictionaries dict) throws MentionException {
 		if(!appo.attrAgree(this, dict)) {
 			return;
 		}
 		
-		if(appo.apposTo != null){
+		if(appo.apposTo != null) {
 			if(appo.apposTo(this) || appo.apposTo.isListMemberOf(this)) {
 				return;
 			}
-			else{
+			else {
 				throw new MentionException(appo.headString + " is apposition to another mention " + appo.apposTo.mentionID);
 			}
 		}
 		
-		if(appo.headword.basic_head != this.headIndex || !appo.headword.basic_deprel.equals("appos")){
+		if(appo.headword.basic_head != this.headIndex || !appo.headword.basic_deprel.equals("appos")) {
 			return;
 		}
 		
-		if(appositions == null){
+		if(appositions == null) {
 			appositions = new ArrayList<Mention>();
 		}
 		
@@ -527,16 +497,64 @@ public class Mention implements Serializable{
 		appo.apposTo = this;
 	}
 	
-	public void addPredicativeNominative(Mention predMomi, Dictionaries dict) throws MentionException{
+	public void addRoleApposition(Mention role, Sentence sent, Dictionaries dict) throws MentionException {
+		if(role.isPronominal()) {
+			return;
+		}
+		
+		if(!this.headword.ner.startsWith("PER") && !this.headword.ner.equals("O")) {
+			return;
+		}
+		
+		if(!role.headword.ner.startsWith("PER") && !role.headword.ner.equals("O")) {
+			return;
+		}
+		
+		if(role.headword.ner.equals("O") && this.headword.ner.equals("O")) {
+			return;
+		}
+		
+		if(!role.attrAgree(this, dict)) {
+			return;
+		}
+		
+		String thisString = this.getSpan(sent);
+		if(thisString.contains("'") || thisString.contains("and")) {
+			return;
+		}
+		
+		if(dict.demonymSet.contains(thisString.toLowerCase()) 
+			|| dict.demonymSet.contains(role.getSpan(sent).toLowerCase())) {
+			return;
+		}
+		
+		if(role.roleApposTo != null) {
+			if(role.roleApposTo(this) || role.roleApposTo.isListMemberOf(this)) {
+				return;
+			}
+			else {
+				throw new MentionException(role.headString + " is role apposition to another mention " + role.apposTo.mentionID);
+			}
+		}
+		
+		if(roleAppositions == null) {
+			roleAppositions = new ArrayList<Mention>();
+		}
+		
+		roleAppositions.add(role);
+		role.roleApposTo = this;
+	}
+	
+	public void addPredicativeNominative(Mention predMomi, Dictionaries dict) throws MentionException {
 		if(!predMomi.attrAgree(this, dict)) {
 			return;
 		}
 		
-		if(predMomi.predNomiTo != null){
+		if(predMomi.predNomiTo != null) {
 			return;
 		}
 		
-		if(predicateNominatives == null){
+		if(predicateNominatives == null) {
 			predicateNominatives = new ArrayList<Mention>();
 		}
 		
@@ -544,26 +562,87 @@ public class Mention implements Serializable{
 		predMomi.predNomiTo = this;
 	}
 	
-	public void addRelativePronoun(Mention relPron) throws MentionException{
+	public void addRelativePronoun(Mention relPron) throws MentionException {
+		this.relativePronouns.add(relPron);
 		throw new MentionException(relPron.headString + " is relative pronoun to mention " + this.headString);
 	}
 	
-	public boolean spanMatch(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict){
-		if(this.isPronominal() || antec.isPronominal()){
+	public boolean preciseMatch(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict) {
+		if(this.apposTo(antec)) {
+			return true;
+		}
+		
+		if(this.predNomiTo(antec)) {
+			return true;
+		}
+		
+		if(this.roleApposTo(antec)) {
+			return true;
+		}
+		
+		if(((this.person == Person.I && antec.person == Person.I) 
+				|| (this.person == Person.YOU && antec.person == Person.YOU))
+				&& (this.speakerInfo.equals(antec.speakerInfo))) {
+			return true;
+		}
+		
+		if(this.person == Person.I && antec.speakerTo(this)) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public void addPreciseMatch(Mention preciseMatch, Document doc){
+		if(this.preciseMatchs == null){
+			this.preciseMatchs = new ArrayList<Mention>();
+		}
+		
+		this.preciseMatchs.add(preciseMatch);
+		this.preciseMatch = true;
+	}
+	
+	public boolean stringMatch(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict) {
+		if(!this.isPronominal() && !antec.isPronominal() 
+				&& !this.cover(antec) && !antec.cover(this)
+				&& this.isDefinite()) {
+			return this.spanMatch(sent, antec, antecSent, dict);
+		}
+		
+		return false;
+	}
+	
+	public void addStringMatch(Mention stringMatch, Document doc) {
+		if(this.stringMatchs == null) {
+			this.stringMatchs = new ArrayList<Mention>();
+		}
+		
+		this.stringMatchs.add(stringMatch);
+		this.stringMatch = true;
+	}
+	
+	private boolean spanMatch(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict){
+		if(this.isPronominal() || antec.isPronominal()) {
 			throw new RuntimeException("error: span matching does not apply for pronominals");
 		}
-		return this.headMatch(sent, antec, antecSent)
-				&& (antec.wordsInclude(antecSent, this, sent, dict) 
+		
+		if(antec.isList() || this.isList()) {
+			return this.exactSpanMatch(sent, antec, antecSent);
+		}
+		
+		return this.headMatch(sent, antec, antecSent, dict)
+				&& (antec.compatibleModifier(antecSent, this, sent, dict) 
 					|| this.relaxedSpanMatch(sent, antec, antecSent)
 					|| this.exactSpanMatch(sent, antec, antecSent)
 					|| this.acronymMatch(sent, antec, antecSent)
-					|| this.isDemonym(sent, antec, antecSent, dict));
+					|| (options.useDemonym() && this.isDemonym(sent, antec, antecSent, dict)));
 	}
 	
-	public boolean headMatch(Sentence sent, Mention mention, Sentence sentOfM){
+	public boolean headMatch(Sentence sent, Mention mention, Sentence sentOfM, Dictionaries dict){
 		if(this.isPronominal() || mention.isPronominal()){
 			throw new RuntimeException("error: head matching does not apply for pronominals");
 		}
+		
 		if(this.headString.equals(mention.headString)){
 			return true;
 		}
@@ -576,13 +655,84 @@ public class Mention implements Serializable{
 		else if(this.acronymMatch(sent, mention, sentOfM)) {
 			return true;
 		}
+		else if(options.useDemonym() && this.isDemonym(sent, mention, sentOfM, dict)) {
+			return true;
+		}
 		else{
 			return false;
 		}
 	}
 	
+	private static Set<String> locationModifiers = new HashSet<String>(Arrays.asList("east", "west", "north", "south",
+			"eastern", "western", "northern", "southern", "northwestern", "southwestern", "northeastern",
+			"southeastern", "upper", "lower"));
+	
+	private static Set<String> excludePossessivePronouns = new HashSet<String>(Arrays.asList("our", "my", "your"));
+	
+	public boolean compatibleModifier(Sentence sent, Mention anaph, Sentence anaphSent, Dictionaries dict) {
+		if(this.isPronominal() || anaph.isPronominal()){
+			throw new RuntimeException("error: compatible modifiers does not apply for pronominals");
+		}
+		
+		Set<String> modifiersOfAntec = new HashSet<String>();
+		Set<String> possessivePronsOfAntec = new HashSet<String>();
+		Set<String> locModifiersOfAntec = new HashSet<String>();
+		
+		for(int i = this.startIndex; i < this.endIndex; ++i) {
+			Lexicon antecLex = sent.getLexicon(i);
+			if(antecLex.postag.equals("PRP$") || dict.possessivePronouns.contains(antecLex.form.toLowerCase())) {
+				possessivePronsOfAntec.add(antecLex.form.toLowerCase());
+			}
+			else if(locationModifiers.contains(antecLex.form.toLowerCase()) && antecLex.basic_head == this.headIndex) {
+				locModifiersOfAntec.add(antecLex.form.toLowerCase());
+			}
+			
+			modifiersOfAntec.add(antecLex.form.toLowerCase());
+		}
+		possessivePronsOfAntec.removeAll(excludePossessivePronouns);
+		
+		Set<String> modifiersOfAnaph = new HashSet<String>();
+		Set<String> possessivePronsOfAanph = new HashSet<String>();
+		Set<String> locModifiersOfAnaph = new HashSet<String>();
+		
+		for(int i = anaph.startIndex; i < anaph.endIndex; ++i) {
+			Lexicon anaphLex = anaphSent.getLexicon(i);
+			if(anaphLex.postag.equals("PRP$") || dict.possessivePronouns.contains(anaphLex.form.toLowerCase())) {
+				possessivePronsOfAanph.add(anaphLex.form.toLowerCase());
+			}
+			else if((anaphLex.postag.equals("JJ") || anaphLex.postag.startsWith("N")
+					|| anaphLex.postag.startsWith("V") || anaphLex.postag.equals("CD"))
+					&& (!entityWordsToExclude.contains(anaphLex.form.toLowerCase()))) {
+				
+				modifiersOfAnaph.add(anaphLex.form.toLowerCase());
+				
+				if(locationModifiers.contains(anaphLex.form.toLowerCase())) {
+					locModifiersOfAnaph.add(anaphLex.form.toLowerCase());
+				}
+			}
+		}
+		possessivePronsOfAanph.removeAll(excludePossessivePronouns);
+		
+		if(!modifiersOfAntec.containsAll(modifiersOfAnaph)) {
+			return false;
+		}
+		
+		if((anaph.headword.ner.equals("GPE") || anaph.headword.ner.startsWith("LOC")) && !locModifiersOfAnaph.containsAll(locModifiersOfAntec)) {
+			return false;
+		}
+		
+		if(!possessivePronsOfAntec.isEmpty() && !possessivePronsOfAntec.containsAll(possessivePronsOfAanph)) {
+			return false;
+		}
+		
+		return true;
+	}
+	
 	private static final List<String> entityWordsToExclude =
-			Arrays.asList(new String[]{ "the", "this", "that", "those", "these", "our", "my", "mr.", "miss", "mrs.", "dr.", "ms.", "inc.", "ltd.", "corp.", "'s"});
+			Arrays.asList("the", "this", "that", "those", "these", "mr.", "miss", "mrs.", "dr.", "ms.", "inc.", "ltd.", "corp.", "'s");
+	
+	private static final List<String> entityPOSToExclude = 
+			Arrays.asList(".", ",", "``", "''", ":");
 	
 	//this mention includes all words in anaph
 	public boolean wordsInclude(Sentence sent, Mention anaph, Sentence anaphSent, Dictionaries dict){
@@ -591,26 +741,33 @@ public class Mention implements Serializable{
 		}
 		
 		Set<String> wordsOfThis = new HashSet<String>();
-		for(int i = this.startIndex; i < this.endIndex; ++i){
-			wordsOfThis.add(sent.getLexicon(i).form.toLowerCase());
+		
+		for(int i = this.startIndex; i < this.endIndex; ++i) {
+			Lexicon antecLex = sent.getLexicon(i);
+			wordsOfThis.add(antecLex.form.toLowerCase());
 		}
 		
 		Set<String> wordsExceptStopWords = new HashSet<String>();
-		for(int i = anaph.startIndex; i < anaph.endIndex; ++i){
-			wordsExceptStopWords.add(anaphSent.getLexicon(i).form.toLowerCase());
+		for(int i = anaph.startIndex; i < anaph.endIndex; ++i) {
+			Lexicon anaphLex = anaphSent.getLexicon(i);
+			
+			if(entityPOSToExclude.contains(anaphLex.postag)) {
+				continue;
+			}
+			wordsExceptStopWords.add(anaphLex.form.toLowerCase());
 		}
 		wordsExceptStopWords.removeAll(entityWordsToExclude);
 		
-		if(wordsOfThis.containsAll(wordsExceptStopWords)){
+		if(wordsOfThis.containsAll(wordsExceptStopWords)) {
 			return true;
 		}
-		else{
+		else {
 			return false;
 		}
 	}
 	
 	public boolean isDemonym(Sentence sent, Mention mention, Sentence sentOfM, Dictionaries dict) {
-		if(this.isPronominal() || mention.isPronominal()){
+		if(this.isPronominal() || mention.isPronominal()) {
 			throw new RuntimeException("error: exact matching does not apply for pronominals");
 		}
 		
@@ -1205,7 +1362,7 @@ public class Mention implements Serializable{
 		printer.println("mention animacy: " + this.animacy);
 		printer.println("mention person: " + this.person);
 		printer.println("mention ner: " + this.headword.ner);
-		printer.println("mention speaker: " + this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerName());
+		printer.println("mention speaker: " + (this.speakerInfo == null ? "null" : this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerName()));
 		printer.println("#end Mention " + this.mentionID);
 		printer.println("===================================");
 		printer.flush();
@@ -1225,7 +1382,7 @@ public class Mention implements Serializable{
 		printer.println("mention animacy: " + this.animacy);
 		printer.println("mention person: " + this.person);
 		printer.println("mention ner: " + this.headword.ner);
-		printer.println("mention speaker: " + this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerName());
+		printer.println("mention speaker: " + (this.speakerInfo == null ? "null" : this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerName()));
 		printer.println("#end Mention " + this.mentionID);
 		printer.println("===================================");
 		printer.flush();

@@ -16,10 +16,85 @@ import edu.stanford.nlp.dcoref.Dictionaries;
 public class MentionFeatureGenerator {
 	public MentionFeatureGenerator(){}
 	
-	public void genCoreferentFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, Dictionaries dict, CorefModel model, FeatureVector fv){
+	public void genCoreferentFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, int mode, Dictionaries dict, CorefModel model, FeatureVector fv){
+		if(mode == 0) {
+			//attribute match features
+			genAttrMatchFeatures(anaph, anaphSent, antec, antecSent, dict, model, fv);			
+		}
+		else if(mode == 1) {
+			//string match features
+			genStringMatchFeatures(anaph, anaphSent, antec, antecSent, dict, model, fv);
+		}
+		else if(mode == 2) {
+			//precise match features
+			genPreciseMatchFeatures(anaph, anaphSent, antec, antecSent, dict, model, fv);
+		}
+	}
+	
+	protected void genPreciseMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, Dictionaries dict, CorefModel model, FeatureVector fv) {
+		//mention type features
+		String given = "ANTECTYPE=" +  antec.mentionType;
+		given = given + ", DEFINITE=" + antec.definite;
+		given = given + ", COREF";
 		
-		//attribute match features
-		genAttrMatchFeatures(anaph, anaphSent, antec, antecSent, dict, model, fv);
+		String feat = "ANAPHTYPE=" + anaph.mentionType;
+		
+		//distance of sentences
+		feat = feat + ", " + "DISTOFSENT=-1";
+		
+		//definiteness features
+		feat = feat + ", " + "DEFINITE=" + anaph.definite;
+		
+		//precise match features
+		feat = feat + ", " + "PRECMAT=true";
+		
+		addFeature(feat, given, model, fv);
+	}
+	
+	protected void genStringMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, Dictionaries dict, CorefModel model, FeatureVector fv) {
+		//mention type features
+		String given = "ANTECTYPE=" +  antec.mentionType;
+		given = given + ", DEFINITE=" + antec.definite;
+		given = given + ", COREF";
+		
+		String feat = "ANAPHTYPE=" + anaph.mentionType;
+		
+		//distance of sentences
+		feat = feat + ", " + "DISTOFSENT=-1";
+		
+		//definiteness features
+		feat = feat + ", " + "DEFINITE=" + anaph.definite;
+		
+		//string match features (does not apply for pronominals)
+		if(!anaph.isPronominal() && !antec.isPronominal()) {
+			boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent, dict);
+			feat = feat + ", " + "HDMAT=" + headMatch;
+			
+			//Acronym or Demonym
+			boolean ADNYM = (Mention.options.useDemonym() && anaph.isDemonym(anaphSent, antec, antecSent, dict))
+							|| anaph.acronymMatch(anaphSent, antec, antecSent);
+			
+			//compatible modifier
+			boolean compatibleModifier = ADNYM || antec.compatibleModifier(antecSent, anaph, anaphSent, dict);
+			feat = feat + ", " + "CMPMOD=" + compatibleModifier;
+			//wordInclude
+			boolean wordIncluded = ADNYM || antec.wordsInclude(antecSent, anaph, anaphSent, dict);
+			feat = feat + ", " + "WDIND=" + wordIncluded;
+			//exact match
+			boolean exactMatch = ADNYM || anaph.exactSpanMatch(anaphSent, antec, antecSent);
+			//relaxed match
+			boolean relaxedMatch = exactMatch || anaph.relaxedSpanMatch(anaphSent, antec, antecSent);
+			
+			feat = feat + ", " + "RLXMAT=" + relaxedMatch;
+			feat = feat + ", " + "EXTMAT=" + exactMatch;
+			
+//			if(anaph.isDemonym(anaphSent, antec, antecSent, dict) && !anaph.exactSpanMatch(anaphSent, antec, antecSent)) {
+//				System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%");
+//				antec.display(antecSent, System.out);
+//				anaph.display(anaphSent, System.out);
+//			}
+		}
+		addFeature(feat, given, model, fv);
 	}
 	
 	protected void genAttrMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, Dictionaries dict, CorefModel model, FeatureVector fv){
@@ -30,35 +105,26 @@ public class MentionFeatureGenerator {
 		given = given + ", COREF";
 		
 		String feat = "ANAPHTYPE=" + anaph.mentionType;
-		boolean preciseMatch = anaph.preciseMatch(anaphSent, antec, antecSent, dict);
 		
-		//distance of sentences
-		if(!preciseMatch){
-			int distOfSent = anaph.getDistOfSent(antec);
-			feat = feat + ", " + "DISTOFSENT=" + distOfSent;
-		}
-		else{
-			feat = feat + ", " + "DISTOFSENT=-1";
-		}
+		//definiteness features
+		int distOfSent = anaph.getDistOfSent(antec);
+		feat = feat + ", " + "DISTOFSENT=" + distOfSent;
 		
 		//definiteness features
 		feat = feat + ", " + "DEFINITE=" + anaph.definite;
 		
-		//precise match features
-		feat = feat + ", " + "PRECMAT=" + preciseMatch;
-		
-		//string match features (only apply for nominative or proper mentions)
-		if((anaph.isNominative() || anaph.isProper()) && (antec.isNominative() || antec.isProper())) {
-			boolean headMatch = preciseMatch ? true : antec.headMatch(antecSent, anaph, anaphSent);
+		//string match features (does not apply for pronominals)
+		if(!anaph.isPronominal() && !antec.isPronominal()) {
+			boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent, dict);
 			feat = feat + ", " + "HDMAT=" + headMatch;
-			boolean specialRelation = preciseMatch && !anaph.spanMatch(anaphSent, antec, antecSent, dict);
 			
 			//Acronym or Demonym
-			boolean ADNYM = specialRelation || anaph.isDemonym(anaphSent, antec, antecSent, dict);
-			if(!ADNYM && anaph.isProper() && antec.isProper()) {
-				ADNYM = anaph.acronymMatch(anaphSent, antec, antecSent);
-			}
+			boolean ADNYM = (Mention.options.useDemonym() && anaph.isDemonym(anaphSent, antec, antecSent, dict))
+					|| anaph.acronymMatch(anaphSent, antec, antecSent);
 			
+			//compatible modifier
+			boolean compatibleModifier = ADNYM || antec.compatibleModifier(antecSent, anaph, anaphSent, dict);
+			feat = feat + ", " + "CMPMOD=" + compatibleModifier;
 			//wordInclude
 			boolean wordIncluded = ADNYM || antec.wordsInclude(antecSent, anaph, anaphSent, dict);
 			feat = feat + ", " + "WDIND=" + wordIncluded;
@@ -70,8 +136,6 @@ public class MentionFeatureGenerator {
 			feat = feat + ", " + "RLXMAT=" + relaxedMatch;
 			feat = feat + ", " + "EXTMAT=" + exactMatch;
 		}
-		
-		
 		addFeature(feat, given, model, fv);
 	}
 	

@@ -83,7 +83,7 @@ public abstract class MentionExtractor {
 	}
 	
 	protected void deleteSpuriousPronominalMentions(List<Mention> mentions, Sentence sent) {
-		//remove you know mentions
+		//remove "you know" mentions
 		Set<Mention> remove = new HashSet<Mention>();
 		for(Mention mention : mentions) {
 			if(mention.isPronominal() 
@@ -98,6 +98,17 @@ public abstract class MentionExtractor {
 			}
 		}
 		mentions.removeAll(remove);
+		
+		//remove "you know" part in a mention
+		for(Mention mention : mentions) {
+			if(mention.endIndex - mention.startIndex > 2) {
+				if(sent.getLexicon(mention.endIndex - 2).form.toLowerCase().equals("you")
+					&& sent.getLexicon(mention.endIndex - 1).form.toLowerCase().equals("know")) {
+					mention.endIndex = mention.endIndex - 2;
+					mention.process(sent, dict);
+				}
+			}
+		}
 	}
 	
 	public List<Mention> getSingleMentionList(Document doc, List<List<Mention>> mentionList, Options options){
@@ -220,6 +231,10 @@ public abstract class MentionExtractor {
 				if(anaph.preciseMatch(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)){
 					anaph.addPreciseMatch(antec, doc);
 				}
+				
+				if(anaph.stringMatch(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)) {
+					anaph.addStringMatch(antec, doc);
+				}
 			}
 			
 			//find local attribute match (only for pronominal)
@@ -254,6 +269,7 @@ public abstract class MentionExtractor {
 		markListMemberRelation(mentions, sent, RelationExtractor.createExtractor(options.getListMemberRelationExtractor()));
 		deleteSpuriousListMentions(mentions, sent);
 		markAppositionRelation(mentions, sent, RelationExtractor.createExtractor(options.getAppositionRelationExtractor()));
+		markRoleAppositionRelation(mentions, sent, RelationExtractor.createExtractor(options.getRoleAppositionRelationExtractor()));
 		markPredicateNominativeRelation(mentions, sent, RelationExtractor.createExtractor(options.getPredicateNominativeRelationExtractor()));
 		//markRelativePronounRelation(mentions, sent, RelationExtractor.createExtractor(options.getRelativePronounRelationExtractor()));
 	}
@@ -277,57 +293,69 @@ public abstract class MentionExtractor {
 		mentions.removeAll(remove);
 	}
 	
-	protected void markListMemberRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor) throws MentionException{
+	protected void markListMemberRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor) throws MentionException {
 		Set<Pair<Integer, Integer>> foundPairs = extractor.extractRelation(sent, mentions);
-		markMentionRelation(mentions, foundPairs, "LISTMEMBER");
+		markMentionRelation(mentions, sent, foundPairs, "LISTMEMBER");
 	}
 	
-	protected void markAppositionRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor) throws MentionException{
+	protected void markAppositionRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor) throws MentionException {
 		Set<Pair<Integer, Integer>> foundPairs = extractor.extractRelation(sent, mentions);
-		markMentionRelation(mentions, foundPairs, "APPOSITION");
+		markMentionRelation(mentions, sent, foundPairs, "APPOSITION");
 	}
 	
-	protected void markPredicateNominativeRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor) throws MentionException{
+	protected void markRoleAppositionRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor) throws MentionException {
 		Set<Pair<Integer, Integer>> foundPairs = extractor.extractRelation(sent, mentions);
-		markMentionRelation(mentions, foundPairs, "PREDICATE_NOMINATIVE");
+		markMentionRelation(mentions, sent, foundPairs, "ROLE_APPOSITION");
 	}
 	
-	protected void markRelativePronounRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor) throws MentionException{
+	protected void markPredicateNominativeRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor) throws MentionException {
 		Set<Pair<Integer, Integer>> foundPairs = extractor.extractRelation(sent, mentions);
-		markMentionRelation(mentions, foundPairs, "RELATIVE_PRONOUN");
+		markMentionRelation(mentions, sent, foundPairs, "PREDICATE_NOMINATIVE");
 	}
 	
-	protected void markMentionRelation(List<Mention> mentions, Set<Pair<Integer, Integer>> foundPairs, String relation) throws MentionException{
-		for(Mention mention1 : mentions){
-			for(Mention mention2 : mentions){
-				if(mention1.equals(mention2)){
+	protected void markRelativePronounRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor) throws MentionException {
+		Set<Pair<Integer, Integer>> foundPairs = extractor.extractRelation(sent, mentions);
+		markMentionRelation(mentions, sent, foundPairs, "RELATIVE_PRONOUN");
+	}
+	
+	protected void markMentionRelation(List<Mention> mentions, Sentence sent, Set<Pair<Integer, Integer>> foundPairs, String relation) throws MentionException {
+		for(Mention mention1 : mentions) {
+			for(Mention mention2 : mentions) {
+				if(mention1.equals(mention2)) {
 					continue;
 				}
 				
-				if(relation.equals("LISTMEMBER")){
-					for(Pair<Integer, Integer> pair : foundPairs){
-						if(pair.first == mention1.mentionID && pair.second == mention2.mentionID){
+				if(relation.equals("LISTMEMBER")) {
+					for(Pair<Integer, Integer> pair : foundPairs) {
+						if(pair.first == mention1.mentionID && pair.second == mention2.mentionID) {
 							mention2.addListMember(mention1);
 						}
 					}
 				}
-				else if(relation.equals("PREDICATE_NOMINATIVE")){
-					for(Pair<Integer, Integer> pair : foundPairs){
-						if(pair.first == mention1.mentionID && pair.second == mention2.mentionID){
+				else if(relation.equals("PREDICATE_NOMINATIVE")) {
+					for(Pair<Integer, Integer> pair : foundPairs) {
+						if(pair.first == mention1.mentionID && pair.second == mention2.mentionID) {
 							mention2.addPredicativeNominative(mention1, dict);
 						}
 					}
 				}
+				else if(relation.equals("ROLE_APPOSITION")) {
+					for(Pair<Integer, Integer> pair : foundPairs) {
+						if(pair.first == mention1.mentionID && pair.second == mention2.mentionID) {
+							mention2.addRoleApposition(mention1, sent, dict);
+						}
+					}
+				}
 				else{
-					for(Pair<Integer, Integer> pair : foundPairs){
-						if(pair.first == mention1.headIndex && pair.second == mention2.headIndex){
-							if(relation.equals("APPOSITION")){
+					for(Pair<Integer, Integer> pair : foundPairs) {
+						if(pair.first == mention1.headIndex && pair.second == mention2.headIndex) {
+							if(relation.equals("APPOSITION")) {
 								mention2.addApposition(mention1, dict);
 							}
-							else if(relation.equals("RELATIVE_PRONOUN")){
+							else if(relation.equals("RELATIVE_PRONOUN")) {
 								mention2.addRelativePronoun(mention1);
 							}
-							else{
+							else {
 								throw new MentionException("Unknown mention relation: " + relation);
 							}
 						}

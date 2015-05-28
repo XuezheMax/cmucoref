@@ -36,14 +36,18 @@ public class Options implements Serializable{
 								DEFAULT_PARAMETER_INITIALIZER = cmucoref.model.params.UniformInitializer.class.getName(),
 								MENTION_EXTRACTOR = "mention-extractor",
 								DEFAULT_MENTION_EXTRACTOR_CLASS = cmucoref.mention.extractor.CMUMentionExtractor.class.getName(),
-								USE_PRECISE_MATCH = "use-span-match",
+								USE_PRECISE_MATCH = "use-preicse-match",
 								DEFAULT_USE_PRECISE_MATCH = Boolean.TRUE.toString(),
+								USE_DEMONYM = "use-demonym",
+								DEFAULT_USE_DEMONYM = Boolean.TRUE.toString(),
 								EXTRACT_MENTION_ATTRIBUTE = "extract-mention-attribute",
 								DEFAULT_EXTRACT_MENTION_ATTRIBUTE = Boolean.TRUE.toString(),
 								EXTRACT_MENTION_RELATION = "extract-mention-relation",
 								DEFAULT_EXTRACT_MENTION_RELATION = Boolean.TRUE.toString(),
 								APPOSITION_EXTRACTOR = "apposition-extractor",
 								DEFAULT_APPOSITION_EXTRACTOR = cmucoref.mention.extractor.relationextractor.AppositionRelationDepExtractor.class.getName(),
+								ROLEAPPOSITION_EXTRACTOR = "role-apposition-extractor",
+								DEFAULT_ROLEAPPOSITION_EXTRACTOR = cmucoref.mention.extractor.relationextractor.RoleAppositionDepExtractor.class.getName(),
 								LISTMEMBER_EXTRACTOR = "list-member-extractor",
 								DEFAULT_LISTMEMBER_EXTRACTOR = cmucoref.mention.extractor.relationextractor.ListMemberRelationExtractor.class.getName(),
 								PREDICATENOMINATIVE_EXTRACTOR = "predicate-nominative-extractor",
@@ -104,9 +108,12 @@ public class Options implements Serializable{
 		//mention extractor
 		valid_opt_set.add(MENTION_EXTRACTOR);
 		argToValueMap.put(MENTION_EXTRACTOR, DEFAULT_MENTION_EXTRACTOR_CLASS);
-		//use span match
+		//use precise match
 		valid_opt_set.add(USE_PRECISE_MATCH);
 		argToValueMap.put(USE_PRECISE_MATCH, DEFAULT_USE_PRECISE_MATCH);
+		//use demonym
+		valid_opt_set.add(USE_DEMONYM);
+		argToValueMap.put(USE_DEMONYM, DEFAULT_USE_DEMONYM);
 		//extract mention attribute
 		valid_opt_set.add(EXTRACT_MENTION_ATTRIBUTE);
 		argToValueMap.put(EXTRACT_MENTION_ATTRIBUTE, DEFAULT_EXTRACT_MENTION_ATTRIBUTE);
@@ -115,6 +122,8 @@ public class Options implements Serializable{
 		argToValueMap.put(EXTRACT_MENTION_RELATION, DEFAULT_EXTRACT_MENTION_RELATION);
 		valid_opt_set.add(APPOSITION_EXTRACTOR);
 		argToValueMap.put(APPOSITION_EXTRACTOR, DEFAULT_APPOSITION_EXTRACTOR);
+		valid_opt_set.add(ROLEAPPOSITION_EXTRACTOR);
+		argToValueMap.put(ROLEAPPOSITION_EXTRACTOR, DEFAULT_ROLEAPPOSITION_EXTRACTOR);
 		valid_opt_set.add(LISTMEMBER_EXTRACTOR);
 		argToValueMap.put(LISTMEMBER_EXTRACTOR, DEFAULT_LISTMEMBER_EXTRACTOR);
 		valid_opt_set.add(PREDICATENOMINATIVE_EXTRACTOR);
@@ -271,6 +280,10 @@ public class Options implements Serializable{
 		return Boolean.parseBoolean(getArgValue(USE_PRECISE_MATCH));
 	}
 	
+	public boolean useDemonym() {
+		return Boolean.parseBoolean(getArgValue(USE_DEMONYM));
+	}
+	
 	public boolean extractMentionAttribute(){
 		return Boolean.parseBoolean(getArgValue(EXTRACT_MENTION_ATTRIBUTE));
 	}
@@ -283,83 +296,87 @@ public class Options implements Serializable{
 		return Boolean.parseBoolean(getArgValue(POST_PROCESSING));
 	}
 	
-	public String getListMemberRelationExtractor(){
+	public String getListMemberRelationExtractor() {
 		return getArgValue(LISTMEMBER_EXTRACTOR);
 	}
 	
-	public String getAppositionRelationExtractor(){
+	public String getAppositionRelationExtractor() {
 		return getArgValue(APPOSITION_EXTRACTOR);
 	}
 	
-	public String getPredicateNominativeRelationExtractor(){
+	public String getRoleAppositionRelationExtractor() {
+		return getArgValue(ROLEAPPOSITION_EXTRACTOR);
+	}
+	
+	public String getPredicateNominativeRelationExtractor() {
 		return getArgValue(PREDICATENOMINATIVE_EXTRACTOR);
 	}
 	
-	public String getRelativePronounRelationExtractor(){
+	public String getRelativePronounRelationExtractor() {
 		return getArgValue(RELATIVEPRONOUN_EXTRACTOR);
 	}
 	
-	public int maxIter(){
+	public int maxIter() {
 		return maxIter;
 	}
 	
-	public double stopEta(){
+	public double stopEta() {
 		return stop_eta;
 	}
 	
-	public boolean createTrainingTmp(){
+	public boolean createTrainingTmp() {
 		return Boolean.parseBoolean(getArgValue(CREATE_TRAININGTMP));
 	}
 	
-	public String getTrainTmp(){
+	public String getTrainTmp() {
 		return train_tmp;
 	}
 	
-	public String getCoNLLScorer(){
+	public String getCoNLLScorer() {
 		return getArgValue(CONLL_SCORER);
 	}
 	
-	public String getTrainingFile(){
+	public String getTrainingFile() {
 		return getArgValue(TRAININGFILE);
 	}
 	
-	public String getTestFile(){
+	public String getTestFile() {
 		return getArgValue(TESTFILE);
 	}
 	
-	public String getDevFile(){
+	public String getDevFile() {
 		return getArgValue(DEVFILE);
 	}
 	
-	public String getOutFile(){
+	public String getOutFile() {
 		return getArgValue(OUTFILE);
 	}
 	
-	public String getGoldFile(){
+	public String getGoldFile() {
 		return getArgValue(GOLDFILE);
 	}
 	
-	public String getLogFile(){
+	public String getLogFile() {
 		return getArgValue(LOGFILE);
 	}
 	
-	public String getModelFile(){
+	public String getModelFile() {
 		return getArgValue(MODELFILE);
 	}
 	
-	public String getPropFile(){
+	public String getPropFile() {
 		return getArgValue(PROPERTYFILE);
 	}
 	
-	public void putDocReader(String reader){
+	public void putDocReader(String reader) {
 		putArgValue(DOC_READER, reader);
 	}
 	
-	public void putDocWriter(String writer){
+	public void putDocWriter(String writer) {
 		putArgValue(DOC_WRITER, writer);
 	}
 	
-	public void setPostProcessing(boolean postProcessing){
+	public void setPostProcessing(boolean postProcessing) {
 		putArgValue(POST_PROCESSING, Boolean.toString(postProcessing));
 	}
 	
@@ -372,14 +389,18 @@ public class Options implements Serializable{
 		out.writeBoolean(extractMentionRelation());
 		//write apposition relation extractor
 		out.writeObject(getAppositionRelationExtractor());
+		//write role apposition relation extractor
+		out.writeObject(getRoleAppositionRelationExtractor());
 		//write list member relation extractor
 		out.writeObject(getListMemberRelationExtractor());
 		//write predicate nominative relation extractor
 		out.writeObject(getPredicateNominativeRelationExtractor());
 		//write relative pronoun relation extractor
 		out.writeObject(getRelativePronounRelationExtractor());
-		//write use span match
+		//write use precise match
 		out.writeBoolean(usePreciseMatch());
+		//write use demonym
+		out.writeBoolean(useDemonym());
 		//write propertity file
 		out.writeObject(getPropFile());
 	}
@@ -398,6 +419,9 @@ public class Options implements Serializable{
 		//read apposition relation extractor
 		String apposExtractor = (String) in.readObject();
 		argToValueMap.put(APPOSITION_EXTRACTOR, apposExtractor);
+		//read role apposition relation extractor
+		String roleApposExtractor = (String) in.readObject();
+		argToValueMap.put(ROLEAPPOSITION_EXTRACTOR, roleApposExtractor);
 		//read list member relation extractor
 		String listExtractor = (String) in.readObject();
 		argToValueMap.put(LISTMEMBER_EXTRACTOR, listExtractor);
@@ -407,9 +431,12 @@ public class Options implements Serializable{
 		//read relative pronoun relation extractor
 		String relPronExtractor = (String) in.readObject();
 		argToValueMap.put(RELATIVEPRONOUN_EXTRACTOR, relPronExtractor);
-		//read use span match
+		//read use precise match
 		flag = in.readBoolean();
 		argToValueMap.put(USE_PRECISE_MATCH, Boolean.toString(flag));
+		//read use demonym
+		flag = in.readBoolean();
+		argToValueMap.put(USE_DEMONYM, Boolean.toString(flag));
 		//read propertity file
 		String propfile = (String) in.readObject();
 		argToValueMap.put(PROPERTYFILE, propfile);

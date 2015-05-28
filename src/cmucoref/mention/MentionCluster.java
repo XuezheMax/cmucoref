@@ -31,4 +31,8 @@ public class MentionCluster {
 	public boolean add(Mention mention){
 		return mentionSet.add(mention);
 	}
+	
+	public boolean remove(Mention mention) {
+		return mentionSet.remove(mention);
+	}
 }

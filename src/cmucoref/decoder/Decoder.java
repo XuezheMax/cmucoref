@@ -23,14 +23,26 @@ public class Decoder {
 			Mention anaph = allMentions.get(i);
 			Sentence anaphSent = doc.getSentence(anaph.sentID);
 			
-			if(anaph.preciseMatchs != null) {
-				int length = anaph.preciseMatchs.size();
-				
-				for(int j = 0; j < length; ++j) {
-					Mention antec = anaph.preciseMatchs.get(j);
+			if(anaph.stringMatchs != null) {
+				int length = anaph.stringMatchs.size();
+				for(int j = length - 1; j >= 0; --j) {
+					Mention antec = anaph.stringMatchs.get(j);
 					Sentence antecSent = doc.getSentence(antec.sentID);
 					FeatureVector fv = new FeatureVector();
-					manager.mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 
+					manager.mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 1,
+							manager.getDict(), model, fv);
+					double prob = model.getScore(fv);
+					if(prob > score) {
+						score = prob;
+						antecedent = antec;
+					}
+				}
+			}
+			else if(anaph.preciseMatchs != null) {
+				for(Mention antec : anaph.preciseMatchs) {
+					Sentence antecSent = doc.getSentence(antec.sentID);
+					FeatureVector fv = new FeatureVector();
+					manager.mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 2, 
 							manager.getDict(), model, fv);
 					double prob = model.getScore(fv);
 					if(prob > score) {
@@ -49,7 +61,7 @@ public class Decoder {
 					}
 					
 					FeatureVector fv = new FeatureVector();
-					manager.mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 
+					manager.mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 0, 
 							manager.getDict(), model, fv);
 					
 					double prob = model.getScore(fv);

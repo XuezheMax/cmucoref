@@ -94,11 +94,21 @@ public class CorefManager {
 				for(int i = 0; i < allMentions.size(); ++i) {
 					Mention anaph = allMentions.get(i);
 					Sentence anaphSent = doc.getSentence(anaph.sentID);
+					
+					if(anaph.stringMatchs != null) {
+						for(Mention antec : anaph.stringMatchs) {
+							Sentence antecSent = doc.getSentence(antec.sentID);
+							mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 1, getDict(), model, null);
+						}
+						continue;
+					}
+					
 					if(anaph.preciseMatchs != null) {
 						for(Mention antec : anaph.preciseMatchs) {
 							Sentence antecSent = doc.getSentence(antec.sentID);
-							mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, getDict(), model, null);
+							mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 2, getDict(), model, null);
 						}
+						continue;
 					}
 					
 					for(int j = 0; j <= i; ++j) {
@@ -109,7 +119,7 @@ public class CorefManager {
 								continue;
 							}
 							
-							mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, getDict(), model, null);
+							mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 0, getDict(), model, null);
 						}
 						else {
 							mentionFeatGen.genNewClusterFeatures(anaph, anaphSent, model, null);
@@ -139,13 +149,26 @@ public class CorefManager {
 			
 			FeatureVector[] fvs = null;
 			
+			if(anaph.stringMatchs != null) {
+				fvs = new FeatureVector[anaph.stringMatchs.size()];
+				int j = 0;
+				for(Mention antec : anaph.stringMatchs) {
+					Sentence antecSent = doc.getSentence(antec.sentID);
+					fvs[j] = new FeatureVector();
+					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 1, getDict(), model, fvs[j]);
+					j++;
+				}
+				out.writeObject(fvs);
+				continue;
+			}
+			
 			if(anaph.preciseMatchs != null) {
 				fvs = new FeatureVector[anaph.preciseMatchs.size()];
 				int j = 0;
 				for(Mention antec : anaph.preciseMatchs) {
 					Sentence antecSent = doc.getSentence(antec.sentID);
-					fvs[j] = new FeatureVector();;
-					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, getDict(), model, fvs[j]);
+					fvs[j] = new FeatureVector();
+					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 2, getDict(), model, fvs[j]);
 					j++;
 				}
 				out.writeObject(fvs);
@@ -162,7 +185,7 @@ public class CorefManager {
 					}
 					
 					fvs[j] = new FeatureVector();
-					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, getDict(), model, fvs[j]);
+					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 0, getDict(), model, fvs[j]);
 				}
 				else {
 					fvs[j] = new FeatureVector();
