@@ -18,8 +18,11 @@ public class Lexicon {
 	
 	public String corefLabel = null;
 	
+	public int utterance = 0;
+	
 	public Lexicon(){
 		id = 0;
+		utterance = 0;
 	}
 	
 	public Lexicon(int id){

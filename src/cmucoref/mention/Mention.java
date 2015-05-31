@@ -36,6 +36,7 @@ public class Mention implements Serializable{
 	
 	public static final Comparator<Mention> headIndexOrderComparator = new MentionComparatorHeadIndexOrder();
 	public static final Comparator<Mention> postTreeOrderComparator = new MentionComparatorPostTreeOrder();
+	public static final Comparator<Mention> headIndexWithSpeakerOrderComparator = new MentionComparatorHeadIndexWithSpeakerOrder();
 	
 	public static Options options = null;
 	
@@ -52,6 +53,7 @@ public class Mention implements Serializable{
 	public Animacy animacy;
 	public Person person;
 	public Definiteness definite;
+	
 	public SpeakerInfo speakerInfo = null;
 	public SpeakerInfo utteranceInfo = null; // the utterances with this mention as speaker;
 	public SpeakerInfo nextSpeakerInfo = null; //TODO
@@ -202,6 +204,11 @@ public class Mention implements Serializable{
 		return anaphSpeaker == null ? false : this.equals(anaphSpeaker);
 	}
 	
+	public void setSpeakerInfo(SpeakerInfo speakerInfo) {
+		this.speakerInfo = speakerInfo;
+		speakerInfo.addMention(this);
+	}
+	
 	public boolean isNominative(){
 		return !isList() && (this.mentionType == MentionType.NOMINAL);
 	}
@@ -212,6 +219,12 @@ public class Mention implements Serializable{
 	
 	public boolean isPronominal(){
 		return !isList() && (this.mentionType == MentionType.PRONOMINAL);
+	}
+	
+	public boolean isPossessiveOrReflexivePronominal(Dictionaries dict) {
+		return isPronominal() 
+				&& (dict.possessivePronouns.contains(this.headString) 
+						|| dict.reflexivePronouns.contains(this.headString));
 	}
 	
 	public boolean isList(){
@@ -229,8 +242,8 @@ public class Mention implements Serializable{
 		}
 		
 		//cover ---> rule out
-		if(!antec.isPronominal() && !this.isPronominal() 
-				&& (antec.cover(this) || this.cover(antec))){
+		if(!antec.isPossessiveOrReflexivePronominal(dict) && !this.isPossessiveOrReflexivePronominal(dict) 
+				&& (antec.cover(this) || this.cover(antec))) {
 			return true;
 		}
 		
@@ -412,8 +425,12 @@ public class Mention implements Serializable{
 		}
 		listMember.add(member);
 		member.belongTo = this;
-		//this.mentionType = MentionType.LIST;
+		
 		this.number = Number.PLURAL;
+		if(this.mentionType == MentionType.PRONOMINAL) {
+			this.mentionType = MentionType.NOMINAL;
+		}
+		
 		if(this.person == Person.I) {
 			this.person = Person.WE;
 		}
@@ -668,6 +685,32 @@ public class Mention implements Serializable{
 			"southeastern", "upper", "lower"));
 	
 	private static Set<String> excludePossessivePronouns = new HashSet<String>(Arrays.asList("our", "my", "your"));
+	
+	@SuppressWarnings("unused")
+	private boolean compatibleModifierforProper(Sentence sent, Mention anaph, Sentence anaphSent, Dictionaries dict) {
+		Set<String> locModifiersOfAntec = new HashSet<String>();
+		for(int i = this.startIndex; i < this.endIndex; ++i) {
+			Lexicon antecLex = sent.getLexicon(i);
+			if(locationModifiers.contains(antecLex.form.toLowerCase())) {
+				locModifiersOfAntec.add(antecLex.form.toLowerCase());
+			}
+		}
+		
+		Set<String> locModifiersOfAnaph = new HashSet<String>();
+		for(int i = anaph.startIndex; i < anaph.endIndex; ++i) {
+			Lexicon anaphLex = anaphSent.getLexicon(i);
+			if(locationModifiers.contains(anaphLex.form.toLowerCase())) {
+				locModifiersOfAnaph.add(anaphLex.form.toLowerCase());
+			}
+		}
+		
+		if(locModifiersOfAnaph.containsAll(locModifiersOfAntec) && locModifiersOfAntec.containsAll(locModifiersOfAnaph)) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
 	
 	public boolean compatibleModifier(Sentence sent, Mention anaph, Sentence anaphSent, Dictionaries dict) {
 		if(this.isPronominal() || anaph.isPronominal()){

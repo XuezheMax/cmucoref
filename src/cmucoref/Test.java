@@ -40,14 +40,15 @@ public class Test {
 	 */
 	public static void main(String[] args) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, MentionException {		
 		Options options = new Options(args);
+		Mention.options = options;
 		
 		DocumentReader reader = new CoNLLXDocumentReader();
 		DocumentWriter writer = new CoNLLXDocumentWriter();
 		
-		reader.startReading("data/dev/original/conllx/gold/conll2012.eng.dev.gold.nw.wsj.conllx");
-		writer.startWriting("outfile/oracle.nw.wsj.conllx");
+		reader.startReading("data/dev/original/conllx/gold/conll2012.eng.dev.gold.mz.conllx");
+		writer.startWriting("outfile/oracle.mz.conllx");
 		
-		PrintStream printer = new PrintStream(new File("mention.conllx.nw.wsj.txt"));
+		PrintStream printer = new PrintStream(new File("mention.conllx.mz.txt"));
 		
 		Document doc = reader.getNextDocument(true);
 		

@@ -17,6 +17,7 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -111,14 +112,14 @@ public abstract class MentionExtractor {
 		}
 	}
 	
-	public List<Mention> getSingleMentionList(Document doc, List<List<Mention>> mentionList, Options options){
+	public List<Mention> getSingleMentionList(Document doc, List<List<Mention>> mentionList, Options options) {
 		List<Mention> allMentions = new ArrayList<Mention>();
-		for(List<Mention> mentions : mentionList){
+		for(List<Mention> mentions : mentionList) {
 			allMentions.addAll(mentions);
 		}
 		
 		//re-assign mention ID;
-		for(int i = 0; i < allMentions.size(); ++i){
+		for(int i = 0; i < allMentions.size(); ++i) {
 			Mention mention = allMentions.get(i);
 			mention.mentionID = i;
 		}
@@ -126,7 +127,7 @@ public abstract class MentionExtractor {
 		//find speaker for each mention
 		findSpeakers(doc, allMentions, mentionList);
 		
-		if(options.usePreciseMatch()){
+		if(options.usePreciseMatch()) {
 			findPreciseMatchRelation(doc, allMentions);
 		}
 		
@@ -145,6 +146,36 @@ public abstract class MentionExtractor {
 		// find default speakers from the speaker tags of document doc
 		findDefaultSpeakers(doc, allMentions, speakersMap);
 		
+		//makr quotations
+		markQuotaions(doc, false);
+		findQuotationSpeakers(doc, allMentions, mentionList, dict, speakersMap);
+		Collections.sort(allMentions, Mention.headIndexWithSpeakerOrderComparator);
+	}
+	
+	protected void findQuotationSpeakers(Document doc, List<Mention> allMentions, 
+			List<List<Mention>> mentionList, Dictionaries dict, Map<String, SpeakerInfo> speakersMap) {
+		Pair<Integer, Integer> beginQuotation = new Pair<Integer, Integer>();
+		Pair<Integer, Integer> endQuotation = new Pair<Integer, Integer>();
+		boolean insideQuotation = false;
+		
+		int sizeOfDoc = doc.size();
+		for(int i = 0; i < sizeOfDoc; ++i) {
+			Sentence sent = doc.getSentence(i);
+			for(int j = 1; j < sent.length(); ++j) {
+				int utterIndex = sent.getLexicon(j).utterance;
+				if(utterIndex != 0 && !insideQuotation) {
+					insideQuotation = true;
+					beginQuotation.first = i;
+					beginQuotation.second = j;
+				}
+				else if(utterIndex == 0 && insideQuotation) {
+					insideQuotation = false;
+					endQuotation.first = i;
+					endQuotation.second = j;
+					findQuotationSpeakers(doc, allMentions, mentionList, dict, speakersMap, beginQuotation, endQuotation);
+				}
+			}
+		}
 	}
 	
 	protected void findQuotationSpeakers(Document doc, List<Mention> allMentions, List<List<Mention>> mentionList, 
@@ -154,7 +185,7 @@ public abstract class MentionExtractor {
 		List<Mention> mentions = mentionList.get(beginQuotation.first);
 		SpeakerInfo speakerInfo = findQuotationSpeaker(sent, mentions, 1, beginQuotation.second, dict, speakersMap);
 		if(speakerInfo != null) {
-			
+			assignUtterancetoSpeaker(doc, mentionList, dict, beginQuotation, endQuotation, speakerInfo);
 			return;
 		}
 		
@@ -162,16 +193,53 @@ public abstract class MentionExtractor {
 		mentions = mentionList.get(endQuotation.first);
 		speakerInfo = findQuotationSpeaker(sent, mentions, endQuotation.second + 1, sent.length(), dict, speakersMap);
 		if(speakerInfo != null) {
-			
+			assignUtterancetoSpeaker(doc, mentionList, dict, beginQuotation, endQuotation, speakerInfo);
 			return;
 		}
 		
+		if(beginQuotation.second <= 2 && beginQuotation.first > 0) {
+			sent = doc.getSentence(beginQuotation.first - 1);
+			mentions = mentionList.get(beginQuotation.first - 1);
+			speakerInfo = findQuotationSpeaker(sent, mentions, 1, sent.length(), dict, speakersMap);
+			if(speakerInfo != null) {
+				assignUtterancetoSpeaker(doc, mentionList, dict, beginQuotation, endQuotation, speakerInfo);
+				return;
+			}
+		}
 		
+		if(endQuotation.second == doc.getSentence(endQuotation.first).length() - 1 
+				&& doc.size() > endQuotation.first + 1) {
+			sent = doc.getSentence(endQuotation.first + 1);
+			mentions = mentionList.get(endQuotation.first + 1);
+			speakerInfo = findQuotationSpeaker(sent, mentions, 1, sent.length(), dict, speakersMap);
+			if(speakerInfo != null) {
+				assignUtterancetoSpeaker(doc, mentionList, dict, beginQuotation, endQuotation, speakerInfo);
+				return;
+			}
+		}
+	}
+	
+	private void assignUtterancetoSpeaker(Document doc, List<List<Mention>> mentionList, Dictionaries dict,
+			Pair<Integer, Integer> beginQuotation, Pair<Integer, Integer> endQuotation, SpeakerInfo speakerInfo) {
+		for(int i = beginQuotation.first; i <= endQuotation.first; ++i) {
+			Sentence sent = doc.getSentence(i);
+			int start = i == beginQuotation.first ? beginQuotation.second : 1;
+			int end = i == endQuotation.first ? endQuotation.second : sent.length() - 1;
+			List<Mention> mentions = mentionList.get(i);
+			for(Mention mention : mentions) {
+				if(mention.startIndex >= start && mention.endIndex <= end) {
+					mention.setSpeakerInfo(speakerInfo);
+				}
+			}
+		}
 	}
 	
 	protected SpeakerInfo findQuotationSpeaker(Sentence sent, List<Mention> mentions, 
 			int startIndex, int endIndex, Dictionaries dict, Map<String, SpeakerInfo> speakersMap) {
 		for(int i = endIndex - 1; i >= startIndex; --i) {
+			if(sent.getLexicon(i).utterance != 0) {
+				continue;
+			}
 			String lemma = sent.getLexicon(i).lemma;
 			if(dict.reportVerb.contains(lemma)) {
 				int reportVerbPos = i;
@@ -201,6 +269,36 @@ public abstract class MentionExtractor {
 	}
 	
 	/**
+	 * mark quotations for a document
+	 * @param doc
+	 * @param normalQuotationType
+	 */
+	private void markQuotaions(Document doc, boolean normalQuotationType) {
+		int utteranceIndex = 0;
+		boolean insideQuotation = false;
+		boolean hasQuotation = false;
+		
+		for(Sentence sent : doc.getSentences()) {
+			for(Lexicon lex : sent.getLexicons()) {
+				lex.utterance = utteranceIndex;
+				if(lex.form.equals("``") || (!insideQuotation && normalQuotationType && lex.form.equals("\""))) {
+					utteranceIndex++;
+					insideQuotation = true;
+					hasQuotation = true;
+				}
+				else if(lex.form.equals("''") || (insideQuotation && normalQuotationType && lex.form.equals("\""))) {
+					insideQuotation = false;
+					utteranceIndex--;
+				}
+			}
+		}
+		
+		if(!hasQuotation && !normalQuotationType) {
+			markQuotaions(doc, true);
+		}
+	}
+	
+	/**
 	 * find default speakers from the speaker tags of document
 	 * @param doc
 	 * @param allMentions
@@ -215,8 +313,7 @@ public abstract class MentionExtractor {
 				speakerInfo = new SpeakerInfo(speaker);
 				speakersMap.put(speaker, speakerInfo);
 			}
-			mention.speakerInfo = speakerInfo;
-			speakerInfo.addMention(mention);
+			mention.setSpeakerInfo(speakerInfo);
 		}
 	}
 	

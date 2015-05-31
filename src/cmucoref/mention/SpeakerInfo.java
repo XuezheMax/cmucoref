@@ -11,8 +11,6 @@ public class SpeakerInfo {
 	private String[] speakerNameStrings; // tokenized speaker name
 	private Mention speaker = null;
 	private Set<Mention> mentions = new LinkedHashSet<Mention>();  // Mentions that corresponds to the speaker...
-	
-	private static final Pattern DEFAULT_SPEAKER_PATTERN = Pattern.compile("PER\\d+");
 
 	protected static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+|_+");
 	

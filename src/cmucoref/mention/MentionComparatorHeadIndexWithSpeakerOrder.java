@@ -1,8 +1,6 @@
 package cmucoref.mention;
 
-import java.util.Comparator;
-
-public class MentionComparatorHeadIndexOrder implements Comparator<Mention> {
+public class MentionComparatorHeadIndexWithSpeakerOrder extends MentionComparatorHeadIndexOrder {
 
 	@Override
 	public int compare(Mention m1, Mention m2) {
@@ -18,6 +16,18 @@ public class MentionComparatorHeadIndexOrder implements Comparator<Mention> {
 		else if(m1.apposTo(m2) || m1.predNomiTo(m2) || m1.roleApposTo(m2)) {
 			return 1;
 		}
+		else if(m1.speakerTo(m2)) {
+			return -1;
+		}
+		else if(m2.speakerTo(m1)) {
+			return 1;
+		}
+		else if(afterUtterance(m1, m2)) {
+			return -1;
+		}
+		else if(afterUtterance(m2, m1)) {
+			return 1;
+		}
 		else if(m1.headIndex < m2.headIndex){
 			return -1;
 		}
@@ -29,5 +39,20 @@ public class MentionComparatorHeadIndexOrder implements Comparator<Mention> {
 		else{
 			return 1;
 		}
+	}
+	
+	//m2 is after one utterance of m1
+	private boolean afterUtterance(Mention m1, Mention m2) {
+		if(m1.utteranceInfo == null) {
+			return false;
+		}
+		
+		for(Mention utterance : m1.utteranceInfo.getMentions()) {
+			if(super.compare(utterance, m2) < 0) {
+				return true;
+			}
+		}
+		
+		return false;
 	}
 }
