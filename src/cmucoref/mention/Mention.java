@@ -603,7 +603,8 @@ public class Mention implements Serializable{
 			return true;
 		}
 		
-		if(this.person == Person.I && antec.speakerTo(this)) {
+		if((this.person == Person.I || this.person == Person.WE) 
+				&& antec.numberAgree(this) && antec.speakerTo(this)) {
 			return true;
 		}
 		
@@ -1036,7 +1037,8 @@ public class Mention implements Serializable{
 			this.definite = Definiteness.GENERIC;
 			for(int i = this.startIndex; i <= this.headIndex; ++i) {
 				String word = sent.getLexicon(i).form.toLowerCase();
-				if(word.equals("its") || dict.determiners.contains(word)) {
+				String pos = sent.getLexicon(i).postag;
+				if(word.equals("its") || pos.equals("POS") || dict.determiners.contains(word)) {
 					this.definite = Definiteness.DEFINITE;
 					return;
 				}
@@ -1400,6 +1402,7 @@ public class Mention implements Serializable{
 		printer.println("headIndex: " + this.headIndex);
 		printer.println("headString: " + this.headString);
 		printer.println("mention type: " + this.mentionType);
+		printer.println("mention definiteness: " + this.definite);
 		printer.println("mention gender: " + this.gender);
 		printer.println("mention number: " + this.number);
 		printer.println("mention animacy: " + this.animacy);
@@ -1420,6 +1423,7 @@ public class Mention implements Serializable{
 		printer.println("headIndex: " + this.headIndex);
 		printer.println("headString: " + this.headString);
 		printer.println("mention type: " + this.mentionType);
+		printer.println("mention definiteness: " + this.definite);
 		printer.println("mention gender: " + this.gender);
 		printer.println("mention number: " + this.number);
 		printer.println("mention animacy: " + this.animacy);
