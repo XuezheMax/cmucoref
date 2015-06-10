@@ -78,9 +78,10 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 			// quantRule : not starts with 'any', 'all' etc
 			if (m.originalSpan.size() > 0 
 				&& dict.quantifiers.contains(m.originalSpan.get(0).get(CoreAnnotations.TextAnnotation.class).toLowerCase(Locale.ENGLISH))) {
-				remove.add(m);
+				//remove.add(m);
 			}
 
+			/*
 			// partitiveRule
 			if (partitiveRule(m, sent, dict)) {
 				remove.add(m);
@@ -90,8 +91,9 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 			// bareNPRule
 			if(headPOS.equals("NN") && !dict.temporals.contains(m.headString) && !m.headString.equals("today")
 					&& !bareNNs.contains(m.headString) && m.originalSpan.size() == 1) {
-//				remove.add(m);
+				remove.add(m);
 			}
+			*/
 
 			if (m.headString.equals("%")) {
 				remove.add(m);
@@ -147,11 +149,17 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 
 		return false;
 	}
+	
+	private static final Set<String> parts = new HashSet<String>(Arrays.asList("hundreds", "thousands", "millions", "billions", "tens", "dozens", "group", "groups", "bunch", "a number", "numbers", "a pinch", "a total"));
 
 	private static boolean partitiveRule(Mention m, List<CoreLabel> sent, Dictionaries dict) {
-		return m.startIndex >= 2
+		return (m.startIndex >= 2
 				&& sent.get(m.startIndex - 1).get(CoreAnnotations.TextAnnotation.class).equalsIgnoreCase("of")
-				&& dict.parts.contains(sent.get(m.startIndex - 2).get(CoreAnnotations.TextAnnotation.class).toLowerCase(Locale.ENGLISH));
+				&& parts.contains(sent.get(m.startIndex - 2).get(CoreAnnotations.TextAnnotation.class).toLowerCase(Locale.ENGLISH)))
+				|| (m.startIndex >= 3
+				&& sent.get(m.startIndex - 1).get(CoreAnnotations.TextAnnotation.class).equalsIgnoreCase("of")
+				&& sent.get(m.startIndex - 3).get(CoreAnnotations.TextAnnotation.class).equalsIgnoreCase("a")
+				&& parts.contains("a " + sent.get(m.startIndex - 2).get(CoreAnnotations.TextAnnotation.class).toLowerCase(Locale.ENGLISH)));
 	}
 	
 	/** Check whether pleonastic 'it'. E.g., It is possible that ... */

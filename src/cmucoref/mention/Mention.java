@@ -962,14 +962,31 @@ public class Mention implements Serializable{
 		return span.toString();
 	}
 	
-	private void getHeadword(Sentence sent){
+	private static final Set<String> parts = new HashSet<String>(Arrays.asList("hundreds", "thousands", "millions", "billions", "tens", "dozens", "group", "groups", "bunch", "a number", "numbers", "a pinch", "a total"));
+	private boolean partitiveRule(Sentence sent) {
+		return ((headIndex + 1 < endIndex) &&
+				parts.contains(headword.form.toLowerCase(Locale.ENGLISH)) &&
+				sent.getLexicon(headIndex + 1).form.equalsIgnoreCase("of")) ||
+				((headIndex + 1 < endIndex) && (headIndex - 1 >= startIndex) &&
+				sent.getLexicon(headIndex + 1).form.equalsIgnoreCase("of") &&
+				sent.getLexicon(headIndex - 1).form.equalsIgnoreCase("a") &&
+				parts.contains("a " + headword.form.toLowerCase(Locale.ENGLISH)));
+	}
+	
+	private boolean numberOfRule(Sentence sent) {
+		return (headIndex + 1 < endIndex) && 
+				headword.postag.equals("CD") 
+				&& sent.getLexicon(headIndex + 1).form.equalsIgnoreCase("of");
+	}
+	
+	private void getHeadword(Sentence sent, Dictionaries dict){
 		if(headword == null){
 			Lexicon lex = sent.getLexicon(headIndex);
 			headword= new Lexicon(lex);
 			headString = headword.form.toLowerCase();
 		}
+		// make sure that the head of a NE is not a known suffix, e.g., Corp.
 		if(!headword.ner.equals("O")){
-			// make sure that the head of a NE is not a known suffix, e.g., Corp.
 			int start = headIndex;
 			while(start >= 0){
 				String head = sent.getLexicon(start).form.toLowerCase();
@@ -984,10 +1001,26 @@ public class Mention implements Serializable{
 				}
 			}
 		}
+		// make sure that the NER of a number-of mention is O
+		if(numberOfRule(sent)) {
+			headword.ner = "O";
+		}
+		// make sure partitive mention's head is correct
+		while(partitiveRule(sent)) {
+			int ofPos = headIndex + 1;
+			for(int i = ofPos + 1; i < endIndex; ++i) {
+				if(sent.getLexicon(i).basic_head == ofPos) {
+					headIndex = i;
+					this.headword = new Lexicon(sent.getLexicon(headIndex));
+					this.headString = headword.form.toLowerCase();
+					break;
+				}
+			}
+		}
 	}
 	
 	public void process(Sentence sent, Dictionaries dict){
-		getHeadword(sent);
+		getHeadword(sent, dict);
 		setType(sent, dict);
 		setDefiniteness(sent, dict);
 		setNumber(sent, dict);
@@ -1049,12 +1082,12 @@ public class Mention implements Serializable{
 		}
 	}
 	
-	private void setNumber(Sentence sent, Dictionaries dict){
+	private void setNumber(Sentence sent, Dictionaries dict) {
 		if(this.isPronominal()){
 			if (dict.pluralPronouns.contains(headString) || pluralDeterminers.contains(headString)) {
 				number = Number.PLURAL;
 			}
-			else if(dict.singularPronouns.contains(headString) || singularDeterminers.contains(headString)){
+			else if(dict.singularPronouns.contains(headString) || singularDeterminers.contains(headString)) {
 				number = Number.SINGULAR;
 			}
 			else{
@@ -1064,37 +1097,48 @@ public class Mention implements Serializable{
 		else if(this.isList()){
 			number = Number.PLURAL;
 		}
-		else if(!headword.ner.equals("O") && !this.isNominative()){
+		else if(numberOfRule(sent)) {
+			if(headword.form.equalsIgnoreCase("one")) {
+				number = Number.SINGULAR;
+			}
+			else if(headword.form.equalsIgnoreCase("half")) {
+				number = Number.UNKNOWN;
+			}
+			else {
+				number = Number.PLURAL;
+			}
+		}
+		else if(!headword.ner.equals("O") && !this.isNominative()) {
 			if(headword.ner.equals("ORGANIZATION") || headword.ner.startsWith("ORG") 
 					|| headword.ner.equals("PRODUCT")
 					|| headword.ner.equals("NORP")) {
 				// ORGs, PRODUCTs and NORP can be both plural and singular
 				number = Number.UNKNOWN;
 			}
-			else{
+			else {
 				number = Number.SINGULAR;
 			}
 		}
-		else{
-			if(headword.postag.startsWith("N") && headword.postag.endsWith("S")){
+		else {
+			if(headword.postag.startsWith("N") && headword.postag.endsWith("S")) {
 				number = Number.PLURAL;
 			}
-			else if(headword.postag.startsWith("N")){
+			else if(headword.postag.startsWith("N")) {
 				number = Number.SINGULAR;
 			}
-			else{
+			else {
 				number = Number.UNKNOWN;
 			}
 		}
 		
 		if(!this.isPronominal()) {
-			if(number == Number.UNKNOWN){
+			if(number == Number.UNKNOWN) {
 				if(dict.singularWords.contains(headString)){
 					number = Number.SINGULAR;
 				}
-			}
-			else if(dict.pluralWords.contains(headString)){
-				number = Number.PLURAL;
+				else if(dict.pluralWords.contains(headString)){
+					number = Number.PLURAL;
+				}
 			}
 		}
 	}

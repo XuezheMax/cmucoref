@@ -45,10 +45,10 @@ public class Test {
 		DocumentReader reader = new CoNLLXDocumentReader();
 		DocumentWriter writer = new CoNLLXDocumentWriter();
 		
-		reader.startReading("data/dev/original/conllx/gold/conll2012.eng.dev.gold.pt.conllx");
-		writer.startWriting("outfile/oracle.pt.conllx");
+		reader.startReading("data/test/original/conllx/conll2012.eng.test.gold.all.conllx");
+		writer.startWriting("outfile/oracle.test.conllx");
 		
-		PrintStream printer = new PrintStream(new File("mention.conllx.pt.txt"));
+		PrintStream printer = new PrintStream(new File("mention.conllx.test.txt"));
 		
 		Document doc = reader.getNextDocument(true);
 		
