@@ -176,6 +176,12 @@ public abstract class MentionExtractor {
 				}
 			}
 		}
+		
+		if(insideQuotation) {
+			endQuotation.first = sizeOfDoc - 1;
+			endQuotation.second = doc.getSentence(endQuotation.first).length();
+			findQuotationSpeakers(doc, allMentions, mentionList, dict, speakersMap, beginQuotation, endQuotation);
+		}
 	}
 	
 	protected void findQuotationSpeakers(Document doc, List<Mention> allMentions, List<List<Mention>> mentionList, 
@@ -191,7 +197,7 @@ public abstract class MentionExtractor {
 		
 		sent = doc.getSentence(endQuotation.first);
 		mentions = mentionList.get(endQuotation.first);
-		speakerInfo = findQuotationSpeaker(sent, mentions, endQuotation.second + 1, sent.length(), dict, speakersMap);
+		speakerInfo = findQuotationSpeaker(sent, mentions, endQuotation.second, sent.length(), dict, speakersMap);
 		if(speakerInfo != null) {
 			assignUtterancetoSpeaker(doc, mentionList, dict, beginQuotation, endQuotation, speakerInfo);
 			return;
@@ -236,6 +242,7 @@ public abstract class MentionExtractor {
 	
 	protected SpeakerInfo findQuotationSpeaker(Sentence sent, List<Mention> mentions, 
 			int startIndex, int endIndex, Dictionaries dict, Map<String, SpeakerInfo> speakersMap) {
+		
 		for(int i = endIndex - 1; i >= startIndex; --i) {
 			if(sent.getLexicon(i).utterance != 0) {
 				continue;
@@ -283,6 +290,7 @@ public abstract class MentionExtractor {
 				lex.utterance = utteranceIndex;
 				if(lex.form.equals("``") || (!insideQuotation && normalQuotationType && lex.form.equals("\""))) {
 					utteranceIndex++;
+					lex.utterance = utteranceIndex;
 					insideQuotation = true;
 					hasQuotation = true;
 				}

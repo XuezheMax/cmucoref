@@ -4,19 +4,7 @@ public class MentionComparatorHeadIndexWithSpeakerOrder extends MentionComparato
 
 	@Override
 	public int compare(Mention m1, Mention m2) {
-		if(m1.sentID < m2.sentID) {
-			return -1;
-		}
-		else if(m1.sentID > m2.sentID) {
-			return 1;
-		}
-		else if(m2.apposTo(m1) || m2.predNomiTo(m1) || m2.roleApposTo(m1)) {
-			return -1;
-		}
-		else if(m1.apposTo(m2) || m1.predNomiTo(m2) || m1.roleApposTo(m2)) {
-			return 1;
-		}
-		else if(m1.speakerTo(m2)) {
+		if(m1.speakerTo(m2)) {
 			return -1;
 		}
 		else if(m2.speakerTo(m1)) {
@@ -26,6 +14,18 @@ public class MentionComparatorHeadIndexWithSpeakerOrder extends MentionComparato
 			return -1;
 		}
 		else if(afterUtterance(m2, m1)) {
+			return 1;
+		}
+		else if(m1.sentID < m2.sentID) {
+			return -1;
+		}
+		else if(m1.sentID > m2.sentID) {
+			return 1;
+		}
+		else if(m2.apposTo(m1) || m2.predNomiTo(m1) || m2.roleApposTo(m1)) {
+			return -1;
+		}
+		else if(m1.apposTo(m2) || m1.predNomiTo(m2) || m1.roleApposTo(m2)) {
 			return 1;
 		}
 		else if(m1.headIndex < m2.headIndex){

@@ -53,6 +53,10 @@ public class SpeakerInfo {
 		return speaker;
 	}
 	
+	public int getSpeakerMentionId() {
+		return speaker == null ? -1 : speaker.mentionID;
+	}
+	
 	public String getSpeakerName() {
 		return speakerName;
 	}

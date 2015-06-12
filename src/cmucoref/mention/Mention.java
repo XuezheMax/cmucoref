@@ -1452,7 +1452,7 @@ public class Mention implements Serializable{
 		printer.println("mention animacy: " + this.animacy);
 		printer.println("mention person: " + this.person);
 		printer.println("mention ner: " + this.headword.ner);
-		printer.println("mention speaker: " + (this.speakerInfo == null ? "null" : this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerName()));
+		printer.println("mention speaker: " + (this.speakerInfo == null ? "null" : this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerMentionId() + " " + this.speakerInfo.getSpeakerName()));
 		printer.println("#end Mention " + this.mentionID);
 		printer.println("===================================");
 		printer.flush();
@@ -1473,7 +1473,7 @@ public class Mention implements Serializable{
 		printer.println("mention animacy: " + this.animacy);
 		printer.println("mention person: " + this.person);
 		printer.println("mention ner: " + this.headword.ner);
-		printer.println("mention speaker: " + (this.speakerInfo == null ? "null" : this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerName()));
+		printer.println("mention speaker: " + (this.speakerInfo == null ? "null" : this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerMentionId() + " " + this.speakerInfo.getSpeakerName()));
 		printer.println("#end Mention " + this.mentionID);
 		printer.println("===================================");
 		printer.flush();

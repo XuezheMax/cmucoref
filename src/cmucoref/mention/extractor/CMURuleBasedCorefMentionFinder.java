@@ -55,9 +55,7 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 	}
 	
 	private static final Set<String> nonWords = new HashSet<String>(Arrays.asList("mm", "hmm", "ahem", "um", "uh", "%mm", "%hmm", "%ahem", "%um", "%uh"));
-	private static final Set<String> bareNNs = new HashSet<String>(Arrays.asList("something", "nothing", "everything", "anything", 
-			"somebody", "everybody", "nobody", "anybody", "everyone", "someone", "anyone"));
-	
+	private static final Set<String> negWords = new HashSet<String>(Arrays.asList("nobody", "none", "nothing", "no", "not"));
 	protected static void removeSpuriousMentions(CoreMap s, List<Mention> mentions, Dictionaries dict) {
 		Tree tree = s.get(TreeCoreAnnotations.TreeAnnotation.class);
 		List<CoreLabel> sent = s.get(CoreAnnotations.TokensAnnotation.class);
@@ -74,14 +72,21 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 			if(nonWords.contains(m.headString)) {
 				remove.add(m);
 			}
-
-			// quantRule : not starts with 'any', 'all' etc
-			if (m.originalSpan.size() > 0 
-				&& dict.quantifiers.contains(m.originalSpan.get(0).get(CoreAnnotations.TextAnnotation.class).toLowerCase(Locale.ENGLISH))) {
-				//remove.add(m);
+			
+			//negative mentions
+			if(negWords.contains(m.headString) 
+				|| (m.originalSpan.size() > 0 
+				&& negWords.contains(m.originalSpan.get(0).get(CoreAnnotations.TextAnnotation.class).toLowerCase(Locale.ENGLISH)))) {
+				remove.add(m);
 			}
 
 			/*
+			// quantRule : not starts with 'any', 'all' etc
+			if (m.originalSpan.size() > 0 
+				&& dict.quantifiers.contains(m.originalSpan.get(0).get(CoreAnnotations.TextAnnotation.class).toLowerCase(Locale.ENGLISH))) {
+				remove.add(m);
+			}
+
 			// partitiveRule
 			if (partitiveRule(m, sent, dict)) {
 				remove.add(m);
