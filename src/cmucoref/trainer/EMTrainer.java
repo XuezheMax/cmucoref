@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.util.Arrays;
 import java.util.List;
 
 import cmucoref.decoder.Decoder;
@@ -20,6 +21,7 @@ import cmucoref.mention.Mention;
 import cmucoref.model.CorefModel;
 import cmucoref.model.Feature;
 import cmucoref.model.FeatureVector;
+import cmucoref.util.Util;
 
 import edu.stanford.nlp.io.StringOutputStream;
 import edu.stanford.nlp.util.SystemUtils;
@@ -71,17 +73,17 @@ public class EMTrainer extends Trainer{
 			
 			for(int i = 1; i < threadNum; ++i){
 				for(int j = 0; j < nsize; ++j){
-					threads[0].featC[j] += threads[i].featC[j];
+					threads[0].featC[j] = Util.logsumexp(threads[0].featC[j], threads[i].featC[j]);
 				}
 				
 				for(int j = 0; j < gsize; ++j){
-					threads[0].givenC[j] += threads[i].givenC[j];
+					threads[0].givenC[j] = Util.logsumexp(threads[0].givenC[j], threads[i].givenC[j]);
 				}
 			}
 			
 			for(int j = 0; j < nsize; ++j){
 				int gid = model.getGidFromIndex(j);
-				double val = threads[0].featC[j] / threads[0].givenC[gid];
+				double val = threads[0].featC[j] - threads[0].givenC[gid];
 				model.update(j, val);
 			}
 			System.out.println(EMThread.totalTrainInst + "|time=" + (System.currentTimeMillis() /1000 - clock) + "s." + "]");
@@ -163,6 +165,8 @@ class EMThread extends Thread {
 		this.model = model;
 		featC = new double[model.featureSize()];
 		givenC = new double[model.givenSize()];
+		Arrays.fill(featC, Double.NEGATIVE_INFINITY);
+		Arrays.fill(givenC, Double.NEGATIVE_INFINITY);
 	}
 	
 	private void EMupdate(ObjectReader in, CorefModel model, CorefManager manager) throws IOException, ClassNotFoundException {
@@ -182,20 +186,23 @@ class EMThread extends Thread {
 			for(int j = 0; j < sizeOfMention; ++j) {
 				FeatureVector[] fvs = (FeatureVector[]) in.readObject();
 				double[] probs = new double[fvs.length];
-				double sumProb = 0.0;
+				double sumProb = Double.NEGATIVE_INFINITY;
 				for(int k = 0; k < fvs.length; ++k) {
-					probs[k] = fvs[k] == null ? 0.0 : model.getScore(fvs[k]);
-					sumProb += probs[k];
+					if(fvs[k] == null) {
+						continue;
+					}
+					probs[k] = model.getScore(fvs[k]);
+					sumProb = Util.logsumexp(sumProb, probs[k]);
 				}
 				for(int k = 0; k < fvs.length; ++k) {
 					if(fvs[k] == null) {
 						continue;
 					}
-					double val = probs[k] / sumProb;
+					double val = probs[k] - sumProb;
 					for(Object obj : fvs[k]) {
 						Feature f = (Feature) obj;
-						featC[f.index] += val;
-						givenC[f.gid] += val;
+						featC[f.index] = Util.logsumexp(featC[f.index], val);
+						givenC[f.gid] = Util.logsumexp(givenC[f.gid], val);
 					}
 				}
 			}

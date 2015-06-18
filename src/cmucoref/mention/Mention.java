@@ -280,7 +280,7 @@ public class Mention implements Serializable{
 //	}
 	
 	public int getDistOfSent(Mention mention){
-		int distOfSent = this.sentID - mention.sentID;
+		int distOfSent = Math.abs(this.sentID - mention.sentID);
 		
 		if(distOfSent == 0 && (this.isPronominal() || mention.isPronominal())) {
 			distOfSent = 1;

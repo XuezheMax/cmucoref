@@ -6,6 +6,8 @@ import gnu.trove.list.linked.TLinkedList;
 @SuppressWarnings("rawtypes")
 public class FeatureVector extends TLinkedList {
 	
+	private static final long serialVersionUID = 1L;
+	
 	public FeatureVector(){}
 	
 	@SuppressWarnings("unchecked")
@@ -47,22 +49,15 @@ public class FeatureVector extends TLinkedList {
 	
 	public final double getScore(double[] params){
 		if(this.size() == 0){
-			return 0.0;
+			return Double.NEGATIVE_INFINITY;
 		}
 		
-		double score = 1.0;
+		double score = 0.0;
 		
 		for(Object b : this){
 			Feature f = (Feature)(b);
-			score *= params[f.index] * f.val;
+			score += params[f.index] * f.val;
 		}
 		return score;
-	}
-	
-	public void update(double[] parameters, double val){
-		for(Object b : this){
-			Feature f = (Feature)(b);
-			parameters[f.index] += val;
-		}
 	}
 }

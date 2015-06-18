@@ -14,7 +14,7 @@ public class UniformInitializer extends ParameterInitializer{
 		
 		for(int j = 0; j < parameters.length; ++j){
 			int gid = model.getGidFromIndex(j);
-			parameters[j] = 1.0 / c[gid];
+			parameters[j] = Math.log(1.0 / c[gid]);
 		}
 	}
 
