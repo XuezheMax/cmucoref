@@ -44,6 +44,8 @@ public class Options implements Serializable{
 								DEFAULT_EXTRACT_MENTION_ATTRIBUTE = Boolean.TRUE.toString(),
 								EXTRACT_MENTION_RELATION = "extract-mention-relation",
 								DEFAULT_EXTRACT_MENTION_RELATION = Boolean.TRUE.toString(),
+								USE_EVENT_FEATURE = "use-event-feature",
+								DEFAULT_USE_EVENT = Boolean.TRUE.toString(),
 								APPOSITION_EXTRACTOR = "apposition-extractor",
 								DEFAULT_APPOSITION_EXTRACTOR = cmucoref.mention.extractor.relationextractor.AppositionRelationDepExtractor.class.getName(),
 								ROLEAPPOSITION_EXTRACTOR = "role-apposition-extractor",
@@ -108,6 +110,9 @@ public class Options implements Serializable{
 		//mention extractor
 		valid_opt_set.add(MENTION_EXTRACTOR);
 		argToValueMap.put(MENTION_EXTRACTOR, DEFAULT_MENTION_EXTRACTOR_CLASS);
+		//use event feature
+		valid_opt_set.add(USE_EVENT_FEATURE);
+		argToValueMap.put(USE_EVENT_FEATURE, DEFAULT_USE_EVENT);
 		//use precise match
 		valid_opt_set.add(USE_PRECISE_MATCH);
 		argToValueMap.put(USE_PRECISE_MATCH, DEFAULT_USE_PRECISE_MATCH);
@@ -192,22 +197,22 @@ public class Options implements Serializable{
 		maxIter = Integer.parseInt(argToValueMap.get(MAX_ITER));
 	}
 	
-	private void parseOptions(String configfile) throws OptionException{
+	private void parseOptions(String configfile) throws OptionException {
 		try {
 			BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(configfile)));
 			String line = reader.readLine();
-			while(line != null){
+			while(line != null) {
 				line = line.trim();
-				if(line.length() == 0){
+				if(line.length() == 0) {
 					line = reader.readLine();
 					continue;
 				}
 				String[] tokens = line.split("=");
-				if(!valid_opt_set.contains(tokens[0])){
+				if(!valid_opt_set.contains(tokens[0])) {
 					reader.close();
 					throw new OptionException("unexpected argument name: " + tokens[0] + "\n" + helpInfo());
 				}
-				else{
+				else {
 					argToValueMap.put(tokens[0], tokens[1]);
 				}
 				line = reader.readLine();
@@ -218,11 +223,11 @@ public class Options implements Serializable{
 		}
 	}
 	
-	public Options(){
+	public Options() {
 		init();
 	}
 	
-	public Options(String[] args){
+	public Options(String[] args) {
 		init();
 		try {
 			parseOptions(args);
@@ -232,52 +237,56 @@ public class Options implements Serializable{
 		}
 	}
 	
-	private String getArgValue(String argName){
+	private String getArgValue(String argName) {
 		return argToValueMap.get(argName);
 	}
 	
-	private void putArgValue(String argName, String value){
+	private void putArgValue(String argName, String value) {
 		argToValueMap.put(argName, value);
 	}
 	
-	public String getDocReader(){
+	public String getDocReader() {
 		return getArgValue(DOC_READER);
 	}
 	
-	public String getTrainReader(){
+	public String getTrainReader() {
 		return getArgValue(TRAIN_READER);
 	}
 	
-	public String getDocWriter(){
+	public String getDocWriter() {
 		return getArgValue(DOC_WRITER);
 	}
 	
-	public String getMode(){
+	public String getMode() {
 		return getArgValue(MODE);
 	}
 	
-	public int getThreadNum(){
+	public int getThreadNum() {
 		return Integer.parseInt(getArgValue(THREAD_NUM));
 	}
 	
-	public String getTrainer(){
+	public String getTrainer() {
 		return getArgValue(TRAINER);
 	}
 	
-	public String getDecoder(){
+	public String getDecoder() {
 		return getArgValue(DECODER);
 	}
 	
-	public String getParamInitializer(){
+	public String getParamInitializer() {
 		return getArgValue(PARAMETER_INITIALIZER);
 	}
 	
-	public String getMentionExtractor(){
+	public String getMentionExtractor() {
 		return getArgValue(MENTION_EXTRACTOR);
 	}
 	
-	public boolean usePreciseMatch(){
+	public boolean usePreciseMatch() {
 		return Boolean.parseBoolean(getArgValue(USE_PRECISE_MATCH));
+	}
+	
+	public boolean useEventFeature() {
+		return Boolean.parseBoolean(getArgValue(USE_EVENT_FEATURE));
 	}
 	
 	public boolean useDemonym() {
@@ -399,6 +408,8 @@ public class Options implements Serializable{
 		out.writeObject(getRelativePronounRelationExtractor());
 		//write use precise match
 		out.writeBoolean(usePreciseMatch());
+		//write use event feature
+		out.writeBoolean(useEventFeature());
 		//write use demonym
 		out.writeBoolean(useDemonym());
 		//write propertity file
@@ -434,6 +445,9 @@ public class Options implements Serializable{
 		//read use precise match
 		flag = in.readBoolean();
 		argToValueMap.put(USE_PRECISE_MATCH, Boolean.toString(flag));
+		//read use event feature
+		flag = in.readBoolean();
+		argToValueMap.put(USE_EVENT_FEATURE, Boolean.toString(flag));
 		//read use demonym
 		flag = in.readBoolean();
 		argToValueMap.put(USE_DEMONYM, Boolean.toString(flag));

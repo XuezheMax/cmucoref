@@ -1035,7 +1035,7 @@ public class Mention implements Serializable{
 	
 	private static final Set<String> pluralDeterminers = new HashSet<String>(Arrays.asList("these", "those"));
 	
-	private static final Set<String> singularDeterminers = new HashSet<String>(Arrays.asList("this"));
+	private static final Set<String> singularDeterminers = new HashSet<String>(Arrays.asList("this", "that"));
 
 	private static boolean knownSuffix(String s) {
 		if(s.endsWith(".")) {
@@ -1202,7 +1202,7 @@ public class Mention implements Serializable{
 				gender = Gender.FEMALE;
 			}
 		}
-		else{
+		else {
 			if(gender == Gender.UNKNOWN) {
 				if(headword.ner.equals("PERSON") || headword.ner.equals("PER")){
 					int[] ids = getNerSpan(sent);
@@ -1237,15 +1237,16 @@ public class Mention implements Serializable{
 		}
 	}
 	
-	//re-define animate pronouns
+	//re-define animate and inanimate pronouns
 	private final Set<String> animatePronouns = Generics.newHashSet(Arrays.asList(new String[]{ "i", "me", "myself", "mine", "my", "we", "us", "ourself", "ourselves", "ours", "our", "you", "yourself", "yours", "your", "yourselves", "he", "him", "himself", "his", "she", "her", "herself", "hers", "her", "who", "whom"}));
+	private final Set<String> inanimatePronouns = Generics.newHashSet(Arrays.asList(new String[]{"it", "itself", "its", "where", "when", "the", "that", "this", "those", "these"}));
 	
 	private void setAnimacy(Sentence sent, Dictionaries dict){
 		if(this.isPronominal()) {
 			if(animatePronouns.contains(headString)) {
 				animacy = Animacy.ANIMATE;
 			}
-			else if(dict.inanimatePronouns.contains(headString) || dict.determiners.contains(headString)) {
+			else if(inanimatePronouns.contains(headString)) {
 				animacy = Animacy.INANIMATE;
 			}
 			else{

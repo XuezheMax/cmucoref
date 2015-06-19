@@ -45,9 +45,9 @@ public class Test {
 		DocumentReader reader = new CoNLLXDocumentReader();
 		DocumentWriter writer = new CoNLLXDocumentWriter();
 		
-		reader.startReading("data/test/original/conllx/conll2012.eng.test.gold.all.conllx");
-		writer.startWriting("outfile/oracle.test0.conllx");
-		PrintStream printer = new PrintStream(new File("mention.conllx.test0.txt"));
+		reader.startReading("data/dev/original/conllx/gold/conll2012.eng.dev.gold.bc.phoenix.conllx");
+		writer.startWriting("outfile/oracle.dev.gold.bc.phoenix.conllx");
+		PrintStream printer = new PrintStream(new File("mention.conllx.dev.gold.bc.phoenix.txt"));
 		
 //		reader.startReading("tmp.conllx");
 //		writer.startWriting("outfile/tmp.conllx");
