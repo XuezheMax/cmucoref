@@ -142,7 +142,7 @@ public abstract class MentionExtractor {
 	protected void findSpeakers(Document doc, List<Mention> allMentions, List<List<Mention>> mentionList) {
 		SpeakerInfo.reset();
 		Map<String, SpeakerInfo> speakersMap = new HashMap<String, SpeakerInfo>();
-		speakersMap.put("<DEFAULT_SPEAKER>", new SpeakerInfo("<DEFAULT_SPEAKER>"));
+		speakersMap.put("<DEFAULT_SPEAKER>", new SpeakerInfo("<DEFAULT_SPEAKER>", false));
 		// find default speakers from the speaker tags of document doc
 		findDefaultSpeakers(doc, allMentions, speakersMap);
 		
@@ -150,6 +150,28 @@ public abstract class MentionExtractor {
 		markQuotaions(doc, false);
 		findQuotationSpeakers(doc, allMentions, mentionList, dict, speakersMap);
 		Collections.sort(allMentions, Mention.headIndexWithSpeakerOrderComparator);
+		
+		//find previous speakerinfo
+		SpeakerInfo defaultSpeakerInfo = speakersMap.get("<DEFAULT_SPEAKER>");
+		SpeakerInfo preSpeakerInfo = defaultSpeakerInfo;
+		Mention preMention = null;
+		for(Mention mention : allMentions) {
+			if(mention.speakerInfo.isQuotationSpeaker()) {
+				continue;
+			}
+			
+			if(preMention != null && !preMention.speakerInfo.equals(mention.speakerInfo)) {
+				preSpeakerInfo = preMention.speakerInfo;
+			}
+			
+			if(preSpeakerInfo.equals(defaultSpeakerInfo)) {
+				mention.preSpeakerInfo = null;
+			}
+			else {
+				mention.preSpeakerInfo = preSpeakerInfo;
+			}
+			preMention = mention;
+		}
 	}
 	
 	protected void findQuotationSpeakers(Document doc, List<Mention> allMentions, 
@@ -252,14 +274,14 @@ public abstract class MentionExtractor {
 				int reportVerbPos = i;
 				for(int j = startIndex; j < endIndex; ++j) {
 					Lexicon lex = sent.getLexicon(j);
-					if(lex.collapsed_head == reportVerbPos && lex.collapsed_deprel.equals("nsubj")) {
+					if(lex.collapsed_head == reportVerbPos && (lex.collapsed_deprel.equals("nsubj") || lex.collapsed_deprel.equals("xsubj"))) {
 						int speakerHeadIndex = j;
 						for(Mention mention : mentions) {
 							if(mention.headIndex == speakerHeadIndex 
 								&& mention.startIndex >= startIndex && mention.endIndex < endIndex) {
 								if(mention.utteranceInfo == null) {
 									String speakerKey = mention.getSpan(sent);
-									SpeakerInfo speakerInfo = new SpeakerInfo(speakerKey);
+									SpeakerInfo speakerInfo = new SpeakerInfo(speakerKey, true);
 									speakersMap.put(speakerKey, speakerInfo);
 									speakerInfo.setSpeaker(mention);
 									mention.utteranceInfo = speakerInfo;
@@ -267,7 +289,7 @@ public abstract class MentionExtractor {
 								return mention.utteranceInfo;
 							}
 						}
-						return new SpeakerInfo(sent.getLexicon(speakerHeadIndex).form);
+						return new SpeakerInfo(sent.getLexicon(speakerHeadIndex).form, true);
 					}
 				}
 			}
@@ -318,7 +340,7 @@ public abstract class MentionExtractor {
 			String speaker = sent.getSpeaker().equals("-") ? "<DEFAULT_SPEAKER>" : sent.getSpeaker();
 			SpeakerInfo speakerInfo = speakersMap.get(speaker);
 			if(speakerInfo == null) {
-				speakerInfo = new SpeakerInfo(speaker);
+				speakerInfo = new SpeakerInfo(speaker, false);
 				speakersMap.put(speaker, speakerInfo);
 			}
 			mention.setSpeakerInfo(speakerInfo);

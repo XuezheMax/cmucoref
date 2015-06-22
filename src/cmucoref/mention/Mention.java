@@ -56,7 +56,7 @@ public class Mention implements Serializable{
 	
 	public SpeakerInfo speakerInfo = null;
 	public SpeakerInfo utteranceInfo = null; // the utterances with this mention as speaker;
-	public SpeakerInfo nextSpeakerInfo = null; //TODO
+	public SpeakerInfo preSpeakerInfo = null;
 	
 	private List<Mention> listMember = null;
 	private Mention belongTo = null;
@@ -584,6 +584,23 @@ public class Mention implements Serializable{
 		throw new MentionException(relPron.headString + " is relative pronoun to mention " + this.headString);
 	}
 	
+	private static final List<String> personalTitles = Arrays.asList("the", "'s", "mr.", "miss", "mrs.", "ms.", 
+			"atty.", "attorney", "coach", "dr.", "doctor", "dir.", "director", "fr.", "father", "gov.", "governor", 
+			"prof.", "professor");
+	
+	private boolean mentionSpeakerMatch(Mention mention, Sentence sent, SpeakerInfo speakerInfo) {
+		//non-quotation speaker only
+		if(speakerInfo.isQuotationSpeaker()) {
+			return false;
+		}
+		
+		String[] speakerNameStrings = speakerInfo.getSpeakerNameStrings();
+		Set<String> nameSet = new HashSet<String>(Arrays.asList(speakerNameStrings));
+		Set<String> mSet = new HashSet<String>(Arrays.asList(mention.getRelaxedSpan(sent).toLowerCase().split(" ")));
+		mSet.removeAll(personalTitles);
+		return nameSet.containsAll(mSet);
+	}
+	
 	public boolean preciseMatch(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict) {
 		if(this.apposTo(antec)) {
 			return true;
@@ -596,18 +613,28 @@ public class Mention implements Serializable{
 		if(this.roleApposTo(antec)) {
 			return true;
 		}
-		
+		// I and you with same speaker
 		if(((this.person == Person.I && antec.person == Person.I) 
 				|| (this.person == Person.YOU && antec.person == Person.YOU))
 				&& (this.speakerInfo.equals(antec.speakerInfo))) {
 			return true;
 		}
-		
+		// you and I with adjacent speakers
+		if(this.preSpeakerInfo != null && this.preSpeakerInfo.equals(antec.speakerInfo)
+			&& ((this.person == Person.I && antec.person == Person.YOU) 
+				|| (this.person == Person.YOU && antec.person == Person.I))) {
+			return true;
+		}
+		//antec is the speaker of anaph (quotation speaker only)
 		if((this.person == Person.I || this.person == Person.WE) 
 				&& antec.numberAgree(this) && antec.speakerTo(this)) {
 			return true;
 		}
-		
+		//speaker-mention name match (non-quotation speaker only)
+		if(antec.person == Person.I && this.headword.ner.startsWith("PER") && mentionSpeakerMatch(this, sent, antec.speakerInfo) 
+			|| this.person == Person.I && antec.headword.ner.startsWith("PER") && mentionSpeakerMatch(antec, antecSent, this.speakerInfo)) {
+			return true;
+		}
 		return false;
 	}
 	
@@ -1454,6 +1481,7 @@ public class Mention implements Serializable{
 		printer.println("mention person: " + this.person);
 		printer.println("mention ner: " + this.headword.ner);
 		printer.println("mention speaker: " + (this.speakerInfo == null ? "null" : this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerMentionId() + " " + this.speakerInfo.getSpeakerName()));
+		printer.println("previous speaker: " + (this.preSpeakerInfo == null ? "null" : this.preSpeakerInfo.toString() + " " + this.preSpeakerInfo.getSpeakerName()));
 		printer.println("#end Mention " + this.mentionID);
 		printer.println("===================================");
 		printer.flush();
@@ -1475,6 +1503,7 @@ public class Mention implements Serializable{
 		printer.println("mention person: " + this.person);
 		printer.println("mention ner: " + this.headword.ner);
 		printer.println("mention speaker: " + (this.speakerInfo == null ? "null" : this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerMentionId() + " " + this.speakerInfo.getSpeakerName()));
+		printer.println("previous speaker: " + (this.preSpeakerInfo == null ? "null" : this.preSpeakerInfo.toString() + " " + this.preSpeakerInfo.getSpeakerName()));
 		printer.println("#end Mention " + this.mentionID);
 		printer.println("===================================");
 		printer.flush();

@@ -14,10 +14,12 @@ public class SpeakerInfo {
 
 	protected static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+|_+");
 	
+	private boolean isQuotationSpeaker = false;
 	private static int numOfSpeaker = 0;
 	
-	public SpeakerInfo(String speakerName) {
+	public SpeakerInfo(String speakerName, boolean isQuotationSpeaker) {
 		this.speakerId = "PER" + numOfSpeaker++;
+		this.isQuotationSpeaker = isQuotationSpeaker;
 		int commaPos = speakerName.indexOf(',');
 		if(commaPos > 0) {
 			// drop everything after the ,
@@ -34,7 +36,7 @@ public class SpeakerInfo {
 			this.speakerName = speakerName;
 		}
 		
-		this.speakerNameStrings = WHITESPACE_PATTERN.split(this.speakerName);
+		this.speakerNameStrings = WHITESPACE_PATTERN.split(this.speakerName.toLowerCase());
 	}
 	
 	public static void reset() {
@@ -91,5 +93,9 @@ public class SpeakerInfo {
 	
 	public boolean equals(SpeakerInfo speakerInfo) {
 		return this.speakerId.equals(speakerInfo.toString());
+	}
+	
+	public boolean isQuotationSpeaker() {
+		return isQuotationSpeaker;
 	}
 }
