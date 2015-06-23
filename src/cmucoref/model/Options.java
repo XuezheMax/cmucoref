@@ -46,6 +46,8 @@ public class Options implements Serializable{
 								DEFAULT_EXTRACT_MENTION_RELATION = Boolean.TRUE.toString(),
 								USE_EVENT_FEATURE = "use-event-feature",
 								DEFAULT_USE_EVENT = Boolean.TRUE.toString(),
+								EVENT_EXTRACTOR = "event-extractor",
+								DEFAULT_EVENT_EXTRACTOR = cmucoref.mention.eventextractor.BasicEventExtractor.class.getName(),
 								APPOSITION_EXTRACTOR = "apposition-extractor",
 								DEFAULT_APPOSITION_EXTRACTOR = cmucoref.mention.extractor.relationextractor.AppositionRelationDepExtractor.class.getName(),
 								ROLEAPPOSITION_EXTRACTOR = "role-apposition-extractor",
@@ -60,6 +62,8 @@ public class Options implements Serializable{
 								DEFAULT_CREATE_TRAININGTMP = Boolean.FALSE.toString(),
 								POST_PROCESSING = "post-processing",
 								DEFAULT_POST_PROCESSING = Boolean.FALSE.toString(),
+								ONTONOTES = "OntoNotes",
+								DEFAULT_ONTONOTES = Boolean.FALSE.toString(),
 								CONFIGURATION = "config",
 								TRAININGFILE = "train-file",
 								TESTFILE = "test-file",
@@ -113,6 +117,9 @@ public class Options implements Serializable{
 		//use event feature
 		valid_opt_set.add(USE_EVENT_FEATURE);
 		argToValueMap.put(USE_EVENT_FEATURE, DEFAULT_USE_EVENT);
+		//event extractor
+		valid_opt_set.add(EVENT_EXTRACTOR);
+		argToValueMap.put(EVENT_EXTRACTOR, DEFAULT_EVENT_EXTRACTOR);
 		//use precise match
 		valid_opt_set.add(USE_PRECISE_MATCH);
 		argToValueMap.put(USE_PRECISE_MATCH, DEFAULT_USE_PRECISE_MATCH);
@@ -141,6 +148,9 @@ public class Options implements Serializable{
 		//post-processiong
 		valid_opt_set.add(POST_PROCESSING);
 		argToValueMap.put(POST_PROCESSING, DEFAULT_POST_PROCESSING);
+		//ontonotes
+		valid_opt_set.add(ONTONOTES);
+		argToValueMap.put(ONTONOTES, DEFAULT_ONTONOTES);
 		//conll scorer
 		valid_opt_set.add(CONLL_SCORER);
 		//maxIter
@@ -293,16 +303,24 @@ public class Options implements Serializable{
 		return Boolean.parseBoolean(getArgValue(USE_DEMONYM));
 	}
 	
-	public boolean extractMentionAttribute(){
+	public boolean extractMentionAttribute() {
 		return Boolean.parseBoolean(getArgValue(EXTRACT_MENTION_ATTRIBUTE));
 	}
 	
-	public boolean extractMentionRelation(){
+	public boolean extractMentionRelation() {
 		return Boolean.parseBoolean(getArgValue(EXTRACT_MENTION_RELATION));
 	}
 	
-	public boolean postProcessing(){
+	public boolean postProcessing() {
 		return Boolean.parseBoolean(getArgValue(POST_PROCESSING));
+	}
+	
+	public boolean OntoNotes() {
+		return Boolean.parseBoolean(getArgValue(ONTONOTES));
+	}
+	
+	public String getEventExtractor() {
+		return getArgValue(EVENT_EXTRACTOR);
 	}
 	
 	public String getListMemberRelationExtractor() {
@@ -389,6 +407,10 @@ public class Options implements Serializable{
 		putArgValue(POST_PROCESSING, Boolean.toString(postProcessing));
 	}
 	
+	public void setOntoNotes(boolean OntoNotes) {
+		putArgValue(ONTONOTES, Boolean.toString(OntoNotes));
+	}
+	
 	private void writeObject(ObjectOutputStream out) throws IOException{
 		//write extract mention attribute
 		out.writeBoolean(extractMentionAttribute());
@@ -410,6 +432,8 @@ public class Options implements Serializable{
 		out.writeBoolean(usePreciseMatch());
 		//write use event feature
 		out.writeBoolean(useEventFeature());
+		//write event extractor
+		out.writeObject(getEventExtractor());
 		//write use demonym
 		out.writeBoolean(useDemonym());
 		//write propertity file
@@ -448,6 +472,9 @@ public class Options implements Serializable{
 		//read use event feature
 		flag = in.readBoolean();
 		argToValueMap.put(USE_EVENT_FEATURE, Boolean.toString(flag));
+		//read event extractor
+		String eventExtractor = (String) in.readObject();
+		argToValueMap.put(EVENT_EXTRACTOR, eventExtractor);
 		//read use demonym
 		flag = in.readBoolean();
 		argToValueMap.put(USE_DEMONYM, Boolean.toString(flag));

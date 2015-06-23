@@ -83,6 +83,7 @@ public class StanfordMentionExtractor extends MentionExtractor{
 			}
 			
 			//remove spurious mentions
+			deleteDuplicatedMentions(mentions, sent);
 			deleteSpuriousNamedEntityMentions(mentions, sent);
 			deleteSpuriousPronominalMentions(mentions, sent);
 			

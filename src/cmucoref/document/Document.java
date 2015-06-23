@@ -130,6 +130,7 @@ public class Document {
 					}
 					else{
 						System.err.println("order error");
+						mention.display(sent, System.err);
 						System.exit(0);
 					}
 				}

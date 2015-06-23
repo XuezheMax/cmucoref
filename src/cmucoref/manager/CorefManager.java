@@ -135,7 +135,7 @@ public class CorefManager {
 		return numInst;
 	}
 	
-	protected void writeDocInstance(Document doc, ObjectWriter out, CorefModel model) throws IOException{
+	protected void writeDocInstance(Document doc, ObjectWriter out, CorefModel model) throws IOException, InstantiationException, IllegalAccessException, ClassNotFoundException{
 		List<List<Mention>> mentionList = mentionExtractor.extractPredictedMentions(doc, model.options);
 		List<Mention> allMentions = mentionExtractor.getSingleMentionList(doc, mentionList, model.options);
 		

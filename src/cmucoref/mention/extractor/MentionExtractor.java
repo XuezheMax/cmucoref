@@ -5,6 +5,7 @@ import cmucoref.document.Lexicon;
 import cmucoref.document.Sentence;
 import cmucoref.exception.MentionException;
 import cmucoref.mention.Mention;
+import cmucoref.mention.eventextractor.EventExtractor;
 import cmucoref.mention.extractor.relationextractor.*;
 import cmucoref.model.Options;
 import cmucoref.util.Pair;
@@ -45,6 +46,21 @@ public abstract class MentionExtractor {
 	}
 	
 	public abstract List<List<Mention>> extractPredictedMentions(Document doc, Options options) throws IOException;
+	
+	protected void deleteDuplicatedMentions(List<Mention> mentions, Sentence sent) {
+		//remove duplicated mentions
+		Set<Mention> remove = new HashSet<Mention>();
+		for(int i = 0; i < mentions.size(); ++i) {
+			Mention mention1 = mentions.get(i);
+			for(int j = i + 1; j < mentions.size(); ++j) {
+				Mention mention2 = mentions.get(j);
+				if(mention1.equals(mention2)) {
+					remove.add(mention2);
+				}
+			}
+		}
+		mentions.removeAll(remove);
+	}
 	
 	protected void deleteSpuriousNamedEntityMentions(List<Mention> mentions, Sentence sent){
 		//remove overlap mentions
@@ -112,7 +128,7 @@ public abstract class MentionExtractor {
 		}
 	}
 	
-	public List<Mention> getSingleMentionList(Document doc, List<List<Mention>> mentionList, Options options) {
+	public List<Mention> getSingleMentionList(Document doc, List<List<Mention>> mentionList, Options options) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
 		List<Mention> allMentions = new ArrayList<Mention>();
 		for(List<Mention> mentions : mentionList) {
 			allMentions.addAll(mentions);
@@ -122,6 +138,11 @@ public abstract class MentionExtractor {
 		for(int i = 0; i < allMentions.size(); ++i) {
 			Mention mention = allMentions.get(i);
 			mention.mentionID = i;
+		}
+		
+		//extract events for mentions
+		if(options.useEventFeature()) {
+			extractEvents(mentionList, doc, options);
 		}
 		
 		//find speaker for each mention
@@ -390,6 +411,11 @@ public abstract class MentionExtractor {
 				break;
 			}
 		}
+	}
+	
+	protected void extractEvents(List<List<Mention>> mentionList, Document doc, Options options) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
+		EventExtractor eventExtractor = EventExtractor.createExtractor(options.getEventExtractor());
+		eventExtractor.extractEvents(doc, mentionList, options);
 	}
 	
 	protected void findSyntacticRelation(List<Mention> mentions, Sentence sent, Options options) throws InstantiationException, IllegalAccessException, ClassNotFoundException, MentionException{

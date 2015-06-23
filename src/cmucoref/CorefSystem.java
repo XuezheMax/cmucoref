@@ -54,6 +54,7 @@ public class CorefSystem {
 			model.options.putDocReader(options.getDocReader());
 			model.options.putDocWriter(options.getDocWriter());
 			model.options.setPostProcessing(options.postProcessing());
+			model.options.setOntoNotes(options.OntoNotes());
 			
 			MentionExtractor mentionExtractor = (MentionExtractor) Class.forName(model.options.getMentionExtractor()).newInstance();
 			mentionExtractor.createDict(model.options.getPropFile());

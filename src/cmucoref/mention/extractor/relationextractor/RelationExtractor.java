@@ -16,8 +16,8 @@ import edu.stanford.nlp.trees.tregex.TregexPattern;
 import edu.stanford.nlp.util.CoreMap;
 
 public abstract class RelationExtractor {
-	public static RelationExtractor createExtractor(String readerClassName) throws InstantiationException, IllegalAccessException, ClassNotFoundException{
-		return (RelationExtractor) Class.forName(readerClassName).newInstance();
+	public static RelationExtractor createExtractor(String extractorClassName) throws InstantiationException, IllegalAccessException, ClassNotFoundException{
+		return (RelationExtractor) Class.forName(extractorClassName).newInstance();
 	}
 	
 	public abstract Set<Pair<Integer, Integer>> extractRelation(Sentence sent, List<Mention> mentions);

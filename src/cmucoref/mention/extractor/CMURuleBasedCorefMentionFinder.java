@@ -13,6 +13,8 @@ import edu.stanford.nlp.dcoref.RuleBasedCorefMentionFinder;
 import edu.stanford.nlp.ling.CoreAnnotations;
 import edu.stanford.nlp.ling.CoreLabel;
 import edu.stanford.nlp.pipeline.Annotation;
+import edu.stanford.nlp.semgraph.SemanticGraph;
+import edu.stanford.nlp.semgraph.SemanticGraphCoreAnnotations;
 import edu.stanford.nlp.trees.Tree;
 import edu.stanford.nlp.trees.TreeCoreAnnotations;
 import edu.stanford.nlp.trees.tregex.TregexMatcher;
@@ -52,6 +54,39 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 			assignMentionIDs(predictedMentions, maxID);
 		}
 		return predictedMentions;
+	}
+	
+	private static final TregexPattern npOrPrpMentionPattern = TregexPattern.compile("/^(?:NP|PRP)/");
+	protected static void extractNPorPRP(CoreMap s, List<Mention> mentions, Set<IntPair> mentionSpanSet, Set<IntPair> namedEntitySpanSet) {
+		List<CoreLabel> sent = s.get(CoreAnnotations.TokensAnnotation.class);
+		Tree tree = s.get(TreeCoreAnnotations.TreeAnnotation.class);
+		tree.indexLeaves();
+		SemanticGraph dependency = s.get(SemanticGraphCoreAnnotations.CollapsedDependenciesAnnotation.class);
+
+		TregexPattern tgrepPattern = npOrPrpMentionPattern;
+		TregexMatcher matcher = tgrepPattern.matcher(tree);
+		while (matcher.find()) {
+			Tree t = matcher.getMatch();
+			List<Tree> mLeaves = t.getLeaves();
+			int beginIdx = ((CoreLabel)mLeaves.get(0).label()).get(CoreAnnotations.IndexAnnotation.class)-1;
+			int endIdx = ((CoreLabel)mLeaves.get(mLeaves.size()-1).label()).get(CoreAnnotations.IndexAnnotation.class);
+			IntPair mSpan = new IntPair(beginIdx, endIdx);
+			if(!mentionSpanSet.contains(mSpan) && !insideNE(mSpan, namedEntitySpanSet)) {
+				int dummyMentionId = -1;
+				Mention m = new Mention(dummyMentionId, beginIdx, endIdx, dependency, new ArrayList<CoreLabel>(sent.subList(beginIdx, endIdx)), t);
+				mentions.add(m);
+				mentionSpanSet.add(mSpan);
+			}
+		}
+	}
+	
+	private static boolean insideNE(IntPair mSpan, Set<IntPair> namedEntitySpanSet) {
+		for (IntPair span : namedEntitySpanSet){
+			if(span.get(0) <= mSpan.get(0) && mSpan.get(1) <= span.get(1)) {
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	private static final Set<String> nonWords = new HashSet<String>(Arrays.asList("mm", "hmm", "ahem", "um", "uh", "%mm", "%hmm", "%ahem", "%um", "%uh"));

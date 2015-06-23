@@ -13,7 +13,7 @@ import cmucoref.model.FeatureVector;
 public class Decoder {
 	public Decoder(){}
 	
-	public List<List<Mention>> decode(Document doc, CorefManager manager, CorefModel model) throws IOException{
+	public List<List<Mention>> decode(Document doc, CorefManager manager, CorefModel model) throws IOException, InstantiationException, IllegalAccessException, ClassNotFoundException{
 		List<List<Mention>> mentionList = manager.mentionExtractor.extractPredictedMentions(doc, model.options);
 		List<Mention> allMentions = manager.mentionExtractor.getSingleMentionList(doc, mentionList, model.options);
 		

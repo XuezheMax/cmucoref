@@ -34,6 +34,20 @@ public class CMUMentionExtractor extends MentionExtractor {
 		mentionFinder = new CMURuleBasedCorefMentionFinder();
 	}
 	
+	private void validateMentionBoundary(Document doc, Mention mention, Sentence sent, Options options) {
+		// try not to have span that ends with ,
+		
+		// for ontonotes nw/ docs, skip this step (annotation issues)
+		if(options.OntoNotes() && doc.getFileName().startsWith("nw/")) {
+			return;
+		}
+		
+		Lexicon lastWord = sent.getLexicon(mention.endIndex - 1);
+		if(lastWord.form.equals(",")) {
+			mention.endIndex--;
+		}
+	}
+	
 	@Override
 	public List<List<Mention>> extractPredictedMentions(Document doc, Options options) throws IOException {
 		//assign annotations
@@ -76,6 +90,7 @@ public class CMUMentionExtractor extends MentionExtractor {
 			Sentence sent = doc.getSentence(i);
 			for(int j = 0; j < stanfordMentions.size(); ++j) {
 				Mention mention = new Mention(stanfordMentions.get(j), i);
+				validateMentionBoundary(doc, mention, sent, options);
 				if(options.extractMentionAttribute()){
 					mention.process(sent, dict);
 				}
@@ -83,6 +98,7 @@ public class CMUMentionExtractor extends MentionExtractor {
 			}
 			
 			//remove spurious mentions
+			deleteDuplicatedMentions(mentions, sent);
 			deleteSpuriousNamedEntityMentions(mentions, sent);
 			deleteSpuriousPronominalMentions(mentions, sent);
 			
