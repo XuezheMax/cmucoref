@@ -56,6 +56,77 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 		return predictedMentions;
 	}
 	
+	protected static void extractNamedEntityMentions(CoreMap s, List<Mention> mentions, Set<IntPair> mentionSpanSet, Set<IntPair> namedEntitySpanSet) {
+		List<CoreLabel> sent = s.get(CoreAnnotations.TokensAnnotation.class);
+		SemanticGraph dependency = s.get(SemanticGraphCoreAnnotations.CollapsedDependenciesAnnotation.class);
+		String preNE = "O";
+		int beginIndex = -1;
+		for(CoreLabel w : sent) {
+			String nerString = w.get(CoreAnnotations.NamedEntityTagAnnotation.class);
+			if(!nerString.equals(preNE)) {
+				int endIndex = w.get(CoreAnnotations.IndexAnnotation.class) - 1;
+				if(!preNE.matches("O|QUANTITY|CARDINAL|PERCENT|DURATION|TIME|SET")) {
+					if(w.get(CoreAnnotations.TextAnnotation.class).equals("'s")) endIndex++;
+					IntPair mSpan = new IntPair(beginIndex, endIndex);
+					// Need to check if beginIndex < endIndex because, for
+					// example, there could be a 's mislabeled by the NER and
+					// attached to the previous NER by the earlier heuristic
+					if(beginIndex < endIndex && !mentionSpanSet.contains(mSpan)) {
+						int dummyMentionId = -1;
+						Mention m = new Mention(dummyMentionId, beginIndex, endIndex, dependency, new ArrayList<CoreLabel>(sent.subList(beginIndex, endIndex)));
+						mentions.add(m);
+						mentionSpanSet.add(mSpan);
+						namedEntitySpanSet.add(mSpan);
+					}
+				}
+				beginIndex = endIndex;
+				preNE = nerString;
+			}
+		}
+		// NE at the end of sentence
+		if(!preNE.matches("O|QUANTITY|CARDINAL|PERCENT|DURATION|TIME|SET")) {
+			IntPair mSpan = new IntPair(beginIndex, sent.size());
+			if(!mentionSpanSet.contains(mSpan)) {
+				int dummyMentionId = -1;
+				Mention m = new Mention(dummyMentionId, beginIndex, sent.size(), dependency, new ArrayList<CoreLabel>(sent.subList(beginIndex, sent.size())));
+				mentions.add(m);
+				mentionSpanSet.add(mSpan);
+				namedEntitySpanSet.add(mSpan);
+			}
+		}
+		
+		removeSpuriousNamedEntityMentions(s, mentions, mentionSpanSet, namedEntitySpanSet);
+	}
+	
+	private static final Set<String> dates = new HashSet<String>(Arrays.asList(
+			"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "yesterday", "tomorrow", "today", 
+			"january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"));
+	private static void removeSpuriousNamedEntityMentions(CoreMap s, List<Mention> mentions, Set<IntPair> mentionSpanSet, Set<IntPair> namedEntitySpanSet) {
+		List<CoreLabel> sent = s.get(CoreAnnotations.TokensAnnotation.class);
+		Set<Mention> remove = Generics.newHashSet();
+		Set<IntPair> removeSpan = Generics.newHashSet();
+		for(Mention m : mentions) {
+			String nerTag = m.originalSpan.get(0).get(CoreAnnotations.NamedEntityTagAnnotation.class);
+			String posTag = m.originalSpan.get(0).get(CoreAnnotations.PartOfSpeechAnnotation.class);
+			String word = m.originalSpan.get(0).get(CoreAnnotations.TextAnnotation.class).toLowerCase();
+			IntPair mSpan = new IntPair(m.startIndex, m.endIndex);
+			if(nerTag.equals("DATE")) {
+				if(m.originalSpan.size() > 1) {
+					remove.add(m);
+					removeSpan.add(mSpan);
+				}
+				else if(!dates.contains(word) && !posTag.equals("CD")) {
+					remove.add(m);
+					removeSpan.add(mSpan);
+				}
+			}
+		}
+		
+		mentions.removeAll(remove);
+		mentionSpanSet.removeAll(removeSpan);
+		namedEntitySpanSet.removeAll(removeSpan);
+	}
+	
 	private static final TregexPattern npOrPrpMentionPattern = TregexPattern.compile("/^(?:NP|PRP)/");
 	protected static void extractNPorPRP(CoreMap s, List<Mention> mentions, Set<IntPair> mentionSpanSet, Set<IntPair> namedEntitySpanSet) {
 		List<CoreLabel> sent = s.get(CoreAnnotations.TokensAnnotation.class);
@@ -121,12 +192,16 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 				&& dict.quantifiers.contains(m.originalSpan.get(0).get(CoreAnnotations.TextAnnotation.class).toLowerCase(Locale.ENGLISH))) {
 				remove.add(m);
 			}
+			*/
 
+			/*
 			// partitiveRule
 			if (partitiveRule(m, sent, dict)) {
 				remove.add(m);
 			}
+			*/
 			
+			/*
 			String headPOS = m.headWord.get(CoreAnnotations.PartOfSpeechAnnotation.class);
 			// bareNPRule
 			if(headPOS.equals("NN") && !dict.temporals.contains(m.headString) && !m.headString.equals("today")
@@ -153,20 +228,7 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 				remove.add(m);
 			}
 		}
-
-		// nested mention with shared headword (except apposition, enumeration): pick larger one
-		for (Mention m1 : mentions){
-			for (Mention m2 : mentions){
-				if (m1==m2 || remove.contains(m1) || remove.contains(m2)) continue;
-				if (m1.sentNum==m2.sentNum && m1.headWord==m2.headWord && m2.insideIn(m1)) {
-					if (m2.endIndex < sent.size() && (sent.get(m2.endIndex).get(CoreAnnotations.PartOfSpeechAnnotation.class).equals(",")
-							|| sent.get(m2.endIndex).get(CoreAnnotations.PartOfSpeechAnnotation.class).equals("CC"))) {
-						continue;
-					}
-					remove.add(m2);
-				}
-			}
-		}
+		
 		mentions.removeAll(remove);
 	}
 	
@@ -193,13 +255,9 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 	private static final Set<String> parts = new HashSet<String>(Arrays.asList("hundreds", "thousands", "millions", "billions", "tens", "dozens", "group", "groups", "bunch", "a number", "numbers", "a pinch", "a total"));
 
 	private static boolean partitiveRule(Mention m, List<CoreLabel> sent, Dictionaries dict) {
-		return (m.startIndex >= 2
+		return m.startIndex >= 2
 				&& sent.get(m.startIndex - 1).get(CoreAnnotations.TextAnnotation.class).equalsIgnoreCase("of")
-				&& parts.contains(sent.get(m.startIndex - 2).get(CoreAnnotations.TextAnnotation.class).toLowerCase(Locale.ENGLISH)))
-				|| (m.startIndex >= 3
-				&& sent.get(m.startIndex - 1).get(CoreAnnotations.TextAnnotation.class).equalsIgnoreCase("of")
-				&& sent.get(m.startIndex - 3).get(CoreAnnotations.TextAnnotation.class).equalsIgnoreCase("a")
-				&& parts.contains("a " + sent.get(m.startIndex - 2).get(CoreAnnotations.TextAnnotation.class).toLowerCase(Locale.ENGLISH)));
+				&& sent.get(m.startIndex - 2).get(CoreAnnotations.TextAnnotation.class).equalsIgnoreCase("all");
 	}
 	
 	/** Check whether pleonastic 'it'. E.g., It is possible that ... */

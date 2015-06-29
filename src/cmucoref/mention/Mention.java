@@ -339,7 +339,16 @@ public class Mention implements Serializable{
 	}
 	
 	public boolean personAgree(Mention mention) {
-		if(this.person == Person.UNKNOWN || mention.person == Person.UNKNOWN) {
+		if(this.person == Person.UNKNOWN 
+				&& mention.person != Person.I 
+				&& mention.person != Person.WE 
+				&& mention.person != Person.YOU) {
+			return true;
+		}
+		else if(mention.person == Person.UNKNOWN
+				&& this.person != Person.I
+				&& this.person != Person.WE
+				&& this.person != Person.YOU) {
 			return true;
 		}
 		else {
@@ -371,7 +380,10 @@ public class Mention implements Serializable{
 					|| mention.headword.ner.equals("WORK_OF_ART")){
 				return dict.locationPronouns.contains(headString);
 			}
-			else if(mention.headword.ner.equals("DATE") || mention.headword.ner.equals("TIME")){
+			else if(mention.headword.ner.equals("TIME")){
+				return dict.dateTimePronouns.contains(headString);
+			}
+			else if(mention.headword.ner.equals("DATE")) {
 				return dict.dateTimePronouns.contains(headString);
 			}
 			else if(mention.headword.ner.equals("MONEY") 
@@ -432,12 +444,18 @@ public class Mention implements Serializable{
 		return true;
 	}
 	
-	public void addListMember(Mention member) {
+	public void addListMember(Mention member, Sentence sent) {
 		// Don't handle nested lists
 		if(member.listMember != null && member.listMember.size() > 0){
 			return;
 		}
 		
+		if(member.belongTo != null && !member.belongTo.equals(this)) {
+			this.display(sent, System.err);
+			member.belongTo.display(sent, System.err);
+			member.display(sent, System.err);
+			throw new RuntimeException(member.headString + " is list member of another mention.");
+		}
 		if(listMember == null){
 			listMember = new ArrayList<Mention>();
 		}
@@ -511,17 +529,18 @@ public class Mention implements Serializable{
 			return;
 		}
 		
+		// skip list member
+		if(this.belongTo != null) {
+			return;
+		}
+		
 		if(appo.apposTo != null) {
-			if(appo.apposTo(this) || appo.apposTo.isListMemberOf(this)) {
+			if(appo.apposTo(this)) {
 				return;
 			}
 			else {
-				throw new MentionException(appo.headString + " is apposition to another mention " + appo.apposTo.mentionID);
+				throw new MentionException(appo.headString + " is apposition to another mention " + appo.apposTo.mentionID + "\n this mentionID: " + this.mentionID);
 			}
-		}
-		
-		if(appo.headword.basic_head != this.headIndex || !appo.headword.basic_deprel.equals("appos")) {
-			return;
 		}
 		
 		if(appositions == null) {
@@ -699,7 +718,12 @@ public class Mention implements Serializable{
 		}
 		
 		if(antec.isList() || this.isList()) {
-			return this.exactSpanMatch(sent, antec, antecSent);
+			if(antec.isList() && this.isList()) {
+				return this.exactSpanMatch(sent, antec, antecSent) || this.listMemberMatch(sent, antec, antecSent, dict);
+			}
+			else {
+				return this.exactSpanMatch(sent, antec, antecSent);
+			}
 		}
 		
 		return this.headMatch(sent, antec, antecSent, dict)
@@ -708,6 +732,36 @@ public class Mention implements Serializable{
 					|| this.exactSpanMatch(sent, antec, antecSent)
 					|| this.acronymMatch(sent, antec, antecSent)
 					|| (options.useDemonym() && this.isDemonym(sent, antec, antecSent, dict)));
+	}
+	
+	public boolean listMemberMatch(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict) {
+		if(this.listMember.size() != antec.listMember.size()) {
+			return false;
+		}
+		
+		for(Mention anaphMember : this.listMember) {
+			boolean memberMatch = false;
+			for(Mention antecMember: antec.listMember) {
+				if(anaphMember.isPronominal()) {
+					if(antecMember.isPronominal()) {
+						if(anaphMember.headString.equals(antecMember.headString)) {
+							memberMatch = true;
+							break;
+						}
+					}
+				}
+				else if(!antecMember.isPronominal()) {
+					if(anaphMember.stringMatch(sent, antecMember, antecSent, dict)) {
+						memberMatch = true;
+						break;
+					}
+				}
+			}
+			if(!memberMatch) {
+				return false;
+			}
+		}
+		return true;
 	}
 	
 	public boolean headMatch(Sentence sent, Mention mention, Sentence sentOfM, Dictionaries dict){
@@ -830,7 +884,7 @@ public class Mention implements Serializable{
 			Arrays.asList("the", "this", "that", "those", "these", "mr.", "miss", "mrs.", "dr.", "ms.", "inc.", "ltd.", "corp.", "'s");
 	
 	private static final List<String> entityPOSToExclude = 
-			Arrays.asList(".", ",", "``", "''", ":");
+			Arrays.asList(".", ",", "``", "''", ":", "-LRB-", "-RRB-", "UH");
 	
 	//this mention includes all words in anaph
 	public boolean wordsInclude(Sentence sent, Mention anaph, Sentence anaphSent, Dictionaries dict){
@@ -1033,7 +1087,7 @@ public class Mention implements Serializable{
 				&& sent.getLexicon(headIndex + 1).form.equalsIgnoreCase("of");
 	}
 	
-	private void getHeadword(Sentence sent, Dictionaries dict){
+	private void getHeadword(Sentence sent, List<Mention> mentions, Dictionaries dict, Set<Mention> remove){
 		if(headword == null){
 			Lexicon lex = sent.getLexicon(headIndex);
 			headword= new Lexicon(lex);
@@ -1045,7 +1099,7 @@ public class Mention implements Serializable{
 			while(start >= 0){
 				String head = sent.getLexicon(start).form.toLowerCase();
 				if (knownSuffix(head)) {
-					start --;
+					start--;
 				}
 				else {
 					this.headString = head;
@@ -1061,6 +1115,18 @@ public class Mention implements Serializable{
 		}
 		// make sure partitive mention's head is correct
 		while(partitiveRule(sent)) {
+			for(Mention mention : mentions) {
+				if(this.headIndex == mention.headIndex) { 
+					if(this.cover(mention)) {
+						remove.add(mention);
+					}
+				}
+			}
+			//break if this is removed.
+			if(remove.contains(this)) {
+				break;
+			}
+			
 			int ofPos = headIndex + 1;
 			for(int i = ofPos + 1; i < endIndex; ++i) {
 				if(sent.getLexicon(i).basic_head == ofPos) {
@@ -1070,11 +1136,15 @@ public class Mention implements Serializable{
 					break;
 				}
 			}
+			//break if new headIndex does not exist
+			if(headIndex + 1 == ofPos) {
+				break;
+			}
 		}
 	}
 	
-	public void process(Sentence sent, Dictionaries dict){
-		getHeadword(sent, dict);
+	public void process(Sentence sent, List<Mention> mentions, Dictionaries dict, Set<Mention> remove) {
+		getHeadword(sent, mentions, dict, remove);
 		setType(sent, dict);
 		setDefiniteness(sent, dict);
 		setNumber(sent, dict);
@@ -1103,12 +1173,14 @@ public class Mention implements Serializable{
 		return false;
 	}
 	
-	private void setType(Sentence sent, Dictionaries dict){
+	private void setType(Sentence sent, Dictionaries dict) {
 		if(headword.postag.startsWith("PRP") || 
 				((endIndex - startIndex) == 1 && headword.ner.equals("O") && 
 				(dict.allPronouns.contains(headString) 
 					|| dict.relativePronouns.contains(headString)
-					|| dict.determiners.contains(headString)))){
+					|| dict.determiners.contains(headString)
+					|| singularDeterminers.contains(headString)
+					|| pluralDeterminers.contains(headString)))) {
 			mentionType = MentionType.PRONOMINAL;
 		}
 		else if(!headword.ner.equals("O") || headword.postag.startsWith("NNP")){
@@ -1163,11 +1235,20 @@ public class Mention implements Serializable{
 			}
 		}
 		else if(!headword.ner.equals("O") && !this.isNominative()) {
-			if(headword.ner.equals("ORGANIZATION") || headword.ner.startsWith("ORG") 
-					|| headword.ner.equals("PRODUCT")
-					|| headword.ner.equals("NORP")) {
+			if(headword.ner.equals("NORP") || headword.ner.equals("ORGANIZATION")) {
 				// ORGs, PRODUCTs and NORP can be both plural and singular
-				number = Number.UNKNOWN;
+				if(headword.postag.startsWith("N") && headword.postag.endsWith("S")) {
+					number = Number.PLURAL;
+				}
+				else if(headword.postag.startsWith("N")) {
+					number = Number.SINGULAR;
+				}
+				else {
+					number = Number.UNKNOWN;
+				}
+			}
+			else if(headword.ner.startsWith("ORG") || headword.ner.equals("PRODUCT")) {
+				number = Number.SINGULAR;
 			}
 			else {
 				number = Number.SINGULAR;
@@ -1272,10 +1353,10 @@ public class Mention implements Serializable{
 					}
 				}
 				else{
-					if(dict.maleWords.contains(headString)) {
+					if(dict.maleWords.contains(headString) || dict.maleWords.contains(headword.lemma)) {
 						gender = Gender.MALE;
 					}
-					else if(dict.femaleWords.contains(headString)) {
+					else if(dict.femaleWords.contains(headString) || dict.femaleWords.contains(headword.lemma)) {
 						gender = Gender.FEMALE;
 					}
 					else if(dict.neutralWords.contains(headString)) {
@@ -1509,6 +1590,7 @@ public class Mention implements Serializable{
 		printer.println("mention ner: " + this.headword.ner);
 		printer.println("mention speaker: " + (this.speakerInfo == null ? "null" : this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerMentionId() + " " + this.speakerInfo.getSpeakerName()));
 		printer.println("previous speaker: " + (this.preSpeakerInfo == null ? "null" : this.preSpeakerInfo.toString() + " " + this.preSpeakerInfo.getSpeakerName()));
+		printer.println("list member of: " + (this.belongTo == null ? " null" : this.belongTo.mentionID));
 		printer.println("#end Mention " + this.mentionID);
 		printer.println("===================================");
 		printer.flush();
@@ -1531,6 +1613,7 @@ public class Mention implements Serializable{
 		printer.println("mention ner: " + this.headword.ner);
 		printer.println("mention speaker: " + (this.speakerInfo == null ? "null" : this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerMentionId() + " " + this.speakerInfo.getSpeakerName()));
 		printer.println("previous speaker: " + (this.preSpeakerInfo == null ? "null" : this.preSpeakerInfo.toString() + " " + this.preSpeakerInfo.getSpeakerName()));
+		printer.println("list member of: " + (this.belongTo == null ? " null" : this.belongTo.mentionID));
 		printer.println("#end Mention " + this.mentionID);
 		printer.println("===================================");
 		printer.flush();

@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import cmucoref.document.Document;
 import cmucoref.document.Lexicon;
@@ -91,14 +93,22 @@ public class CMUMentionExtractor extends MentionExtractor {
 			for(int j = 0; j < stanfordMentions.size(); ++j) {
 				Mention mention = new Mention(stanfordMentions.get(j), i);
 				validateMentionBoundary(doc, mention, sent, options);
-				if(options.extractMentionAttribute()){
-					mention.process(sent, dict);
-				}
 				mentions.add(mention);
 			}
 			
-			//remove spurious mentions
+			//remove duplicated mentions
 			deleteDuplicatedMentions(mentions, sent);
+			
+			//process mentions
+			Set<Mention> remove = new HashSet<Mention>();
+			if(options.extractMentionAttribute()) {
+				for(Mention mention : mentions) {
+					mention.process(sent, mentions, dict, remove);
+				}
+			}
+			mentions.removeAll(remove);
+			
+			//remove spurious mentions
 			deleteSpuriousNamedEntityMentions(mentions, sent);
 			deleteSpuriousPronominalMentions(mentions, sent);
 			

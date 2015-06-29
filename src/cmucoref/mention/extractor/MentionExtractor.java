@@ -92,7 +92,8 @@ public abstract class MentionExtractor {
 		//remove NORP mentions as modifiers
 		remove.clear();
 		for(Mention mention : mentions) {
-			if(mention.headword.ner.equals("NORP") && mention.headword.postag.equals("JJ")) {
+			if((dict.isAdjectivalDemonym(mention.getSpan(sent)) || mention.headword.ner.equals("NORP")) 
+					&& (mention.headword.postag.equals("JJ") || mention.headword.basic_deprel.equals("nn"))) {
 				remove.add(mention);
 			}
 		}
@@ -117,15 +118,32 @@ public abstract class MentionExtractor {
 		mentions.removeAll(remove);
 		
 		//remove "you know" part in a mention
+		remove.clear();
 		for(Mention mention : mentions) {
 			if(mention.endIndex - mention.startIndex > 2) {
 				if(sent.getLexicon(mention.endIndex - 2).form.toLowerCase().equals("you")
 					&& sent.getLexicon(mention.endIndex - 1).form.toLowerCase().equals("know")) {
 					mention.endIndex = mention.endIndex - 2;
-					mention.process(sent, dict);
+					boolean duplicated = false;
+					for(Mention m2 : mentions) {
+						if(mention == m2) {
+							continue;
+						}
+						if(mention.equals(m2)) {
+							duplicated = true;
+							break;
+						}
+					}
+					if(duplicated) {
+						remove.add(mention);
+					}
+					else {
+						mention.process(sent, mentions, dict, remove);
+					}
 				}
 			}
 		}
+		mentions.removeAll(remove);
 	}
 	
 	public List<Mention> getSingleMentionList(Document doc, List<List<Mention>> mentionList, Options options) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
@@ -293,12 +311,15 @@ public abstract class MentionExtractor {
 			String lemma = sent.getLexicon(i).lemma;
 			if(dict.reportVerb.contains(lemma)) {
 				int reportVerbPos = i;
+				Lexicon reportVerb = sent.getLexicon(reportVerbPos);
 				for(int j = startIndex; j < endIndex; ++j) {
 					Lexicon lex = sent.getLexicon(j);
-					if(lex.collapsed_head == reportVerbPos && (lex.collapsed_deprel.equals("nsubj") || lex.collapsed_deprel.equals("xsubj"))) {
+					if(lex.collapsed_head == reportVerbPos && (lex.collapsed_deprel.equals("nsubj") || lex.collapsed_deprel.equals("xsubj"))
+						|| reportVerb.collapsed_deprel.startsWith("conj_") && lex.collapsed_head == reportVerb.collapsed_head && (lex.collapsed_deprel.equals("nsubj") || lex.collapsed_deprel.equals("xsubj"))) {
 						int speakerHeadIndex = j;
 						for(Mention mention : mentions) {
-							if(mention.headIndex == speakerHeadIndex 
+							if(mention.getBelognTo() == null 
+								&& mention.headIndex == speakerHeadIndex 
 								&& mention.startIndex >= startIndex && mention.endIndex < endIndex) {
 								if(mention.utteranceInfo == null) {
 									String speakerKey = mention.getSpan(sent);
@@ -337,7 +358,7 @@ public abstract class MentionExtractor {
 					insideQuotation = true;
 					hasQuotation = true;
 				}
-				else if(lex.form.equals("''") || (insideQuotation && normalQuotationType && lex.form.equals("\""))) {
+				else if((utteranceIndex > 0 && lex.form.equals("''")) || (insideQuotation && normalQuotationType && lex.form.equals("\""))) {
 					insideQuotation = false;
 					utteranceIndex--;
 				}
@@ -427,19 +448,17 @@ public abstract class MentionExtractor {
 		//markRelativePronounRelation(mentions, sent, RelationExtractor.createExtractor(options.getRelativePronounRelationExtractor()));
 	}
 	
+	/**
+	 * remove nested mention with shared headword (except enumeration/list): pick larger one
+	 * @param mentions
+	 * @param sent
+	 */
 	protected void deleteSpuriousListMentions(List<Mention> mentions, Sentence sent){
 		Set<Mention> remove = new HashSet<Mention>();
 		for(Mention mention1 : mentions){
 			for(Mention mention2 : mentions){
-				if(mention1.headIndex == mention2.headIndex && mention2.cover(mention1) && !mention1.isListMemberOf(mention2)){
-					if(mention2.startIndex == mention1.startIndex 
-							&& mention2.endIndex == mention1.endIndex + 1
-							&& sent.getLexicon(mention1.endIndex).form.equals(",")){
-						remove.add(mention2);
-					}
-					else {
-						remove.add(mention1);
-					}
+				if(mention1.headIndex == mention2.headIndex && mention2.cover(mention1) && mention1.getBelognTo() == null){
+					remove.add(mention1);
 				}
 			}
 		}
@@ -481,7 +500,7 @@ public abstract class MentionExtractor {
 				if(relation.equals("LISTMEMBER")) {
 					for(Pair<Integer, Integer> pair : foundPairs) {
 						if(pair.first == mention1.mentionID && pair.second == mention2.mentionID) {
-							mention2.addListMember(mention1);
+							mention2.addListMember(mention1, sent);
 						}
 					}
 				}

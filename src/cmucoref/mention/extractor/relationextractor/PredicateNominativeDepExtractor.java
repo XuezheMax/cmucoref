@@ -28,7 +28,7 @@ public class PredicateNominativeDepExtractor extends RelationExtractor{
 					continue;
 				}
 				
-				if(mention1 == mention2 || mention1.headIndex == mention2.headIndex){
+				if(mention1.equals(mention2) || mention1.headIndex == mention2.headIndex){
 					continue;
 				}
 				
