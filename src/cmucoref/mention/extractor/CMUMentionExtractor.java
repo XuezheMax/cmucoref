@@ -3,6 +3,7 @@ package cmucoref.mention.extractor;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -36,9 +37,22 @@ public class CMUMentionExtractor extends MentionExtractor {
 		mentionFinder = new CMURuleBasedCorefMentionFinder();
 	}
 	
-	private void validateMentionBoundary(Document doc, Mention mention, Sentence sent, Options options) {
-		// try not to have span that ends with ,
+	private static final Set<String> nonWords = new HashSet<String>(Arrays.asList("mm", "hmm", "ahem", "um", "uh", "%mm", "%hmm", "%ahem", "%um", "%uh"));
+	
+	protected void validateMentionBoundary(Document doc, Mention mention, Sentence sent, Options options) {
+		// try not to have span starts or ends non words.
+		int start = mention.startIndex;
+		while(start < mention.headIndex && nonWords.contains(sent.getLexicon(start).form.toLowerCase())) {
+			start++;
+		}
+		mention.startIndex = start;
+		int end = mention.endIndex;
+		while(end - 1 > mention.headIndex && nonWords.contains(sent.getLexicon(end - 1).form.toLowerCase())) {
+			end--;
+		}
+		mention.endIndex = end;
 		
+		// try not to have span that ends with ,
 		// for ontonotes nw/ docs, skip this step (annotation issues)
 		if(options.OntoNotes() && doc.getFileName().startsWith("nw/")) {
 			return;

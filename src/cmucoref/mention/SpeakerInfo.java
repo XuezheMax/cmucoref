@@ -70,6 +70,15 @@ public class SpeakerInfo {
 	public String[] getSpeakerNameStrings() {
 		return speakerNameStrings;
 	}
+	
+	public String getSpkeakerNameAsOneString() {
+		String str = "[";
+		for(String name : speakerNameStrings) {
+			str += name + " ";
+		}
+		str = str.trim() + "]";
+		return str;
+	}
 
 	public Set<Mention> getMentions() {
 		return mentions;

@@ -169,7 +169,6 @@ public abstract class MentionExtractor {
 		if(options.usePreciseMatch()) {
 			findPreciseMatchRelation(doc, allMentions);
 		}
-		
 		return allMentions;
 	}
 	
@@ -442,6 +441,7 @@ public abstract class MentionExtractor {
 	protected void findSyntacticRelation(List<Mention> mentions, Sentence sent, Options options) throws InstantiationException, IllegalAccessException, ClassNotFoundException, MentionException{
 		markListMemberRelation(mentions, sent, RelationExtractor.createExtractor(options.getListMemberRelationExtractor()));
 		deleteSpuriousListMentions(mentions, sent);
+		correctHeadIndexforNERMentions(mentions, sent);
 		markAppositionRelation(mentions, sent, RelationExtractor.createExtractor(options.getAppositionRelationExtractor()));
 		markRoleAppositionRelation(mentions, sent, RelationExtractor.createExtractor(options.getRoleAppositionRelationExtractor()));
 		markPredicateNominativeRelation(mentions, sent, RelationExtractor.createExtractor(options.getPredicateNominativeRelationExtractor()));
@@ -455,14 +455,20 @@ public abstract class MentionExtractor {
 	 */
 	protected void deleteSpuriousListMentions(List<Mention> mentions, Sentence sent){
 		Set<Mention> remove = new HashSet<Mention>();
-		for(Mention mention1 : mentions){
-			for(Mention mention2 : mentions){
-				if(mention1.headIndex == mention2.headIndex && mention2.cover(mention1) && mention1.getBelognTo() == null){
+		for(Mention mention1 : mentions) {
+			for(Mention mention2 : mentions) {
+				if(mention1.headIndex == mention2.headIndex && mention2.cover(mention1) && mention1.getBelognTo() == null) {
 					remove.add(mention1);
 				}
 			}
 		}
 		mentions.removeAll(remove);
+	}
+	
+	protected void correctHeadIndexforNERMentions(List<Mention> mentions, Sentence sent) {
+		for(Mention mention : mentions) {
+			mention.correctHeadIndex(sent, dict);
+		}
 	}
 	
 	protected void markListMemberRelation(List<Mention> mentions, Sentence sent, RelationExtractor extractor) throws MentionException {
@@ -520,7 +526,8 @@ public abstract class MentionExtractor {
 				}
 				else{
 					for(Pair<Integer, Integer> pair : foundPairs) {
-						if(pair.first == mention1.headIndex && pair.second == mention2.headIndex) {
+//						if(pair.first == mention1.headIndex && pair.second == mention2.headIndex) {
+						if(pair.first == mention1.originalHeadIndex && pair.second == mention2.originalHeadIndex) {
 							if(relation.equals("APPOSITION")) {
 								mention2.addApposition(mention1, dict);
 							}

@@ -26,14 +26,16 @@ public class ListMemberRelationExtractor extends RelationExtractor {
 		List<Mention> memberCands = getListMemberCandidates(sent, mentions);
 		
 		for(Mention cand : memberCands) {
-			int parIndex = cand.headword.basic_head;
+//			int parIndex = cand.headword.basic_head;
+			int parIndex = sent.getLexicon(cand.originalHeadIndex).basic_head;
 			Mention list = null;
 			for(Mention mention2 : mentions) {
 				if(cand.equals(mention2)) {
 					continue;
 				}
 				
-				if((mention2.headIndex == parIndex) && (mention2.cover(cand))) {
+//				if((mention2.headIndex == parIndex) && (mention2.cover(cand))) {
+				if((mention2.originalHeadIndex == parIndex) && (mention2.cover(cand))) {
 					if(list == null || mention2.cover(list)) {
 						list = mention2;
 					}
@@ -55,7 +57,7 @@ public class ListMemberRelationExtractor extends RelationExtractor {
 			if(isList.contains(list.mentionID)) {
 				Mention firstMember = getFirstMember(list, listToMembersMap.get(list.mentionID), mentions);
 				if(firstMember == null) {
-					list.display(sent, System.err);
+//					list.display(sent, System.err);
 					//throw new RuntimeException("cannot find first list member");
 				}
 				else {
@@ -79,7 +81,8 @@ public class ListMemberRelationExtractor extends RelationExtractor {
 	}
 	
 	private boolean checkFirstMember(Mention list, List<Mention> listMembers, Mention member) {
-		if(!(list.cover(member) && list.headIndex == member.headIndex)) {
+//		if(!(list.cover(member) && list.headIndex == member.headIndex)) {
+		if(!(list.cover(member) && list.originalHeadIndex == member.originalHeadIndex)) {
 			return false;
 		}
 		
@@ -94,11 +97,13 @@ public class ListMemberRelationExtractor extends RelationExtractor {
 	private List<Mention> getListMemberCandidates(Sentence sent, List<Mention> mentions) {
 		List<Mention> memberCands = new ArrayList<Mention>();
 		for(Mention cand : mentions) {
-			Lexicon headword = cand.headword;
+//			Lexicon headword = cand.headword;
+			Lexicon headword = sent.getLexicon(cand.originalHeadIndex);
 			if(headword.basic_deprel.equals("conj")) {
 				boolean isLargestSpan = true;
 				for(Mention mention : mentions) {
-					if(mention.headIndex == cand.headIndex && mention.cover(cand)) {
+//					if(mention.headIndex == cand.headIndex && mention.cover(cand)) {
+					if(mention.originalHeadIndex == cand.originalHeadIndex && mention.cover(cand)) {
 						isLargestSpan = false;
 						break;
 					}

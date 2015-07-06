@@ -102,7 +102,6 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 			"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "yesterday", "tomorrow", "today", 
 			"january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"));
 	private static void removeSpuriousNamedEntityMentions(CoreMap s, List<Mention> mentions, Set<IntPair> mentionSpanSet, Set<IntPair> namedEntitySpanSet) {
-		List<CoreLabel> sent = s.get(CoreAnnotations.TokensAnnotation.class);
 		Set<Mention> remove = Generics.newHashSet();
 		Set<IntPair> removeSpan = Generics.newHashSet();
 		for(Mention m : mentions) {
@@ -152,7 +151,7 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 	}
 	
 	private static boolean insideNE(IntPair mSpan, Set<IntPair> namedEntitySpanSet) {
-		for (IntPair span : namedEntitySpanSet){
+		for (IntPair span : namedEntitySpanSet) {
 			if(span.get(0) <= mSpan.get(0) && mSpan.get(1) <= span.get(1)) {
 				return true;
 			}
@@ -164,7 +163,7 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 	private static final Set<String> negWords = new HashSet<String>(Arrays.asList("nobody", "none", "nothing", "no", "not"));
 	protected static void removeSpuriousMentions(CoreMap s, List<Mention> mentions, Dictionaries dict) {
 		Tree tree = s.get(TreeCoreAnnotations.TreeAnnotation.class);
-		List<CoreLabel> sent = s.get(CoreAnnotations.TokensAnnotation.class);
+//		List<CoreLabel> sent = s.get(CoreAnnotations.TokensAnnotation.class);
 		Set<Mention> remove = Generics.newHashSet();
 		
 		for(Mention m : mentions) {

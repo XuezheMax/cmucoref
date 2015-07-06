@@ -15,9 +15,11 @@ public class AppositionRelationDepExtractor extends RelationExtractor {
 	public Set<Pair<Integer, Integer>> extractRelation(Sentence sent, List<Mention> mentions) {
 		Set<Pair<Integer, Integer>> relationSet = new HashSet<Pair<Integer, Integer>>();
 		for(Mention mention : mentions){
-			Lexicon headword = mention.headword;
+//			Lexicon headword = mention.headword;
+			Lexicon headword = sent.getLexicon(mention.originalHeadIndex);
 			if(headword.basic_deprel.equals("appos")){
-				if(mention.headIndex > headword.basic_head){
+//				if(mention.headIndex > headword.basic_head){
+				if(mention.originalHeadIndex > headword.basic_head) {
 					relationSet.add(new Pair<Integer, Integer>(mention.headIndex, headword.basic_head));
 				}
 			}

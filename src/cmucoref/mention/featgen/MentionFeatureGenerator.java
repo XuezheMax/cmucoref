@@ -70,32 +70,41 @@ public class MentionFeatureGenerator {
 		
 		//string match features (does not apply for pronominals)
 		if(!anaph.isPronominal() && !antec.isPronominal()) {
-			boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent, dict);
-			feat.append(", " + "HDMAT=" + headMatch);
-			
-			//Acronym or Demonym
-			boolean ADNYM = (Mention.options.useDemonym() && anaph.isDemonym(anaphSent, antec, antecSent, dict))
-							|| anaph.acronymMatch(anaphSent, antec, antecSent);
-			
-			//compatible modifier
-			boolean compatibleModifier = ADNYM || antec.compatibleModifier(antecSent, anaph, anaphSent, dict);
-			feat.append(", " + "CMPMOD=" + compatibleModifier);
-			//wordInclude
-			boolean wordIncluded = ADNYM || antec.wordsInclude(antecSent, anaph, anaphSent, dict);
-			feat.append(", " + "WDIND=" + wordIncluded);
-			//exact match
-			boolean exactMatch = ADNYM || anaph.exactSpanMatch(anaphSent, antec, antecSent);
-			//relaxed match
-			boolean relaxedMatch = exactMatch || anaph.relaxedSpanMatch(anaphSent, antec, antecSent);
-			
-			feat.append(", " + "RLXMAT=" + relaxedMatch);
-			feat.append(", " + "EXTMAT=" + exactMatch);
-			
-//			if(anaph.isDemonym(anaphSent, antec, antecSent, dict) && !anaph.exactSpanMatch(anaphSent, antec, antecSent)) {
-//				System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%");
-//				antec.display(antecSent, System.out);
-//				anaph.display(anaphSent, System.out);
-//			}
+			if(anaph.isList() || antec.isList()) {
+				feat.append(", " + "HDMAT=true");
+				feat.append(", " + "CMPMOD=true");
+				feat.append(", " + "WDIND=true");
+				feat.append(", " + "RLXMAT=true");
+				feat.append(", " + "EXTMAT=true");
+			}
+			else {
+				boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent, dict);
+				feat.append(", " + "HDMAT=" + headMatch);
+				
+				//Acronym or Demonym
+				boolean ADNYM = (Mention.options.useDemonym() && anaph.isDemonym(anaphSent, antec, antecSent, dict))
+						|| anaph.acronymMatch(anaphSent, antec, antecSent);
+				
+				//compatible modifier
+				boolean compatibleModifier = ADNYM || antec.compatibleModifier(antecSent, anaph, anaphSent, dict);
+				feat.append(", " + "CMPMOD=" + compatibleModifier);
+				//wordInclude
+				boolean wordIncluded = ADNYM || antec.wordsInclude(antecSent, anaph, anaphSent, dict);
+				feat.append(", " + "WDIND=" + wordIncluded);
+				//exact match
+				boolean exactMatch = ADNYM || anaph.exactSpanMatch(anaphSent, antec, antecSent);
+				//relaxed match
+				boolean relaxedMatch = exactMatch || anaph.relaxedSpanMatch(anaphSent, antec, antecSent);
+				
+				feat.append(", " + "RLXMAT=" + relaxedMatch);
+				feat.append(", " + "EXTMAT=" + exactMatch);
+				
+//				if(anaph.isDemonym(anaphSent, antec, antecSent, dict) && !anaph.exactSpanMatch(anaphSent, antec, antecSent)) {
+//					System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%");
+//					antec.display(antecSent, System.out);
+//					anaph.display(anaphSent, System.out);
+//				}
+			}
 		}
 		addFeature(feat.toString(), given.toString(), model, fv);
 	}
@@ -120,26 +129,36 @@ public class MentionFeatureGenerator {
 		
 		//string match features (does not apply for pronominals)
 		if(!anaph.isPronominal() && !antec.isPronominal()) {
-			boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent, dict);
-			feat.append(", " + "HDMAT=" + headMatch);
-			
-			//Acronym or Demonym
-			boolean ADNYM = (Mention.options.useDemonym() && anaph.isDemonym(anaphSent, antec, antecSent, dict))
-					|| anaph.acronymMatch(anaphSent, antec, antecSent);
-			
-			//compatible modifier
-			boolean compatibleModifier = ADNYM || antec.compatibleModifier(antecSent, anaph, anaphSent, dict);
-			feat.append(", " + "CMPMOD=" + compatibleModifier);
-			//wordInclude
-			boolean wordIncluded = ADNYM || antec.wordsInclude(antecSent, anaph, anaphSent, dict);
-			feat.append(", " + "WDIND=" + wordIncluded);
-			//exact match
-			boolean exactMatch = ADNYM || anaph.exactSpanMatch(anaphSent, antec, antecSent);
-			//relaxed match
-			boolean relaxedMatch = exactMatch || anaph.relaxedSpanMatch(anaphSent, antec, antecSent);
-			
-			feat.append(", " + "RLXMAT=" + relaxedMatch);
-			feat.append(", " + "EXTMAT=" + exactMatch);
+			if(anaph.isList() || antec.isList()) {
+				boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent, dict);
+				feat.append(", " + "HDMAT=" + headMatch);
+				feat.append(", " + "CMPMOD=false");
+				feat.append(", " + "WDIND=false");
+				feat.append(", " + "RLXMAT=false");
+				feat.append(", " + "EXTMAT=false");
+			}
+			else {
+				boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent, dict);
+				feat.append(", " + "HDMAT=" + headMatch);
+				
+				//Acronym or Demonym
+				boolean ADNYM = (Mention.options.useDemonym() && anaph.isDemonym(anaphSent, antec, antecSent, dict))
+						|| anaph.acronymMatch(anaphSent, antec, antecSent);
+				
+				//compatible modifier
+				boolean compatibleModifier = ADNYM || antec.compatibleModifier(antecSent, anaph, anaphSent, dict);
+				feat.append(", " + "CMPMOD=" + compatibleModifier);
+				//wordInclude
+				boolean wordIncluded = ADNYM || antec.wordsInclude(antecSent, anaph, anaphSent, dict);
+				feat.append(", " + "WDIND=" + wordIncluded);
+				//exact match
+				boolean exactMatch = ADNYM || anaph.exactSpanMatch(anaphSent, antec, antecSent);
+				//relaxed match
+				boolean relaxedMatch = exactMatch || anaph.relaxedSpanMatch(anaphSent, antec, antecSent);
+				
+				feat.append(", " + "RLXMAT=" + relaxedMatch);
+				feat.append(", " + "EXTMAT=" + exactMatch);
+			}
 		}
 		
 		addFeature(feat.toString(), given.toString(), model, fv);

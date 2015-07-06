@@ -30,13 +30,21 @@ public class Pair<T1, T2> implements Comparable<Pair<T1,T2>>, Serializable{
 		return new Pair<T1, T2>(first, second);
 	}
 	
+	@Override
 	public int hashCode(){
 		int hashFirst = first != null ? first.hashCode() : 0;
 		int hashSecond = second != null ? second.hashCode() : 0;
 		return (hashFirst + hashSecond) * hashSecond + hashFirst;
 	}
 	
-	public boolean equals(Pair<T1, T2> otherPair){
+	 @Override
+	public boolean equals(Object obj) {
+		if(!(obj instanceof Pair<?, ?>)) {
+			return false;
+		}
+		@SuppressWarnings("unchecked")
+		Pair<T1, T2> otherPair = (Pair<T1, T2>) obj;
+		
 		return ((this.first == otherPair.first 
 				|| (this.first != null && otherPair.first != null && this.first.equals(otherPair.first))) 
 				&& 
