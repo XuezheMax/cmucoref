@@ -417,7 +417,7 @@ public abstract class MentionExtractor {
 				
 				int distOfSent = anaph.getDistOfSent(antec);
 				if(antec.isPronominal()) {
-					if(distOfSent > 5) {
+					if(distOfSent > 4) {
 						continue;
 					}
 				}

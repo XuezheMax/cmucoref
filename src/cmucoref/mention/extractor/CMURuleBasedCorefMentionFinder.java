@@ -262,7 +262,7 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 	/** Check whether pleonastic 'it'. E.g., It is possible that ... */
 	private static final TregexPattern[] pleonasticPatterns = getPleonasticPatterns();
 	private static boolean isPleonastic(Mention m, Tree tree) {
-		if ( ! m.spanToString().equalsIgnoreCase("it")) {
+		if (!m.spanToString().equalsIgnoreCase("it")) {
 			return false;
 		}
 		for (TregexPattern p : pleonasticPatterns) {
@@ -279,32 +279,61 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 				// cdm 2013: I spent a while on these patterns. I fixed a syntax error in five patterns ($.. split with space), so it now shouldn't exception in checkPleonastic. This gave 0.02% on CoNLL11 dev
 				// I tried some more precise patterns but they didn't help. Indeed, they tended to hurt vs. the higher recall patterns.
 
-				//"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|become|became)/) $.. (VP < (VBN $.. /S|SBAR/))))", // overmatches
-				// "@NP < (PRP=m1 < it|IT|It) $.. (@VP < (/^V.*/ < /^(?i:is|was|be|becomes|become|became)$/ $.. (@VP < (VBN < expected|hoped $.. @SBAR))))",// this one seems more accurate, but ...
-				"@NP < (PRP=m1 < it|IT|It) $.. (@VP < (/^V.*/ < /^(?i:is|was|be|becomes|become|became)$/ $.. (@VP < (VBN $.. @S|SBAR))))",// in practice, go with this one (best results)
+//				"@NP <: (DT=m1) $. (@VP < (/^V.*/ < /^(?i:is|was|be|becomes|become|became)$/ $.. (@VP < (VBN $.. @S|SBAR))))",// in practice, go with this one (best results)
+//				"NP <: (DT=m1) $. (VP < ((/^V.*/ < /^(?:is|was|become|became)/) $.. (ADJP $.. (/S|SBAR/))))",
+//				"NP <: (DT=m1) $. (VP < ((/^V.*/ < /^(?:is|was|become|became)/) $.. (ADJP < (/S|SBAR/))))",
+				
+				"@NP < (PRP=m1) $.. (@VP < (/^V.*/ < /^(?i:is|was|be|becomes|become|became)$/ $.. (@VP < (VBN $.. @S|SBAR))))",// in practice, go with this one (best results)
+				"@NP < (NP < (PRP=m1)) $.. (@VP < (/^V.*/ < /^(?i:is|was|be|becomes|become|became)$/ $.. (@VP < (VBN $.. @S|SBAR))))", // by Max
 
-				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|become|became)/) $.. (ADJP $.. (/S|SBAR/))))",
-				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|become|became)/) $.. (ADJP < (/S|SBAR/))))",
-				// "@NP < (PRP=m1 < it|IT|It) $.. (@VP < (/^V.*/ < /^(?i:is|was|be|becomes|become|became)$/ $.. (@ADJP < (/^(?:JJ|VB)/ < /^(?i:(?:hard|tough|easi)(?:er|est)?|(?:im|un)?(?:possible|interesting|worthwhile|likely|surprising|certain)|disappointing|pointless|easy|fine|okay)$/) [ < @S|SBAR | $.. (@S|SBAR !< (IN !< for|For|FOR|that|That|THAT)) ] )))", // does worse than above 2 on CoNLL11 dev
-
-				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|become|became)/) $.. (NP < /S|SBAR/)))",
-				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|become|became)/) $.. (NP $.. ADVP $.. /S|SBAR/)))",
-				// "@NP < (PRP=m1 < it|IT|It) $.. (@VP < (/^V.*/ < /^(?i:is|was|be|becomes|become|became)$/ $.. (@NP $.. @ADVP $.. @SBAR)))", // cleft examples, generalized to not need ADVP; but gave worse CoNLL12 dev numbers....
-
-				// these next 5 had buggy space in "$ ..", which I fixed
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (ADJP $.. (/S|SBAR/))))",
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (ADJP $.. (/S|SBAR/))))", //by Max
+				
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (ADJP < (/S|SBAR/))))",
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (ADJP < (/S|SBAR/))))", // by Max
+				
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (NP < (NP $.. /S|SBAR/))))",
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (NP < (NP < (NP $.. /S|SBAR/)))))", // by Max
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (NP < (NP $.. /S|SBAR/))))", //by Max
+				
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became|takes|took)/) $.. (NP $.. (/S|SBAR/))))", // by Max
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became|takes|took)/) $.. (NP $.. (/S|SBAR/))))", // by Max
+				
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (NP $.. ADVP $.. /S|SBAR/)))",
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (NP $.. ADVP $.. /S|SBAR/)))", // by Max
+				
+				// with MD
 				"NP < (PRP=m1) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become)/) $.. (VP < (VBN $.. /S|SBAR/))))))",
+				"NP < (NP < (PRP=m1)) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become)/) $.. (VP < (VBN $.. /S|SBAR/))))))", // by Max
 
 				"NP < (PRP=m1) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become)/) $.. (ADJP $.. (/S|SBAR/))))))", // extraposed. OK 1/2 correct; need non-adverbial case
+				"NP < (NP < (PRP=m1)) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become)/) $.. (ADJP $.. (/S|SBAR/))))))", // by Max
+				
 				"NP < (PRP=m1) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become)/) $.. (ADJP < (/S|SBAR/))))))", // OK: 3/3 good matches on dev; but 3/4 wrong on WSJ
-				// certain can be either but relatively likely pleonastic with it ... be
-				// "@NP < (PRP=m1 < it|IT|It) $.. (@VP < (MD $.. (@VP < ((/^V.*/ < /^(?:be|become)/) $.. (@ADJP < (/^JJ/ < /^(?i:(?:hard|tough|easi)(?:er|est)?|(?:im|un)?(?:possible|interesting|worthwhile|likely|surprising|certain)|disappointing|pointless|easy|fine|okay))$/) [ < @S|SBAR | $.. (@S|SBAR !< (IN !< for|For|FOR|that|That|THAT)) ] )))))", // GOOD REPLACEMENT ; 2nd clause is for extraposed ones
-
-				"NP < (PRP=m1) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become)/) $.. (NP < /S|SBAR/)))))",
+				"NP < (NP < (PRP=m1)) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become)/) $.. (ADJP < (/S|SBAR/))))))", // by Max
+				
+				"NP < (PRP=m1) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become)/) $.. (NP < (NP $.. /S|SBAR/))))))",
+				"NP < (NP < (PRP=m1)) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become)/) $.. (NP < (NP $.. /S|SBAR/))))))", // by Max
+				
+				"NP < (PRP=m1) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become|take)/) $.. (NP $.. /S|SBAR/)))))", // by Max
+				"NP < (NP < (PRP=m1)) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become|take)/) $.. (NP $.. /S|SBAR/)))))", // by Max
+				
 				"NP < (PRP=m1) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become)/) $.. (NP $.. ADVP $.. /S|SBAR/)))))",
+				"NP < (NP < (PRP=m1)) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become)/) $.. (NP $.. ADVP $.. /S|SBAR/)))))", // by Max
 
-				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:seems|appears|means|follows)/) $.. /S|SBAR/))",
+				//some other VBs
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:seems|seemed|appeared|appears|means|follows)/) $.. /S|SBAR/))",
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:seems|seemed|appeared|appears|means|follows)/) $.. /S|SBAR/))", // by Max
 
-				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:turns|turned)/) $.. PRT $.. /S|SBAR/))"
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:happens|happened)/) $.. SBAR))",
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:happens|happened)/) $.. SBAR))", // by Max
+				
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:turns|turned)/) $.. PRT $.. /S|SBAR/))", 
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:turns|turned)/) $.. PRT $.. /S|SBAR/))", // by Max
+				
+				//eg. make it safer to do sth
+				"VP $.. (S < ((NP < (PRP=m1)) $.. ADJP $.. /S|SBAR/))", // by Max
+				"VP $.. (S < ((NP < (NP < (PRP=m1))) $.. ADJP $.. /S|SBAR/))" // by Max
 		};
 
 		TregexPattern[] tgrepPatterns = new TregexPattern[patterns.length];

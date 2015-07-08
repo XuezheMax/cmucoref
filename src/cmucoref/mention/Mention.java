@@ -468,13 +468,14 @@ public class Mention implements Serializable{
 		}
 	}
 	
-	public boolean isPureNerMention(Sentence sent){
-		if(headword.ner.equals("O")){
+	public boolean isPureNerMention(Sentence sent) {
+		String headNE = sent.getLexicon(headIndex).ner;
+		if(headNE.equals("O")){
 			return false;
 		}
 		
 		for(int i = this.startIndex; i < this.endIndex; ++i){
-			if(!(sent.getLexicon(i).ner.equals(headword.ner))){
+			if(!(sent.getLexicon(i).ner.equals(headNE))){
 				return false;
 			}
 		}
@@ -696,8 +697,9 @@ public class Mention implements Serializable{
 		if(this.roleApposTo(antec)) {
 			return true;
 		}
-		// I and you with same speaker
+		// I , we and you with same speaker
 		if(((this.person == Person.I && antec.person == Person.I) 
+				|| (this.person == Person.WE && antec.person == Person.WE)
 				|| (this.person == Person.YOU && antec.person == Person.YOU))
 				&& (this.speakerInfo.equals(antec.speakerInfo))) {
 			return true;
@@ -731,12 +733,13 @@ public class Mention implements Serializable{
 			this.preciseMatchs = new ArrayList<Mention>();
 		}
 		
-//		if(this.preciseMatchs.size() > 0) {
-//			if(preciseMatch.preciseMatchs == null) {
-//				preciseMatch.preciseMatchs = new ArrayList<Mention>();
-//			}
-//			preciseMatch.preciseMatchs.addAll(this.preciseMatchs);
-//		}
+		if(this.preciseMatchs.size() > 0) {
+			if(preciseMatch.preciseMatchs == null) {
+				preciseMatch.preciseMatchs = new ArrayList<Mention>();
+			}
+			preciseMatch.preciseMatchs.addAll(this.preciseMatchs);
+			preciseMatch.preciseMatch = true;
+		}
 		
 		this.preciseMatchs.add(preciseMatch);
 		this.preciseMatch = true;
@@ -901,7 +904,8 @@ public class Mention implements Serializable{
 			if(anaphLex.postag.equals("PRP$") || dict.possessivePronouns.contains(anaphLex.form.toLowerCase())) {
 				possessivePronsOfAanph.add(anaphLex.form.toLowerCase());
 			}
-			else if((anaphLex.postag.equals("JJ") || anaphLex.postag.startsWith("N")
+			else if((anaphLex.postag.startsWith("JJ") || anaphLex.postag.startsWith("N") 
+					||anaphLex.postag.equals("RB")
 					|| anaphLex.postag.startsWith("V") || anaphLex.postag.equals("CD"))
 					&& (!entityWordsToExclude.contains(anaphLex.form.toLowerCase()))) {
 				
@@ -1171,6 +1175,14 @@ public class Mention implements Serializable{
 		// make sure that the NER of a number-of mention is O
 		if(numberOfRule(sent)) {
 			headword.ner = "O";
+//			int ofPos = headIndex + 1;
+//			for(int i = this.headIndex + 2; i < this.endIndex; ++i) {
+//				Lexicon lex = sent.getLexicon(i);
+//				if(lex.basic_head == ofPos && lex.postag.startsWith("N")) {
+//					headword.ner = lex.ner;
+//					break;
+//				}
+//			}
 		}
 		// make sure partitive mention's head is correct
 		while(partitiveRule(sent)) {
@@ -1238,7 +1250,7 @@ public class Mention implements Serializable{
 				this.mentionType = MentionType.NOMINAL;
 			}
 		}
-		else if((endIndex - startIndex) == 1 && headword.ner.equals("O") && //headword.postag.startsWith("PRP") &&
+		else if((endIndex - startIndex) == 1 && headword.ner.equals("O") && headword.postag.startsWith("PRP") &&
 				(dict.allPronouns.contains(headString) 
 					|| dict.relativePronouns.contains(headString)
 					|| dict.determiners.contains(headString)
@@ -1246,8 +1258,15 @@ public class Mention implements Serializable{
 					|| pluralDeterminers.contains(headString))) {
 			mentionType = MentionType.PRONOMINAL;
 		}
-		else if(!headword.ner.equals("O") || headword.postag.startsWith("NNP")){
-			mentionType = MentionType.PROPER;
+		else if(!headword.ner.equals("O") || headword.postag.startsWith("NNP")) {
+			// CARDINAL, QUANTITY are not regarded as Proper
+			if(headword.ner.equals("CARDINAL") || headword.ner.equals("QUANTITY") 
+				|| headword.ner.equals("MONEY") || headword.ner.equals("NUMBER")) {
+				mentionType = MentionType.NOMINAL;
+			}
+			else {
+				mentionType = MentionType.PROPER;
+			}
 		}
 		else{
 			mentionType = MentionType.NOMINAL;
@@ -1656,6 +1675,12 @@ public class Mention implements Serializable{
 				person = Person.UNKNOWN;
 			}
 		}
+		else if(singularDeterminers.contains(spanToString)) {
+			person = Person.IT;
+		}
+		else if(pluralDeterminers.contains(spanToString)) {
+			person = Person.THEY;
+		}
 		else {
 			person = Person.UNKNOWN;
 		}
@@ -1694,8 +1719,18 @@ public class Mention implements Serializable{
 		return res;
 	}
 	
-	public boolean equals(Mention m) {
+	@Override
+	public boolean equals(Object obj) {
+		if(!(obj instanceof Mention)) {
+			return false;
+		}
+		Mention m = (Mention) obj;
 		return this.sentID == m.sentID && this.startIndex == m.startIndex && this.endIndex == m.endIndex ;
+	}
+	
+	@Override
+	public int hashCode() {
+		return this.sentID ^ this.startIndex ^ this.endIndex;
 	}
 	
 	public void display(Sentence sent, PrintStream printer) {

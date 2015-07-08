@@ -3,7 +3,9 @@ package cmucoref.document;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Stack;
 
 import cmucoref.exception.MentionException;
@@ -62,34 +64,32 @@ public class Document {
 	}
 	
 	private void postProcessing(List<List<Mention>> mentionList) {
+		Set<Mention> removeSet = new HashSet<Mention>();
 		for(List<Mention> mentions : mentionList) {
 			for(Mention mention : mentions) {
-				boolean removed = false;
 				//remove appositives
 				if(mention.corefTo(mention.getApposTo())) {
-					Mention antec = mention.getApposTo();
-					antec.corefCluster.remove(mention);
-					removed = true;
+					removeSet.add(mention);
+					continue;
 				}
 				
 				//remove predicate nominatives
 				if(mention.corefTo(mention.getPredNomiTo())) {
-					Mention antec = mention.getPredNomiTo();
-					antec.corefCluster.remove(mention);
-					removed = true;
+					removeSet.add(mention);
+					continue;
 				}
 				
 				//remove role appositives
 				if(mention.corefTo(mention.getRoleApposTo())) {
-					Mention antec = mention.getRoleApposTo();
-					antec.corefCluster.remove(mention);
-					removed = true;
-				}
-				
-				if(removed) {
-					mention.setSingleton();
+					removeSet.add(mention);
+					continue;
 				}
 			}
+		}
+		
+		for(Mention mention : removeSet) {
+			mention.corefCluster.remove(mention);
+			mention.corefCluster = null;
 		}
 		
 		for(List<Mention> mentions : mentionList) {

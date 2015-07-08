@@ -44,12 +44,12 @@ public class BasicEventExtractor extends EventExtractor {
 			}
 			
 			if(copulas.contains(collapsed_headword.lemma)) {
-				Event copulaEvent = findCopulaEventWithBasicDep(sent, headword.basic_head, collapsed_deprel, mention, isPart, options);
+				Event copulaEvent = findCopulaEventWithBasicDep(sent, collapsed_headword.id, collapsed_deprel, mention, isPart, options);
 				mention.addEvent(copulaEvent);
 				mention.setMainEvent(copulaEvent, false);
 			}
 			else {				
-				Event collapsedEvent = new Event(mention.sentID, headword.collapsed_head, 
+				Event collapsedEvent = new Event(mention.sentID, collapsed_headword.id, 
 						collapsed_headword.lemma, collapsed_deprel, isPart);
 				mention.addEvent(collapsedEvent);
 				mention.setMainEvent(collapsedEvent, false);
