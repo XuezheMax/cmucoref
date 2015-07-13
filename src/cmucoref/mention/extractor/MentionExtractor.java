@@ -389,14 +389,14 @@ public abstract class MentionExtractor {
 	}
 	
 	protected void findPreciseMatchRelation(Document doc, List<Mention> allMentions) {
-		for(int i = 1; i < allMentions.size(); ++i){
+		for(int i = 1; i < allMentions.size(); ++i) {
 			Mention anaph = allMentions.get(i);
 			
 			//find precise match
-			for(int j = 0; j < i; ++j){
+			for(int j = 0; j < i; ++j) {
 				Mention antec = allMentions.get(j);
 				
-				if(anaph.preciseMatch(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)){
+				if(anaph.preciseMatch(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)) {
 					anaph.addPreciseMatch(antec, doc);
 				}
 				
@@ -409,14 +409,19 @@ public abstract class MentionExtractor {
 			if(!anaph.isPronominal()) {
 				continue;
 			}
-			for(int j = i - 1; j >=0; --j){
+			for(int j = i - 1; j >=0; --j) {
 				Mention antec = allMentions.get(j);
-				if(anaph.ruleout(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)){
+				if(anaph.ruleout(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)) {
 					continue;
 				}
 				
 				int distOfSent = anaph.getDistOfSent(antec);
-				if(antec.isPronominal()) {
+				if(antec.isDetPronominal()) {
+					if(distOfSent > 2) {
+						continue;
+					}
+				}
+				else if(antec.isPronominal()) {
 					if(distOfSent > 4) {
 						continue;
 					}

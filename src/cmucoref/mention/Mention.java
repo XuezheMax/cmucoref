@@ -226,16 +226,20 @@ public class Mention implements Serializable{
 		speakerInfo.addMention(this);
 	}
 	
-	public boolean isNominative(){
+	public boolean isNominative() {
 		return !isList() && (this.mentionType == MentionType.NOMINAL);
 	}
 	
-	public boolean isProper(){
+	public boolean isProper() {
 		return !isList() && (this.mentionType == MentionType.PROPER);
 	}
 	
-	public boolean isPronominal(){
+	public boolean isPronominal() {
 		return !isList() && (this.mentionType == MentionType.PRONOMINAL);
+	}
+	
+	public boolean isDetPronominal() {
+		return isPronominal() && determiners.contains(this.headString);
 	}
 	
 	public boolean isPossessiveOrReflexivePronominal(Dictionaries dict) {
@@ -376,6 +380,23 @@ public class Mention implements Serializable{
 	}
 	
 	public boolean personAgree(Mention mention) {
+		if(this.isDetPronominal()) {
+			if(mention.isPronominal()) {
+				return this.headString.equals(mention.headString);
+			}
+			else {
+				return false;
+			}
+		}
+		else if(mention.isDetPronominal()) {
+			if(this.isPronominal()) {
+				return this.headString.equals(mention.headString);
+			}
+			else {
+				return false;
+			}
+		}
+		
 		if(this.person == Person.UNKNOWN 
 				&& mention.person != Person.I 
 				&& mention.person != Person.WE 
@@ -394,30 +415,30 @@ public class Mention implements Serializable{
 	}
 	
 	public boolean NERAgree(Mention mention, Dictionaries dict) {
-		if(this.isPronominal()){
+		if(this.isPronominal()) {
 			if(mention.headword.ner.equals("O")){
 				return true;
 			}
 			else if(mention.headword.ner.equals("MISC")
 					|| mention.headword.ner.equals("NORP")
-					|| mention.headword.ner.equals("LAW")){
+					|| mention.headword.ner.equals("LAW")) {
 				return true;
 			}
 			else if(mention.headword.ner.equals("ORGANIZATION") || mention.headword.ner.equals("ORG")
 					|| mention.headword.ner.equals("GPE")
-					|| mention.headword.ner.equals("PRODUCT")){
+					|| mention.headword.ner.equals("PRODUCT")) {
 				return dict.organizationPronouns.contains(headString);
 			}
-			else if(mention.headword.ner.equals("PERSON")){
+			else if(mention.headword.ner.equals("PERSON")) {
 				return dict.personPronouns.contains(headString);
 			}
 			else if(mention.headword.ner.equals("LOCATION") 
 					|| mention.headword.ner.equals("LOC")
 					|| mention.headword.ner.equals("FAC")
-					|| mention.headword.ner.equals("WORK_OF_ART")){
+					|| mention.headword.ner.equals("WORK_OF_ART")) {
 				return dict.locationPronouns.contains(headString);
 			}
-			else if(mention.headword.ner.equals("TIME")){
+			else if(mention.headword.ner.equals("TIME")) {
 				return dict.dateTimePronouns.contains(headString);
 			}
 			else if(mention.headword.ner.equals("DATE")) {
@@ -435,7 +456,7 @@ public class Mention implements Serializable{
 			else if(mention.headword.ner.equals("EVENT")) {
 				return false;
 			}
-			else{
+			else {
 				return false;
 			}
 		}
@@ -447,23 +468,23 @@ public class Mention implements Serializable{
 				|| this.headword.ner.equals(mention.headword.ner);
 	}
 	
-	public boolean attrAgree(Mention mention, Dictionaries dict){
-		if(!(this.numberAgree(mention))){
+	public boolean attrAgree(Mention mention, Dictionaries dict) {
+		if(!(this.numberAgree(mention))) {
 			return false;
 		}
-		else if(!(this.genderAgree(mention))){
+		else if(!(this.genderAgree(mention))) {
 			return false;
 		}
-		else if(!(this.animateAgree(mention))){
+		else if(!(this.animateAgree(mention))) {
 			return false;
 		}
-		else if(!(this.NERAgree(mention, dict))){
+		else if(!(this.NERAgree(mention, dict))) {
 			return false;
 		}
-		else if(!(this.personAgree(mention))){
+		else if(!(this.personAgree(mention))) {
 			return false;
 		}
-		else{
+		else {
 			return true;
 		}
 	}
@@ -1231,6 +1252,8 @@ public class Mention implements Serializable{
 	private static final Set<String> pluralDeterminers = new HashSet<String>(Arrays.asList("these", "those"));
 	
 	private static final Set<String> singularDeterminers = new HashSet<String>(Arrays.asList("this", "that"));
+	
+	private static final Set<String> determiners = new HashSet<String>(Arrays.asList("these", "those", "this", "that"));
 
 	private static boolean knownSuffix(String s) {
 		if(s.endsWith(".")) {
@@ -1250,7 +1273,7 @@ public class Mention implements Serializable{
 				this.mentionType = MentionType.NOMINAL;
 			}
 		}
-		else if((endIndex - startIndex) == 1 && headword.ner.equals("O") && headword.postag.startsWith("PRP") &&
+		else if((endIndex - startIndex) == 1 && headword.ner.equals("O") && //headword.postag.startsWith("PRP") &&
 				(dict.allPronouns.contains(headString) 
 					|| dict.relativePronouns.contains(headString)
 					|| dict.determiners.contains(headString)
@@ -1268,7 +1291,7 @@ public class Mention implements Serializable{
 				mentionType = MentionType.PROPER;
 			}
 		}
-		else{
+		else {
 			mentionType = MentionType.NOMINAL;
 		}
 	}

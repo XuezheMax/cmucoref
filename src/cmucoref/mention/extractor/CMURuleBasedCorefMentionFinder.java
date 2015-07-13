@@ -159,6 +159,7 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 		return false;
 	}
 	
+//	private static final Set<String> determiners = new HashSet<String>(Arrays.asList("these", "those", "this", "that"));
 	private static final Set<String> nonWords = new HashSet<String>(Arrays.asList("mm", "hmm", "ahem", "um", "uh", "%mm", "%hmm", "%ahem", "%um", "%uh"));
 	private static final Set<String> negWords = new HashSet<String>(Arrays.asList("nobody", "none", "nothing", "no", "not"));
 	protected static void removeSpuriousMentions(CoreMap s, List<Mention> mentions, Dictionaries dict) {
@@ -208,6 +209,13 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 				remove.add(m);
 			}
 			*/
+			
+			/*
+			//remove this, that, these and those
+			if(m.originalSpan.size() == 1 && determiners.contains(m.headString)) {
+				remove.add(m);
+			}
+			*/
 
 			if (m.headString.equals("%")) {
 				remove.add(m);
@@ -251,13 +259,13 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 		return false;
 	}
 	
-	private static final Set<String> parts = new HashSet<String>(Arrays.asList("hundreds", "thousands", "millions", "billions", "tens", "dozens", "group", "groups", "bunch", "a number", "numbers", "a pinch", "a total"));
+//	private static final Set<String> parts = new HashSet<String>(Arrays.asList("hundreds", "thousands", "millions", "billions", "tens", "dozens", "group", "groups", "bunch", "a number", "numbers", "a pinch", "a total"));
 
-	private static boolean partitiveRule(Mention m, List<CoreLabel> sent, Dictionaries dict) {
-		return m.startIndex >= 2
-				&& sent.get(m.startIndex - 1).get(CoreAnnotations.TextAnnotation.class).equalsIgnoreCase("of")
-				&& sent.get(m.startIndex - 2).get(CoreAnnotations.TextAnnotation.class).equalsIgnoreCase("all");
-	}
+//	private static boolean partitiveRule(Mention m, List<CoreLabel> sent, Dictionaries dict) {
+//		return m.startIndex >= 2
+//				&& sent.get(m.startIndex - 1).get(CoreAnnotations.TextAnnotation.class).equalsIgnoreCase("of")
+//				&& sent.get(m.startIndex - 2).get(CoreAnnotations.TextAnnotation.class).equalsIgnoreCase("all");
+//	}
 	
 	/** Check whether pleonastic 'it'. E.g., It is possible that ... */
 	private static final TregexPattern[] pleonasticPatterns = getPleonasticPatterns();
