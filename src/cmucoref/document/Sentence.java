@@ -5,19 +5,26 @@ public class Sentence {
 	private String pennTree = null;
 	private String speaker = null;
 	private Lexicon[] lexicons = null;
+	private boolean present = true;
 	
 	public Sentence(){}
 	
 	public Sentence(int length, int id){
+		present = true;
 		lexicons = new Lexicon[length];
 		this.id = id;
 	}
 	
 	public Sentence(Lexicon[] lexicons, String pennTree, String speaker, int id){
+		present = true;
 		this.lexicons = lexicons;
 		this.pennTree = pennTree;
 		this.speaker = speaker;
 		this.id = id;
+	}
+	
+	public boolean present() {
+		return present;
 	}
 	
 	public int length(){
@@ -42,6 +49,10 @@ public class Sentence {
 	
 	public Lexicon getLexicon(int index){
 		return lexicons[index];
+	}
+	
+	public void setPresentToFalse() {
+		present = false;
 	}
 	
 	public void setId(int id){

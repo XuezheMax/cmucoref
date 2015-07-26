@@ -34,11 +34,11 @@ public class MentionFeatureGenerator {
 	protected void genPreciseMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, Dictionaries dict, CorefModel model, FeatureVector fv) {
 		//mention type features
 		StringBuilder given = new StringBuilder();
-		given.append("ANTECTYPE=" +  antec.mentionType);
+		given.append("ANTECTYPE=" +  antec.getMentionType());
 		given.append(", DEFINITE=" + antec.definite + ", COREF");
 		
 		StringBuilder feat = new StringBuilder();
-		feat.append("ANAPHTYPE=" + anaph.mentionType);
+		feat.append("ANAPHTYPE=" + anaph.getMentionType());
 		
 		//distance of sentences
 		feat.append(", " + "DISTOFSENT=-1");
@@ -55,12 +55,12 @@ public class MentionFeatureGenerator {
 	protected void genStringMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, Dictionaries dict, CorefModel model, FeatureVector fv) {
 		//mention type features
 		StringBuilder given = new StringBuilder();
-		given.append("ANTECTYPE=" +  antec.mentionType);
+		given.append("ANTECTYPE=" +  antec.getMentionType());
 		given.append(", DEFINITE=" + antec.definite);
 		given.append(", COREF");
 		
 		StringBuilder feat = new StringBuilder();
-		feat.append("ANAPHTYPE=" + anaph.mentionType);
+		feat.append("ANAPHTYPE=" + anaph.getMentionType());
 		
 		//distance of sentences
 		feat.append(", " + "DISTOFSENT=-1");
@@ -83,7 +83,7 @@ public class MentionFeatureGenerator {
 				
 				//Acronym or Demonym
 				boolean ADNYM = (Mention.options.useDemonym() && anaph.isDemonym(anaphSent, antec, antecSent, dict))
-						|| anaph.acronymMatch(anaphSent, antec, antecSent);
+						|| anaph.acronymMatch(anaphSent, antec, antecSent, dict);
 				
 				//compatible modifier
 				boolean compatibleModifier = ADNYM || antec.compatibleModifier(antecSent, anaph, anaphSent, dict);
@@ -113,12 +113,12 @@ public class MentionFeatureGenerator {
 		
 		//mention type features
 		StringBuilder given = new StringBuilder();
-		given.append("ANTECTYPE=" +  antec.mentionType);
+		given.append("ANTECTYPE=" +  antec.getMentionType());
 		given.append(", DEFINITE=" + antec.definite);
 		given.append(", COREF");
 		
 		StringBuilder feat = new StringBuilder();
-		feat.append("ANAPHTYPE=" + anaph.mentionType);
+		feat.append("ANAPHTYPE=" + anaph.getMentionType());
 		
 		//definiteness features
 		int distOfSent = anaph.getDistOfSent(antec);
@@ -143,7 +143,7 @@ public class MentionFeatureGenerator {
 				
 				//Acronym or Demonym
 				boolean ADNYM = (Mention.options.useDemonym() && anaph.isDemonym(anaphSent, antec, antecSent, dict))
-						|| anaph.acronymMatch(anaphSent, antec, antecSent);
+						|| anaph.acronymMatch(anaphSent, antec, antecSent, dict);
 				
 				//compatible modifier
 				boolean compatibleModifier = ADNYM || antec.compatibleModifier(antecSent, anaph, anaphSent, dict);
@@ -169,7 +169,7 @@ public class MentionFeatureGenerator {
 		//type features
 		String given = "NEWCLUSTER";
 		StringBuilder feat = new StringBuilder();
-		feat.append("TYPE=" + anaph.mentionType);
+		feat.append("TYPE=" + anaph.getMentionType());
 		
 		
 //		feat = feat  + ", " + "PRECMATPOS=" + anaph.closestPreciseMatchPos + ", " 
@@ -180,7 +180,7 @@ public class MentionFeatureGenerator {
 		
 		if(anaph.isPronominal()) {
 			int localAttrMatchOfSent = anaph.localAttrMatch == null ? -1 : anaph.getDistOfSent(anaph.localAttrMatch);
-			String localAttrMatchType = anaph.localAttrMatch == null ? null : anaph.localAttrMatch.mentionType.toString();
+			String localAttrMatchType = anaph.localAttrMatch == null ? null : anaph.localAttrMatch.getMentionType().toString();
 			String localAttrMatchDefinite = anaph.localAttrMatch == null ? null : anaph.localAttrMatch.definite.toString();
 			
 			feat.append(", " + "LOCATTRMATOFSENT=" + localAttrMatchOfSent);

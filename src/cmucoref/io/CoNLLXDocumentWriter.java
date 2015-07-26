@@ -25,7 +25,7 @@ public class CoNLLXDocumentWriter extends DocumentWriter {
 	protected void writeSentence(Sentence sent, String filename, int docId, boolean writeCorefLabel) throws IOException{
 		Lexicon[] lexicons = sent.getLexicons();
 		int[] maxLength = new int[12];
-		maxLength[0] = (sent.length() - 2) > 100 ? 3 : ((sent.length() - 2) > 10 ? 2 : 1);
+		maxLength[0] = (sent.length() - 1) > 99 ? 3 : ((sent.length() - 1) > 9 ? 2 : 1);
 		
 		String[] pennBit = new String[sent.length()];
 		String pennTree = sent.getPennTree();

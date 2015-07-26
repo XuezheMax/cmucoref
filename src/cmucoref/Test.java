@@ -48,15 +48,15 @@ public class Test {
 		DocumentReader reader = new CoNLLXDocumentReader();
 		DocumentWriter writer = new CoNLLXDocumentWriter();
 		
-		reader.startReading("data/dev/original/conllx/gold/conll2012.eng.dev.gold.nw.wsj.conllx");
-		writer.startWriting("outfile/oracle.dev.gold.nw.wsj.conllx");
-		PrintStream printer = new PrintStream(new File("mention.conllx.dev.gold.nw.wsj.txt"));
+		reader.startReading("data/test/original/conllx/gold/conll2012.eng.test.gold.nw.wsj.conllx");
+		writer.startWriting("outfile/oracle.test.gold.nw.wsj.conllx");
+		PrintStream printer = new PrintStream(new File("mention.conllx.test.gold.nw.wsj.txt"));
 		
 //		reader.startReading("tmp.conllx");
 //		writer.startWriting("outfile/tmp.conllx");
 //		PrintStream printer = new PrintStream(new File("tmp.txt"));
 		
-		Document doc = reader.getNextDocument(true);
+		Document doc = reader.getNextDocument(options, true);
 		
 		MentionExtractor mentionExtractor = new CMUMentionExtractor();
 		
@@ -70,7 +70,7 @@ public class Test {
 			doc.getCorefClustersFromDocument(mentionList);
 			doc.assignCorefClustersToDocument(mentionList, false);
 			writer.writeDocument(doc, true);
-			doc = reader.getNextDocument(true);
+			doc = reader.getNextDocument(options, true);
 		}
 		
 		printer.close();

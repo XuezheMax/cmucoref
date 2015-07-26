@@ -17,12 +17,17 @@ public class CorefModel implements Serializable{
 	private static final long serialVersionUID = 1L;
 	
 	private Parameters params = null;
+	private Parameters eventParams = null;
 	public Options options = null;
 	private Alphabet featAlphabet = null;
+	private Alphabet eventAlphabet = null;
 	
 	public CorefModel(Options options){
 		this.options = options;
 		featAlphabet = new Alphabet();
+		if(options.useEventFeature()) {
+			eventAlphabet = new Alphabet(100000000);
+		}
 	}
 	
 	public void createParameters() throws InstantiationException, IllegalAccessException, ClassNotFoundException{

@@ -105,7 +105,7 @@ public class CMUMentionExtractor extends MentionExtractor {
 			ArrayList<Mention> mentions = new ArrayList<Mention>(stanfordMentions.size());
 			Sentence sent = doc.getSentence(i);
 			for(int j = 0; j < stanfordMentions.size(); ++j) {
-				Mention mention = new Mention(stanfordMentions.get(j), i);
+				Mention mention = new Mention(stanfordMentions.get(j), i, doc);
 				validateMentionBoundary(doc, mention, sent, options);
 				mentions.add(mention);
 			}

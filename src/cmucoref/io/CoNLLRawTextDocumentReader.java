@@ -66,7 +66,7 @@ public class CoNLLRawTextDocumentReader extends DocumentReader{
 	}
 	
 	@Override
-	public Document getNextDocument(boolean readCorefLabel) throws IOException, ClassNotFoundException {
+	protected Document getNextDocument(boolean readCorefLabel) throws IOException, ClassNotFoundException {
 		String line = inputReader.readLine();
 		Document doc = new Document();
 		

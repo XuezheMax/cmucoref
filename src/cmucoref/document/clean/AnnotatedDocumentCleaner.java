@@ -37,12 +37,12 @@ public class AnnotatedDocumentCleaner {
 		for(File file : files){
 			docReader.startReading(file.getAbsolutePath());
 			docWriter.startWriting(destPath + file.getName().substring(0, file.getName().lastIndexOf('.')) + ".anno");
-			Document doc = docReader.getNextDocument(false);
+			Document doc = docReader.getNextDocument(null, false);
 			while(doc != null){
 				total++;
 				if(doc.size() < 3){
 					System.err.println(doc.getFileName() + " docId " + doc.getDocId() + ": too few sentences");
-					doc = docReader.getNextDocument(false);
+					doc = docReader.getNextDocument(null, false);
 					tooShort++;
 					continue;
 				}
@@ -50,7 +50,7 @@ public class AnnotatedDocumentCleaner {
 				//check short sentences
 				if(numOfShortSent(doc) > 2){
 					System.err.println(doc.getFileName() + " docId " + doc.getDocId() + ": too many short sentences");
-					doc = docReader.getNextDocument(false);
+					doc = docReader.getNextDocument(null, false);
 					shortSents++;
 					continue;
 				}
@@ -58,7 +58,7 @@ public class AnnotatedDocumentCleaner {
 				//check ner missing
 				if(!checkNer(doc)){
 					System.err.println(doc.getFileName() + " docId " + doc.getDocId() + ": missing ner");
-					doc = docReader.getNextDocument(false);
+					doc = docReader.getNextDocument(null, false);
 					missNer++;
 					continue;
 				}
@@ -70,7 +70,7 @@ public class AnnotatedDocumentCleaner {
 				String val = docMap1.get(key);
 				if(val != null){
 					System.err.println(doc.getFileName() + " docId " + doc.getDocId() + ": duplicated 1 with " + val);
-					doc = docReader.getNextDocument(false);
+					doc = docReader.getNextDocument(null, false);
 					duplication1++;
 					continue;
 				}
@@ -82,7 +82,7 @@ public class AnnotatedDocumentCleaner {
 					val = docMap2.get(key);
 					if(val != null){
 						System.err.println(doc.getFileName() + " docId " + doc.getDocId() + ": duplicated 2 with " + val);
-						doc = docReader.getNextDocument(false);
+						doc = docReader.getNextDocument(null, false);
 						duplication2++;
 						continue;
 					}
@@ -91,7 +91,7 @@ public class AnnotatedDocumentCleaner {
 				
 				System.out.println(doc.getFileName() + " docId " + doc.getDocId() + ": accepted");
 				docWriter.writeDocument(doc, false);
-				doc = docReader.getNextDocument(false);
+				doc = docReader.getNextDocument(null, false);
 			}
 			docReader.close();
 			docWriter.close();

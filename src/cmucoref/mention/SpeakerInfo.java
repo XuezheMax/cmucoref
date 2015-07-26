@@ -107,4 +107,8 @@ public class SpeakerInfo {
 	public boolean isQuotationSpeaker() {
 		return isQuotationSpeaker;
 	}
+	
+	public boolean isDefaultSpeaker() {
+		return this.speakerId.equals("PER0");
+	}
 }

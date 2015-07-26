@@ -111,13 +111,13 @@ public class EMTrainer extends Trainer{
 		String tempfile = "tmp/result.tmp";
 		docWriter.startWriting(tempfile);
 		
-		Document doc = docReader.getNextDocument(false);
+		Document doc = docReader.getNextDocument(model.options, false);
 		while(doc != null){
 			List<List<Mention>> mentionList = decoder.decode(doc, manager, model);
 			doc.assignCorefClustersToDocument(mentionList, model.options.postProcessing());
 			docWriter.writeDocument(doc, true);
 			
-			doc = docReader.getNextDocument(false);
+			doc = docReader.getNextDocument(model.options, false);
 		}
 		docReader.close();
 		docWriter.close();

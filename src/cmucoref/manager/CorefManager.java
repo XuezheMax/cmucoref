@@ -85,7 +85,7 @@ public class CorefManager {
 		else if(file.isFile()) {
 			DocumentReader docReader = DocumentReader.createDocumentReader(model.options.getTrainReader());
 			docReader.startReading(file.getAbsolutePath());
-			Document doc = docReader.getNextDocument(false);
+			Document doc = docReader.getNextDocument(model.options, false);
 			while(doc != null) {
 				numInst++;
 				List<List<Mention>> mentionList = mentionExtractor.extractPredictedMentions(doc, model.options);
@@ -126,7 +126,7 @@ public class CorefManager {
 						}
 					}
 				}
-				doc = docReader.getNextDocument(false);
+				doc = docReader.getNextDocument(model.options, false);
 			}
 		}
 		else{
@@ -230,7 +230,7 @@ class CreateTrainingTmpThread extends Thread {
 			boolean createTmpFile = model.options.createTrainingTmp();
 			DocumentReader docReader = DocumentReader.createDocumentReader(model.options.getTrainReader());
 			docReader.startReading(file.getAbsolutePath());
-			Document doc = docReader.getNextDocument(false);
+			Document doc = docReader.getNextDocument(model.options, false);
 			int num = 0;
 			int threadNum = model.threadNum();
 			int count = 0;
@@ -242,7 +242,7 @@ class CreateTrainingTmpThread extends Thread {
 					count++;
 				}
 				++num;
-				doc = docReader.getNextDocument(false);
+				doc = docReader.getNextDocument(model.options, false);
 			}
 			currentNum += count;
 			System.out.print(currentNum + " ");

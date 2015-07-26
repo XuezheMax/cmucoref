@@ -28,6 +28,12 @@ public class MentionComparatorHeadIndexWithSpeakerOrder extends MentionComparato
 		else if(m1.apposTo(m2) || m1.predNomiTo(m2) || m1.roleApposTo(m2)) {
 			return 1;
 		}
+		else if(insideListMember(m1, m2)) {
+			return -1;
+		}
+		else if(insideListMember(m2, m1)) {
+			return 1;
+		}
 		else if(m1.headIndex < m2.headIndex){
 			return -1;
 		}
@@ -42,7 +48,7 @@ public class MentionComparatorHeadIndexWithSpeakerOrder extends MentionComparato
 	}
 	
 	//m2 is after one utterance of m1
-	private boolean afterUtterance(Mention m1, Mention m2) {
+	protected boolean afterUtterance(Mention m1, Mention m2) {
 		if(m1.utteranceInfo == null) {
 			return false;
 		}

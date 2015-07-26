@@ -10,7 +10,7 @@ import cmucoref.document.Sentence;
 public class AnnotatedDocumentReader extends DocumentReader{
 
 	@Override
-	public Document getNextDocument(boolean readCorefLabel) throws IOException {
+	protected Document getNextDocument(boolean readCorefLabel) throws IOException {
 		String line = inputReader.readLine();
 		Document doc = new Document();
 		

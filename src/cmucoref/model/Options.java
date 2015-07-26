@@ -39,7 +39,7 @@ public class Options implements Serializable{
 								USE_PRECISE_MATCH = "use-preicse-match",
 								DEFAULT_USE_PRECISE_MATCH = Boolean.TRUE.toString(),
 								USE_DEMONYM = "use-demonym",
-								DEFAULT_USE_DEMONYM = Boolean.TRUE.toString(),
+								DEFAULT_USE_DEMONYM = Boolean.FALSE.toString(),
 								EXTRACT_MENTION_ATTRIBUTE = "extract-mention-attribute",
 								DEFAULT_EXTRACT_MENTION_ATTRIBUTE = Boolean.TRUE.toString(),
 								EXTRACT_MENTION_RELATION = "extract-mention-relation",
@@ -64,6 +64,8 @@ public class Options implements Serializable{
 								DEFAULT_POST_PROCESSING = Boolean.FALSE.toString(),
 								ONTONOTES = "OntoNotes",
 								DEFAULT_ONTONOTES = Boolean.FALSE.toString(),
+								CLEANDOC = "clean-doc",
+								DEFAULT_CLEANDOC = Boolean.FALSE.toString(),
 								CONFIGURATION = "config",
 								TRAININGFILE = "train-file",
 								TESTFILE = "test-file",
@@ -151,6 +153,9 @@ public class Options implements Serializable{
 		//ontonotes
 		valid_opt_set.add(ONTONOTES);
 		argToValueMap.put(ONTONOTES, DEFAULT_ONTONOTES);
+		//clean doc
+		valid_opt_set.add(CLEANDOC);
+		argToValueMap.put(CLEANDOC, DEFAULT_CLEANDOC);
 		//conll scorer
 		valid_opt_set.add(CONLL_SCORER);
 		//maxIter
@@ -319,6 +324,10 @@ public class Options implements Serializable{
 		return Boolean.parseBoolean(getArgValue(ONTONOTES));
 	}
 	
+	public boolean cleanDoc() {
+		return Boolean.parseBoolean(getArgValue(CLEANDOC));
+	}
+	
 	public String getEventExtractor() {
 		return getArgValue(EVENT_EXTRACTOR);
 	}
@@ -411,6 +420,14 @@ public class Options implements Serializable{
 		putArgValue(ONTONOTES, Boolean.toString(OntoNotes));
 	}
 	
+	public void setCleanDoc(boolean cleanDoc) {
+		putArgValue(CLEANDOC, Boolean.toString(cleanDoc));
+	}
+	
+	public void setUseDemonym(boolean useDemonym) {
+		putArgValue(USE_DEMONYM, Boolean.toString(useDemonym));
+	}
+	
 	private void writeObject(ObjectOutputStream out) throws IOException{
 		//write extract mention attribute
 		out.writeBoolean(extractMentionAttribute());
@@ -434,8 +451,6 @@ public class Options implements Serializable{
 		out.writeBoolean(useEventFeature());
 		//write event extractor
 		out.writeObject(getEventExtractor());
-		//write use demonym
-		out.writeBoolean(useDemonym());
 		//write propertity file
 		out.writeObject(getPropFile());
 	}
@@ -475,9 +490,6 @@ public class Options implements Serializable{
 		//read event extractor
 		String eventExtractor = (String) in.readObject();
 		argToValueMap.put(EVENT_EXTRACTOR, eventExtractor);
-		//read use demonym
-		flag = in.readBoolean();
-		argToValueMap.put(USE_DEMONYM, Boolean.toString(flag));
 		//read propertity file
 		String propfile = (String) in.readObject();
 		argToValueMap.put(PROPERTYFILE, propfile);

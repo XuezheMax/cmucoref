@@ -55,6 +55,8 @@ public class CorefSystem {
 			model.options.putDocWriter(options.getDocWriter());
 			model.options.setPostProcessing(options.postProcessing());
 			model.options.setOntoNotes(options.OntoNotes());
+			model.options.setUseDemonym(options.useDemonym());
+			model.options.setCleanDoc(options.cleanDoc());
 			
 			MentionExtractor mentionExtractor = (MentionExtractor) Class.forName(model.options.getMentionExtractor()).newInstance();
 			mentionExtractor.createDict(model.options.getPropFile());
@@ -66,14 +68,13 @@ public class CorefSystem {
 			docReader.startReading(options.getTestFile());
 			docWriter.startWriting(options.getOutFile());
 			
-			Document doc = docReader.getNextDocument(false);
+			Document doc = docReader.getNextDocument(model.options, false);
 			while(doc != null){
 				System.out.println("Processing Doc: " + doc.getFileName() + " part: " + doc.getDocId());
 				List<List<Mention>> mentionList = decoder.decode(doc, manager, model);
 				doc.assignCorefClustersToDocument(mentionList, model.options.postProcessing());
 				docWriter.writeDocument(doc, true);
-				
-				doc = docReader.getNextDocument(false);
+				doc = docReader.getNextDocument(model.options, false);
 			}
 			docReader.close();
 			docWriter.close();

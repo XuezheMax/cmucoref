@@ -1,12 +1,22 @@
 package cmucoref.mention;
 
-import java.util.Comparator;
-
-public class MentionComparatorHeadIndexOrder implements Comparator<Mention> {
+public class MentionComparatorSyntacticOrder extends MentionComparatorHeadIndexWithSpeakerOrder {
 
 	@Override
 	public int compare(Mention m1, Mention m2) {
-		if(m1.sentID < m2.sentID) {
+		if(m1.speakerTo(m2)) {
+			return -1;
+		}
+		else if(m2.speakerTo(m1)) {
+			return 1;
+		}
+		else if(afterUtterance(m1, m2)) {
+			return -1;
+		}
+		else if(afterUtterance(m2, m1)) {
+			return 1;
+		}
+		else if(m1.sentID < m2.sentID) {
 			return -1;
 		}
 		else if(m1.sentID > m2.sentID) {
@@ -24,6 +34,12 @@ public class MentionComparatorHeadIndexOrder implements Comparator<Mention> {
 		else if(insideListMember(m2, m1)) {
 			return 1;
 		}
+		else if(syntacticParent(m1, m2)) {
+			return -1;
+		}
+		else if(syntacticParent(m2, m1)) {
+			return 1;
+		}
 		else if(m1.headIndex < m2.headIndex){
 			return -1;
 		}
@@ -37,24 +53,13 @@ public class MentionComparatorHeadIndexOrder implements Comparator<Mention> {
 		}
 	}
 	
-	/**
-	 * 
-	 * @param m1
-	 * @param m2
-	 * @return if m1 is inside a list member of m2
-	 */
-	protected boolean insideListMember(Mention m1, Mention m2) {
-		if(m2.getListMembers() == null) {
-			return false;
-		}
-		
-		if(m1.isListMemberOf(m2)) {
-			return true;
-		}
-		
-		for(Mention member : m2.getListMembers()) {
-			if(member.cover(m1)) {
-				return true;
+	// event of m1 is parent of event of m2 
+	protected boolean syntacticParent(Mention m1, Mention m2) {
+		for(Event e1 : m1.getEventSet()) {
+			for(Event e2 : m2.getEventSet()) {
+				if(e2.isChildOf(e1)) {
+					return true;
+				}
 			}
 		}
 		return false;

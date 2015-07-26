@@ -39,6 +39,7 @@ public class Decoder {
 			else if(anaph.stringMatchs != null) {
 				int length = anaph.stringMatchs.size();
 				for(int j = length - 1; j >= 0; --j) {
+//				for(int j = 0; j < length; ++j) {
 					Mention antec = anaph.stringMatchs.get(j);
 					Sentence antecSent = doc.getSentence(antec.sentID);
 					FeatureVector fv = new FeatureVector();

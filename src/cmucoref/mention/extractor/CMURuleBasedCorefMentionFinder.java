@@ -98,9 +98,6 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 		removeSpuriousNamedEntityMentions(s, mentions, mentionSpanSet, namedEntitySpanSet);
 	}
 	
-	private static final Set<String> dates = new HashSet<String>(Arrays.asList(
-			"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "yesterday", "tomorrow", "today", 
-			"january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"));
 	private static void removeSpuriousNamedEntityMentions(CoreMap s, List<Mention> mentions, Set<IntPair> mentionSpanSet, Set<IntPair> namedEntitySpanSet) {
 		Set<Mention> remove = Generics.newHashSet();
 		Set<IntPair> removeSpan = Generics.newHashSet();
@@ -114,7 +111,7 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 					remove.add(m);
 					removeSpan.add(mSpan);
 				}
-				else if(!dates.contains(word) && !posTag.equals("CD")) {
+				else if(!cmucoref.mention.Mention.dates.contains(word) && !posTag.equals("CD")) {
 					remove.add(m);
 					removeSpan.add(mSpan);
 				}
@@ -221,14 +218,16 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 				remove.add(m);
 			}
 			
-			if (headNE.equals("PERCENT") || headNE.equals("MONEY")) {
+			if (headNE.equals("PERCENT")) {
 				remove.add(m);
 			}
 
+			/*
 			// adjective form of nations
 			if (dict.isAdjectivalDemonym(m.spanToString())) {
 				remove.add(m);
 			}
+			*/
 
 			// stop list (e.g., U.S., there)
 			if (inStopList(m)) {
@@ -291,24 +290,24 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 //				"NP <: (DT=m1) $. (VP < ((/^V.*/ < /^(?:is|was|become|became)/) $.. (ADJP $.. (/S|SBAR/))))",
 //				"NP <: (DT=m1) $. (VP < ((/^V.*/ < /^(?:is|was|become|became)/) $.. (ADJP < (/S|SBAR/))))",
 				
-				"@NP < (PRP=m1) $.. (@VP < (/^V.*/ < /^(?i:is|was|be|becomes|become|became)$/ $.. (@VP < (VBN $.. @S|SBAR))))",// in practice, go with this one (best results)
-				"@NP < (NP < (PRP=m1)) $.. (@VP < (/^V.*/ < /^(?i:is|was|be|becomes|become|became)$/ $.. (@VP < (VBN $.. @S|SBAR))))", // by Max
+				"@NP < (PRP=m1) $.. (@VP < (/^V.*/ < /^(?i:is|was|be|'s|becomes|become|became)$/ $.. (@VP < (VBN $.. @S|SBAR))))",// in practice, go with this one (best results)
+				"@NP < (NP < (PRP=m1)) $.. (@VP < (/^V.*/ < /^(?i:is|was|be|'s|becomes|become|became)$/ $.. (@VP < (VBN $.. @S|SBAR))))", // by Max
 
-				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (ADJP $.. (/S|SBAR/))))",
-				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (ADJP $.. (/S|SBAR/))))", //by Max
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became)/) $.. (ADJP $.. (/S|SBAR/))))",
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became)/) $.. (ADJP $.. (/S|SBAR/))))", //by Max
 				
-				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (ADJP < (/S|SBAR/))))",
-				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (ADJP < (/S|SBAR/))))", // by Max
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became)/) $.. (ADJP < (/S|SBAR/))))",
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became)/) $.. (ADJP < (/S|SBAR/))))", // by Max
 				
-				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (NP < (NP $.. /S|SBAR/))))",
-				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (NP < (NP < (NP $.. /S|SBAR/)))))", // by Max
-				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (NP < (NP $.. /S|SBAR/))))", //by Max
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became)/) $.. (NP < (NP $.. /S|SBAR/))))",
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became)/) $.. (NP < (NP < (NP $.. /S|SBAR/)))))", // by Max
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became)/) $.. (NP < (NP $.. /S|SBAR/))))", //by Max
 				
-				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became|takes|took)/) $.. (NP $.. (/S|SBAR/))))", // by Max
-				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became|takes|took)/) $.. (NP $.. (/S|SBAR/))))", // by Max
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became|takes|took)/) $.. (NP $.. (/S|SBAR/))))", // by Max
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became|takes|took)/) $.. (NP $.. (/S|SBAR/))))", // by Max
 				
-				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (NP $.. ADVP $.. /S|SBAR/)))",
-				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|becomes|become|became)/) $.. (NP $.. ADVP $.. /S|SBAR/)))", // by Max
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became)/) $.. (NP $.. ADVP $.. /S|SBAR/)))",
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became)/) $.. (NP $.. ADVP $.. /S|SBAR/)))", // by Max
 				
 				// with MD
 				"NP < (PRP=m1) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become)/) $.. (VP < (VBN $.. /S|SBAR/))))))",
@@ -341,7 +340,9 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 				
 				//eg. make it safer to do sth
 				"VP $.. (S < ((NP < (PRP=m1)) $.. ADJP $.. /S|SBAR/))", // by Max
-				"VP $.. (S < ((NP < (NP < (PRP=m1))) $.. ADJP $.. /S|SBAR/))" // by Max
+				"VP $.. (S < ((NP < (NP < (PRP=m1))) $.. ADJP $.. /S|SBAR/))", // by Max
+				"VP < (S < ((NP < (PRP=m1)) $.. ADJP $.. /S|SBAR/))", // by Max
+				"VP < (S < ((NP < (NP < (PRP=m1))) $.. ADJP $.. /S|SBAR/))" // by Max
 		};
 
 		TregexPattern[] tgrepPatterns = new TregexPattern[patterns.length];

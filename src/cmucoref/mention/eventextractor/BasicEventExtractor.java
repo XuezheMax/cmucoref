@@ -49,7 +49,7 @@ public class BasicEventExtractor extends EventExtractor {
 				mention.setMainEvent(copulaEvent, false);
 			}
 			else {				
-				Event collapsedEvent = new Event(mention.sentID, collapsed_headword.id, 
+				Event collapsedEvent = new Event(mention.sentID, sent, collapsed_headword.id, 
 						collapsed_headword.lemma, collapsed_deprel, isPart);
 				mention.addEvent(collapsedEvent);
 				mention.setMainEvent(collapsedEvent, false);
@@ -68,13 +68,13 @@ public class BasicEventExtractor extends EventExtractor {
 			}
 			
 			if(collapsed_headword.postag.startsWith("VB") || acceptableGrammRole(collapsed_deprel, false)) {
-				Event collapsedEvent = new Event(mention.sentID, collapsed_headword.id, 
+				Event collapsedEvent = new Event(mention.sentID, sent, collapsed_headword.id, 
 						collapsed_headword.lemma, collapsed_deprel, true);
 				mention.addEvent(collapsedEvent);
 				mention.setMainEvent(collapsedEvent, false);
 			}
 			else {
-				Event collapsedEvent = new Event(mention.sentID, 0, Event.unknownPredicate, Event.unknownRole, true);
+				Event collapsedEvent = new Event(mention.sentID, sent, 0, Event.unknownPredicate, Event.unknownRole, true);
 				mention.addEvent(collapsedEvent);
 				mention.setMainEvent(collapsedEvent, false);
 			}
@@ -104,7 +104,7 @@ public class BasicEventExtractor extends EventExtractor {
 				}
 				else {
 					//add basic event
-					Event basicEvent = new Event(mention.sentID, headword.basic_head, basic_headword.lemma, basic_deprel, isPart);
+					Event basicEvent = new Event(mention.sentID, sent, headword.basic_head, basic_headword.lemma, basic_deprel, isPart);
 					mention.addEvent(basicEvent);
 					mention.setMainEvent(basicEvent, true);
 					if(basicEvent.grammaticRole.startsWith("nsubj")) {
@@ -128,17 +128,17 @@ public class BasicEventExtractor extends EventExtractor {
 	
 	protected Event findCopulaEventWithBasicDep(Sentence sent, int copulaPos, String gramRole, Mention mention, boolean isPart, Options options) {
 		Lexicon copula = sent.getLexicon(copulaPos);
-		if(!gramRole.startsWith("nsubj")) {
-			return new Event(mention.sentID, copulaPos, copula.lemma, gramRole, isPart);
+		if(!gramRole.startsWith("nsubj") && !gramRole.startsWith("xsubj")) {
+			return new Event(mention.sentID, sent, copulaPos, copula.lemma, gramRole, isPart);
 		}
 		
 		for(int i = copulaPos + 1; i < sent.length(); ++i) {
 			Lexicon lexi = sent.getLexicon(i);
 			if(lexi.basic_head == copulaPos && lexi.basic_deprel.equals("acomp")) {
-				return new Event(mention.sentID, copulaPos, copula.lemma + "_" + lexi.lemma, gramRole, isPart);
+				return new Event(mention.sentID, sent, copulaPos, copula.lemma + "_" + lexi.lemma, gramRole, isPart);
 			}
 		}
-		return new Event(mention.sentID, copulaPos, copula.lemma, gramRole, isPart);
+		return new Event(mention.sentID, sent, copulaPos, copula.lemma, gramRole, isPart);
 	}
 	
 	protected void findConjEventsWithBasicDep(Sentence sent, int verbPos, Mention mention, boolean isPart, Options options) {
@@ -155,7 +155,7 @@ public class BasicEventExtractor extends EventExtractor {
 					}
 				}
 				if(!hasSubj) {
-					Event conjEvent = new Event(mention.sentID, i, lexi.lemma, "nsubj", isPart);
+					Event conjEvent = new Event(mention.sentID, sent, i, lexi.lemma, "nsubj", isPart);
 					mention.addEvent(conjEvent);
 					prev = i;
 				}

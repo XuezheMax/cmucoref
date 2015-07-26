@@ -77,7 +77,7 @@ public class StanfordMentionExtractor extends MentionExtractor{
 			ArrayList<Mention> mentions = new ArrayList<Mention>(stanfordMentions.size());
 			Sentence sent = doc.getSentence(i);
 			for(int j = 0; j < stanfordMentions.size(); ++j) {
-				Mention mention = new Mention(stanfordMentions.get(j), i);
+				Mention mention = new Mention(stanfordMentions.get(j), i, doc);
 				mentions.add(mention);
 			}
 			

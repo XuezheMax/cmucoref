@@ -20,10 +20,10 @@ public class CoNLLRawText2CoNLLXDocumentConverter {
 		docReader.startReading(conllfile);		
 		docWriter.startWriting(conllxfile);
 		
-		Document doc = docReader.getNextDocument(true);
+		Document doc = docReader.getNextDocument(null, true);
 		while(doc != null){
 			docWriter.writeDocument(doc, true);
-			doc = docReader.getNextDocument(true);
+			doc = docReader.getNextDocument(null, true);
 		}
 		
 		docReader.close();

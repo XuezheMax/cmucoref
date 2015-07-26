@@ -3,6 +3,7 @@ package cmucoref.mention;
 import java.util.HashSet;
 import java.util.Set;
 
+import cmucoref.document.Sentence;
 import cmucoref.mention.eventextractor.EventExtractor;
 
 public class Event {
@@ -12,6 +13,8 @@ public class Event {
 	public int predPosition;
 	public String predicate = null;
 	public String grammaticRole = null;
+	private Sentence sent = null;
+	private Set<Integer> parentSet = new HashSet<Integer>();
 	
 	public Event() {
 		sentID = -1;
@@ -20,9 +23,24 @@ public class Event {
 	
 	//public static Set<String> roleSet = new HashSet<String>();
 	
-	public Event(int sentID, int predPosition, String predicate, String role, boolean isPart) {
+	private void getParents(Sentence sent, int predPosition) {
+		int parent = sent.getLexicon(predPosition).basic_head;
+		while(parent > 0) {
+			parentSet.add(parent);
+			parent = sent.getLexicon(parent).basic_head;
+		}
+	}
+	
+	public boolean isChildOf(Event e) {
+		return this.parentSet.contains(e.predPosition);
+	}
+	
+	public Event(int sentID, Sentence sent, int predPosition, String predicate, String role, boolean isPart) {
 		this.sentID = sentID;
+		this.sent = sent;
 		this.predPosition = predPosition;
+		getParents(this.sent, this.predPosition);
+		
 		this.predicate = predicate;
 		this.grammaticRole = role;
 		if(this.grammaticRole.equals("agent")) {

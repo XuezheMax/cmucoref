@@ -93,7 +93,7 @@ public abstract class MentionExtractor {
 		remove.clear();
 		for(Mention mention : mentions) {
 			if((dict.isAdjectivalDemonym(mention.getSpan(sent)) || mention.headword.ner.equals("NORP")) 
-					&& (mention.headword.postag.equals("JJ") || mention.headword.basic_deprel.equals("nn"))) {
+				&& (mention.headword.postag.equals("JJ") || !Mention.rolesofNoun.contains(mention.headword.basic_deprel))) {
 				remove.add(mention);
 			}
 		}
@@ -152,12 +152,6 @@ public abstract class MentionExtractor {
 			allMentions.addAll(mentions);
 		}
 		
-		//re-assign mention ID;
-		for(int i = 0; i < allMentions.size(); ++i) {
-			Mention mention = allMentions.get(i);
-			mention.mentionID = i;
-		}
-		
 		//extract events for mentions
 		if(options.useEventFeature()) {
 			extractEvents(mentionList, doc, options);
@@ -165,6 +159,14 @@ public abstract class MentionExtractor {
 		
 		//find speaker for each mention
 		findSpeakers(doc, allMentions, mentionList);
+		
+		//Collections.sort(allMentions, Mention.syntacticOrderComparator);
+		
+		//re-assign mention ID;
+		for(int i = 0; i < allMentions.size(); ++i) {
+			Mention mention = allMentions.get(i);
+			mention.mentionID = i;
+		}
 		
 		if(options.usePreciseMatch()) {
 			findPreciseMatchRelation(doc, allMentions);
@@ -397,11 +399,11 @@ public abstract class MentionExtractor {
 				Mention antec = allMentions.get(j);
 				
 				if(anaph.preciseMatch(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)) {
-					anaph.addPreciseMatch(antec, doc);
+					anaph.addPreciseMatch(antec);
 				}
 				
 				if(anaph.stringMatch(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)) {
-					anaph.addStringMatch(antec, doc);
+					anaph.addStringMatch(antec);
 				}
 			}
 			
@@ -416,13 +418,8 @@ public abstract class MentionExtractor {
 				}
 				
 				int distOfSent = anaph.getDistOfSent(antec);
-				if(antec.isDetPronominal()) {
-					if(distOfSent > 2) {
-						continue;
-					}
-				}
-				else if(antec.isPronominal()) {
-					if(distOfSent > 4) {
+				if(antec.isPronominal()) {
+					if(distOfSent > 5) {
 						continue;
 					}
 				}
@@ -450,6 +447,7 @@ public abstract class MentionExtractor {
 		markAppositionRelation(mentions, sent, RelationExtractor.createExtractor(options.getAppositionRelationExtractor()));
 		markRoleAppositionRelation(mentions, sent, RelationExtractor.createExtractor(options.getRoleAppositionRelationExtractor()));
 		markPredicateNominativeRelation(mentions, sent, RelationExtractor.createExtractor(options.getPredicateNominativeRelationExtractor()));
+		deletePleonasticItwithTemproal(mentions, sent);
 		//markRelativePronounRelation(mentions, sent, RelationExtractor.createExtractor(options.getRelativePronounRelationExtractor()));
 	}
 	
@@ -458,12 +456,36 @@ public abstract class MentionExtractor {
 	 * @param mentions
 	 * @param sent
 	 */
-	protected void deleteSpuriousListMentions(List<Mention> mentions, Sentence sent){
+	protected void deleteSpuriousListMentions(List<Mention> mentions, Sentence sent) {
 		Set<Mention> remove = new HashSet<Mention>();
 		for(Mention mention1 : mentions) {
 			for(Mention mention2 : mentions) {
 				if(mention1.headIndex == mention2.headIndex && mention2.cover(mention1) && mention1.getBelognTo() == null) {
 					remove.add(mention1);
+				}
+			}
+		}
+		mentions.removeAll(remove);
+	}
+	
+	/**
+	 * remove pleonastic it with Temporal mentions (e.g. it is summer)
+	 * @param mentions
+	 * @param sent
+	 */
+	protected void deletePleonasticItwithTemproal(List<Mention> mentions, Sentence sent) {
+		Set<Mention> remove = new HashSet<Mention>();
+		for(Mention mention : mentions) {
+			if(mention.isPronominal() && mention.headString.equals("it") && mention.getPredicateNominatives() != null) {
+				for(Mention predN : mention.getPredicateNominatives()) {
+					if(!mentions.contains(predN)) {
+						continue;
+					}
+					if(predN.isProper() && predN.headword.ner.equals("DATE")
+						|| predN.isNominative() && Mention.temporals.contains(predN.headString)) {
+						remove.add(mention);
+						break;
+					}
 				}
 			}
 		}
