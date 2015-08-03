@@ -50,7 +50,13 @@ public class Mention implements Serializable{
 	
 	private static final Set<String> locationPronouns = new HashSet<String>(Arrays.asList("it", "its", "itself"));
 	private static final Set<String> norpPronouns = new HashSet<String>(Arrays.asList("it", "its", "itself", "they", "them", "their", "theirs", "themself", "themselves"));
-		
+	
+	private static final Set<String> numbers = new HashSet<String>(Arrays.asList(
+			"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+			"eleven", "twelve", "thirteen", "fourteen", "fiveteen", "sixteen", "seventeen", "eighteen", "nineteen", 
+			"twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety",
+			"hundred", "thousand", "million", "billion"));
+	
 	public static final Set<String> dates = new HashSet<String>(Arrays.asList(
 			"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "yesterday", 
 			"tomorrow", "today", "tonight", "january", "february", "march", "april", "may", "june", "july", 
@@ -121,7 +127,7 @@ public class Mention implements Serializable{
 	private List<Mention> roleAppositions = null;
 	private Mention roleApposTo = null;
 	
-	public List<Mention> preciseMatchs = null;
+	public Set<Mention> preciseMatchs = null;
 	public boolean preciseMatch = false;
 	public List<Mention> stringMatchs = null;
 	public boolean stringMatch = false;
@@ -216,10 +222,17 @@ public class Mention implements Serializable{
 	}
 	
 	public void addEvent(Event event) {
+		if(event == null) {
+			return;
+		}
 		eventSet.add(event);
 	}
 	
 	public void setMainEvent(Event mainEvent, boolean strict) {
+		if(mainEvent == null) {
+			return;
+		}
+		
 		if(this.mainEvent == null || strict) {
 			this.mainEvent = mainEvent;
 		}
@@ -524,11 +537,9 @@ public class Mention implements Serializable{
 					return norpPronouns.contains(headString) || quantDeterminers.contains(headString);
 				}
 			}
-			else if(mention.headword.ner.equals("MISC")
+			else if(mention.headword.ner.equals("NORP")
+					|| mention.headword.ner.equals("MISC")
 					|| mention.headword.ner.equals("LAW")) {
-				return true;
-			}
-			else if(mention.headword.ner.equals("NORP")) {
 				return norpPronouns.contains(headString) || quantDeterminers.contains(headString);
 			}
 			else if(mention.headword.ner.equals("PERSON") || mention.headword.ner.equals("PER")) {
@@ -594,8 +605,11 @@ public class Mention implements Serializable{
 			return false;
 		}
 		
-		for(int i = this.startIndex; i < this.endIndex; ++i){
-			if(!(sent.getLexicon(i).ner.equals(headNE))){
+		for(int i = this.startIndex; i < this.endIndex; ++i) {
+			if(entityWordsToExclude.contains(sent.getLexicon(i).form.toLowerCase())) {
+				continue;
+			}
+			if(!(sent.getLexicon(i).ner.equals(headNE))) {
 				return false;
 			}
 		}
@@ -697,7 +711,9 @@ public class Mention implements Serializable{
 				return;
 			}
 			else {
-				throw new MentionException(appo.headString + " is apposition to another mention " + appo.apposTo.mentionID + "\n this mentionID: " + this.mentionID);
+				throw new MentionException(appo.getSpan(doc.getSentence(appo.sentID)) + " " + appo.originalHeadIndex + " is apposition to another mention: " 
+						+ appo.apposTo.mentionID + " " + appo.apposTo.getSpan(doc.getSentence(appo.apposTo.sentID)) + " " + appo.apposTo.originalHeadIndex + " " + appo.apposTo.headIndex
+						+ "\n this mentionID: " + this.mentionID + " " + this.getSpan(doc.getSentence(this.sentID)) + " " + this.originalHeadIndex + " " + this.headIndex);
 			}
 		}
 		
@@ -818,13 +834,13 @@ public class Mention implements Serializable{
 			return true;
 		}
 		
-		// I , we and you with same speaker
+		// I with same speaker
 		if((this.person == Person.I && antec.person == Person.I) 
 			&& (this.speakerInfo.equals(antec.speakerInfo))) {
 			return true;
 		}
 		
-		//we with same (non-default) speaker
+		//we and you with same (non-default) speaker
 		if(((this.person == Person.WE && antec.person == Person.WE) 
 				|| (this.person == Person.YOU && antec.person == Person.YOU))
 			&& this.speakerInfo.equals(antec.speakerInfo)
@@ -859,12 +875,12 @@ public class Mention implements Serializable{
 	
 	public void addPreciseMatch(Mention preciseMatch){
 		if(this.preciseMatchs == null){
-			this.preciseMatchs = new ArrayList<Mention>();
+			this.preciseMatchs = new HashSet<Mention>();
 		}
 		
 		if(this.preciseMatchs.size() > 0) {
 			if(preciseMatch.preciseMatchs == null) {
-				preciseMatch.preciseMatchs = new ArrayList<Mention>();
+				preciseMatch.preciseMatchs = new HashSet<Mention>();
 			}
 			preciseMatch.preciseMatchs.addAll(this.preciseMatchs);
 			preciseMatch.preciseMatch = true;
@@ -1024,6 +1040,10 @@ public class Mention implements Serializable{
 		return true;
 	}
 	
+	private boolean isNumber(String str) {
+		return str.matches("[0-9]+|[0-9]+\\.[0-9]+|[0-9]+[0-9,]+");
+	}
+	
 	public boolean compatibleModifier(Sentence sent, Mention anaph, Sentence anaphSent, Dictionaries dict) {
 		if(this.isPronominal() || anaph.isPronominal()){
 			throw new RuntimeException("error: compatible modifiers does not apply for pronominals");
@@ -1032,18 +1052,20 @@ public class Mention implements Serializable{
 		Set<String> modifiersOfAntec = new HashSet<String>();
 		Set<String> possessivePronsOfAntec = new HashSet<String>();
 		Set<String> locModifiersOfAntec = new HashSet<String>();
-		Set<String> numberModifiersofAntec = new HashSet<String>();
+		Set<String> numberModifiersOfAntec = new HashSet<String>();
 		
 		for(int i = this.startIndex; i < this.endIndex; ++i) {
 			Lexicon antecLex = sent.getLexicon(i);
 			if(antecLex.postag.equals("PRP$") || dict.possessivePronouns.contains(antecLex.form.toLowerCase())) {
 				possessivePronsOfAntec.add(antecLex.form.toLowerCase());
 			}
+			else if((numbers.contains(antecLex.form.toLowerCase()) 
+						|| isNumber(antecLex.form.toLowerCase()))
+					&& antecLex.basic_head == this.headIndex) {
+				numberModifiersOfAntec.add(antecLex.form.toLowerCase());
+			}
 			else if(locationModifiers.contains(antecLex.form.toLowerCase()) && antecLex.basic_head == this.headIndex) {
 				locModifiersOfAntec.add(antecLex.form.toLowerCase());
-			}
-			else if(antecLex.postag.equals("CD")) {
-				numberModifiersofAntec.add(antecLex.form.toLowerCase());
 			}
 
 			modifiersOfAntec.add(antecLex.form.toLowerCase());
@@ -1061,7 +1083,7 @@ public class Mention implements Serializable{
 				possessivePronsOfAanph.add(anaphLex.form.toLowerCase());
 			}
 			else if(anaphLex.postag.startsWith("JJ") || anaphLex.postag.startsWith("N") 
-					||anaphLex.postag.equals("RB")
+					|| anaphLex.postag.equals("RB")
 					|| anaphLex.postag.startsWith("V") || anaphLex.postag.equals("CD")) {
 				
 				modifiersOfAnaph.add(anaphLex.form.toLowerCase());
@@ -1069,7 +1091,9 @@ public class Mention implements Serializable{
 				if(locationModifiers.contains(anaphLex.form.toLowerCase())) {
 					locModifiersOfAnaph.add(anaphLex.form.toLowerCase());
 				}
-				else if(anaphLex.postag.equals("CD")) {
+				else if(anaphLex.postag.equals("CD") 
+						|| numbers.contains(anaphLex.form.toLowerCase()) 
+						|| isNumber(anaphLex.form.toLowerCase())) {
 					numberModifierOfAnaph.add(anaphLex.form.toLowerCase());
 				}
 			}
@@ -1085,7 +1109,7 @@ public class Mention implements Serializable{
 			return false;
 		}
 		
-		if(anaph.isProper() && !numberModifierOfAnaph.containsAll(numberModifiersofAntec)) {
+		if(anaph.isProper() && !numberModifierOfAnaph.containsAll(numberModifiersOfAntec)) {
 			return false;
 		}
 		
@@ -1200,18 +1224,18 @@ public class Mention implements Serializable{
 		}
 		
 		int acronymPos = 0;
-		for(int i = mention.startIndex; i < mention.endIndex; ++i){
+		for(int i = mention.startIndex; i < mention.endIndex; ++i) {
 			String word = sent.getLexicon(i).form;
 			if(word.equals(acronym) && (mention.endIndex - mention.startIndex) > 1) {
 				return false;
 			}
 			
-			for(int ch = 0; ch < word.length(); ++ch){
+			for(int ch = 0; ch < word.length(); ++ch) {
 				if (word.charAt(ch) >= 'A' && word.charAt(ch) <= 'Z') {
-					if(acronymPos >= acronym.length()){
+					if(acronymPos >= acronym.length()) {
 						return false;
 					}
-					if(acronym.charAt(acronymPos) != word.charAt(ch)){
+					if(acronym.charAt(acronymPos) != word.charAt(ch)) {
 						return false;
 					}
 					acronymPos++;
@@ -1971,11 +1995,22 @@ public class Mention implements Serializable{
 		printer.println("previous speaker: " + (this.preSpeakerInfo == null ? "null" : this.preSpeakerInfo.toString() + " " + this.preSpeakerInfo.getSpeakerName()));
 		printer.println("list member of: " + (this.belongTo == null ? " null" : this.belongTo.mentionID));
 		printer.println("predicate nominative to: " + (this.predNomiTo == null ? "null" : this.predNomiTo.mentionID));
+		printer.println("main event: " + (mainEvent == null ? "null" : mainEvent.toFeature()));
 		printer.print("event list: ");
 		for(Event event : eventSet) {
 			printer.print(event.toString() + " ");
 		}
 		printer.println();
+		printer.print("precise match: ");
+		if(this.preciseMatchs == null) {
+			printer.println("null");
+		}
+		else {
+			for(Mention mention : this.preciseMatchs) {
+				printer.print(mention.mentionID + " ");
+			}
+			printer.println();
+		}
 		printer.println("#end Mention " + this.mentionID);
 		printer.println("===================================");
 		printer.flush();
@@ -2000,11 +2035,22 @@ public class Mention implements Serializable{
 		printer.println("previous speaker: " + (this.preSpeakerInfo == null ? "null" : this.preSpeakerInfo.toString() + " " + this.preSpeakerInfo.getSpeakerName()));
 		printer.println("list member of: " + (this.belongTo == null ? " null" : this.belongTo.mentionID));
 		printer.println("predicate nominative to: " + (this.predNomiTo == null ? "null" : this.predNomiTo.mentionID));
+		printer.println("main event: " + (mainEvent == null ? "null" : mainEvent.toFeature()));
 		printer.print("event list: ");
 		for(Event event : eventSet) {
 			printer.print(event.toString() + " ");
 		}
 		printer.println();
+		printer.print("precise match: ");
+		if(this.preciseMatchs == null) {
+			printer.println("null");
+		}
+		else {
+			for(Mention mention : this.preciseMatchs) {
+				printer.print(mention.mentionID + " ");
+			}
+			printer.println();
+		}
 		printer.println("#end Mention " + this.mentionID);
 		printer.println("===================================");
 		printer.flush();

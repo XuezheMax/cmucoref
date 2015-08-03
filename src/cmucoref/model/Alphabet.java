@@ -31,8 +31,7 @@ public class Alphabet implements Serializable{
 
 	public Alphabet(int capacity) {
 		this.map = new TCustomHashMap<String, TObjectIntHashMap<String>>(new EqualsHashingStrategy<String>(), capacity);
-		int size_of_given = (int) Math.sqrt(capacity);
-		this.givenMap = new TObjectIntHashMap<String>(size_of_given);
+		this.givenMap = new TObjectIntHashMap<String>(capacity / 100);
 		idToGid = new TIntArrayList(capacity);
 		numEntries = 0;
 		numGivens = 0;

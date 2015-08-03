@@ -15,10 +15,9 @@ public class SpeakerInfo {
 	protected static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+|_+");
 	
 	private boolean isQuotationSpeaker = false;
-	private static int numOfSpeaker = 0;
 	
-	public SpeakerInfo(String speakerName, boolean isQuotationSpeaker) {
-		this.speakerId = "PER" + numOfSpeaker++;
+	public SpeakerInfo(int speakerId, String speakerName, boolean isQuotationSpeaker) {
+		this.speakerId = "PER" + speakerId;
 		this.isQuotationSpeaker = isQuotationSpeaker;
 		int commaPos = speakerName.indexOf(',');
 		if(commaPos > 0) {
@@ -39,16 +38,8 @@ public class SpeakerInfo {
 		this.speakerNameStrings = WHITESPACE_PATTERN.split(this.speakerName.toLowerCase());
 	}
 	
-	public static void reset() {
-		numOfSpeaker = 0;
-	}
-	
 	public void setSpeaker(Mention mention) {
 		this.speaker = mention;
-	}
-	
-	public int numOfSpeaker() {
-		return numOfSpeaker;
 	}
 	
 	public Mention getSpeaker() {

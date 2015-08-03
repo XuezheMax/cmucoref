@@ -11,15 +11,15 @@ public class FeatureVector extends TLinkedList {
 	public FeatureVector(){}
 	
 	@SuppressWarnings("unchecked")
-	public FeatureVector(int[] keys, int[] gids, double[] vals){
+	public FeatureVector(int[] keys, int[] gids){
 		for(int i = 0; i < keys.length; ++i){
-			this.add(new Feature(keys[i], gids[i], vals[i]));		
+			this.add(new Feature(keys[i], gids[i]));		
 		}
 	}
 	
 	@SuppressWarnings("unchecked")
-	public void addFeature(int index, int gid, double val){
-		this.add(new Feature(index, gid, val));
+	public void addFeature(int index, int gid){
+		this.add(new Feature(index, gid));
 	}
 
 	public Pair<int[], int[]> keys(){
@@ -35,18 +35,6 @@ public class FeatureVector extends TLinkedList {
 		return new Pair<int[], int[]>(keys, gids);
 	}
 	
-	public double[] values() {
-		int size = this.size();
-		double[] vals = new double[size];
-		
-		int i = 0;
-		for(Object b : this) {
-			Feature f = (Feature)(b);
-			vals[i++] = f.val;
-		}
-		return vals;
-	}
-	
 	public final double getScore(double[] params){
 		if(this.size() == 0){
 			return Double.NEGATIVE_INFINITY;
@@ -56,7 +44,7 @@ public class FeatureVector extends TLinkedList {
 		
 		for(Object b : this){
 			Feature f = (Feature)(b);
-			score += params[f.index] * f.val;
+			score += params[f.index];
 		}
 		return score;
 	}

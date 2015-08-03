@@ -24,15 +24,15 @@ public class MentionComparatorHeadIndexOrder implements Comparator<Mention> {
 		else if(insideListMember(m2, m1)) {
 			return 1;
 		}
-		else if(m1.headIndex < m2.headIndex){
+		else if(m1.headIndex < m2.headIndex) {
 			return -1;
 		}
-		else if(m1.headIndex == m2.headIndex){
+		else if(m1.headIndex == m2.headIndex) {
 			int span1 = m1.endIndex - m1.startIndex;
 			int span2 = m2.endIndex - m2.startIndex;
 			return span1 < span2 ? 1 : (span1 == span2 ? 0 : -1);
 		}
-		else{
+		else {
 			return 1;
 		}
 	}

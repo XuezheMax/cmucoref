@@ -31,16 +31,19 @@ public class CorefManager {
 		return mentionExtractor.getDict();
 	}
 	
-	public int[] createDocInstance(String trainfile, String traintmp, CorefModel model) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, CreatingInstanceException{
+	public int[] createDocInstance(String trainfile, String traintmp, CorefModel model) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, CreatingInstanceException {
 		long clock = System.currentTimeMillis();
-		System.out.print("Creating Alphabet ... ");
+		System.out.println("Creating Alphabet ... ");
 		File trainFile = new File(trainfile);
 		int numInst = createAlphabet(trainFile, model);
 		model.closeAlphabets();
 		System.out.println("Done.");
-		System.out.println("Num Features: " + model.featureSize());
+		System.out.println("Num Mention Features: " + model.mentionFeatureSize());
+		if(model.options.useEventFeature()) {
+			System.out.println("Num of Events: " + model.givenSizeofEvent() + " " + mentionExtractor.getSizeOfEvent());
+			System.out.println("Num Event Features: " + model.eventFeatureSize());
+		}
 		System.out.println("Num Documents: " + numInst);
-		
 		System.out.print("Creating Training Instances: ");
 		int threadNum = model.threadNum();
 		CreateTrainingTmpThread[] threads = new CreateTrainingTmpThread[threadNum];
@@ -50,10 +53,10 @@ public class CorefManager {
 			threads[i] = new CreateTrainingTmpThread(i, this, trainfile, tmpfile, model);
 		}
 			
-		for(CreateTrainingTmpThread thread : threads){
+		for(CreateTrainingTmpThread thread : threads) {
 			thread.start();
 		}
-		for(CreateTrainingTmpThread thread : threads){
+		for(CreateTrainingTmpThread thread : threads) {
 			try {
 				thread.join();
 			} catch (InterruptedException e) {
@@ -66,7 +69,7 @@ public class CorefManager {
 		System.out.println();
 		
 		int[] res = new int[threadNum + 1];
-		for(int i = 0; i < threadNum; i++){
+		for(int i = 0; i < threadNum; i++) {
 			res[i] = threads[i].numInst;
 		}
 		res[threadNum] = numInst;
@@ -75,17 +78,21 @@ public class CorefManager {
 	
 	private int createAlphabet(File file, CorefModel model) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException{
 		int numInst = 0;
-		if(file.isDirectory()){
+		if(file.isDirectory()) {
 			File[] files = file.listFiles();
 			Arrays.sort(files);
-			for(File subFile : files){
+			for(File subFile : files) {
 				numInst += createAlphabet(subFile, model);
 			}
 		}
 		else if(file.isFile()) {
+			System.out.println(file.getName());
 			DocumentReader docReader = DocumentReader.createDocumentReader(model.options.getTrainReader());
 			docReader.startReading(file.getAbsolutePath());
 			Document doc = docReader.getNextDocument(model.options, false);
+			
+			boolean useEvent = model.options.useEventFeature();
+			
 			while(doc != null) {
 				numInst++;
 				List<List<Mention>> mentionList = mentionExtractor.extractPredictedMentions(doc, model.options);
@@ -98,7 +105,8 @@ public class CorefManager {
 					if(anaph.stringMatchs != null) {
 						for(Mention antec : anaph.stringMatchs) {
 							Sentence antecSent = doc.getSentence(antec.sentID);
-							mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 1, getDict(), model, null);
+							mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 1, 
+									getDict(), model, useEvent, null, null);
 						}
 						continue;
 					}
@@ -106,7 +114,8 @@ public class CorefManager {
 					if(anaph.preciseMatchs != null) {
 						for(Mention antec : anaph.preciseMatchs) {
 							Sentence antecSent = doc.getSentence(antec.sentID);
-							mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 2, getDict(), model, null);
+							mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 2, 
+									getDict(), model, useEvent, null, null);
 						}
 						continue;
 					}
@@ -119,10 +128,12 @@ public class CorefManager {
 								continue;
 							}
 							
-							mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 0, getDict(), model, null);
+							mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 0, 
+									getDict(), model, useEvent, null, null);
 						}
 						else {
-							mentionFeatGen.genNewClusterFeatures(anaph, anaphSent, model, null);
+							mentionFeatGen.genNewClusterFeatures(anaph, anaphSent, 
+									model, useEvent, null, null);
 						}
 					}
 				}
@@ -143,39 +154,55 @@ public class CorefManager {
 		out.writeInt(-4);
 		out.reset();
 		
+		boolean useEvent = model.options.useEventFeature();
+		
 		for(int i = 0; i < allMentions.size(); ++i) {
 			Mention anaph = allMentions.get(i);
 			Sentence anaphSent = doc.getSentence(anaph.sentID);
 			
-			FeatureVector[] fvs = null;
+			FeatureVector[] mfvs = null;
+			FeatureVector[] efvs = null;
 			
 			if(anaph.stringMatchs != null) {
-				fvs = new FeatureVector[anaph.stringMatchs.size()];
+				mfvs = new FeatureVector[anaph.stringMatchs.size()];
+				efvs = useEvent ? new FeatureVector[anaph.stringMatchs.size()] : null;
 				int j = 0;
 				for(Mention antec : anaph.stringMatchs) {
 					Sentence antecSent = doc.getSentence(antec.sentID);
-					fvs[j] = new FeatureVector();
-					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 1, getDict(), model, fvs[j]);
+					mfvs[j] = new FeatureVector();
+					if(useEvent) {
+						efvs[j] = new FeatureVector();
+					}
+					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 1, 
+							getDict(), model, useEvent, mfvs[j], useEvent ? efvs[j] : null);
 					j++;
 				}
-				out.writeObject(fvs);
+				out.writeObject(mfvs);
+				out.writeObject(efvs);
 				continue;
 			}
 			
 			if(anaph.preciseMatchs != null) {
-				fvs = new FeatureVector[anaph.preciseMatchs.size()];
+				mfvs = new FeatureVector[anaph.preciseMatchs.size()];
+				efvs = useEvent ? new FeatureVector[anaph.preciseMatchs.size()] : null;
 				int j = 0;
 				for(Mention antec : anaph.preciseMatchs) {
 					Sentence antecSent = doc.getSentence(antec.sentID);
-					fvs[j] = new FeatureVector();
-					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 2, getDict(), model, fvs[j]);
+					mfvs[j] = new FeatureVector();
+					if(useEvent) {
+						efvs[j] = new FeatureVector();
+					}
+					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 2, 
+							getDict(), model, useEvent, mfvs[j], useEvent ? efvs[j] : null);
 					j++;
 				}
-				out.writeObject(fvs);
+				out.writeObject(mfvs);
+				out.writeObject(efvs);
 				continue;
 			}
 			
-			fvs = new FeatureVector[i + 1];
+			mfvs = new FeatureVector[i + 1];
+			efvs = useEvent ? new FeatureVector[i + 1] : null;
 			for(int j = 0; j <= i; ++j) {
 				if(j < i) {
 					Mention antec = allMentions.get(j);
@@ -184,15 +211,24 @@ public class CorefManager {
 						continue;
 					}
 					
-					fvs[j] = new FeatureVector();
-					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 0, getDict(), model, fvs[j]);
+					mfvs[j] = new FeatureVector();
+					if(useEvent) {
+						efvs[j] = new FeatureVector();
+					}
+					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 0, 
+							getDict(), model, useEvent, mfvs[j], useEvent ? efvs[j] : null);
 				}
 				else {
-					fvs[j] = new FeatureVector();
-					mentionFeatGen.genNewClusterFeatures(anaph, anaphSent, model, fvs[j]);
+					mfvs[j] = new FeatureVector();
+					if(useEvent) {
+						efvs[j] = new FeatureVector();
+					}
+					mentionFeatGen.genNewClusterFeatures(anaph, anaphSent, 
+							model, useEvent, mfvs[j], useEvent ? efvs[j] : null);
 				}
 			}
-			out.writeObject(fvs);
+			out.writeObject(mfvs);
+			out.writeObject(efvs);
 		}
 		out.writeInt(-3);
 	}

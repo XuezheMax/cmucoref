@@ -39,7 +39,7 @@ public abstract class DocumentReader {
 		return doc;
 	}
 	
-	private static Set<String> ignoredPOS = new HashSet<String>(Arrays.asList(".", ",", "``", "''", ":", "-LRB-", "-RRB-", "UH", "CC", "<ROOT-POS>"));
+	private static Set<String> ignoredPOS = new HashSet<String>(Arrays.asList(".", ",", "``", "''", ":", "-LRB-", "-RRB-", "UH", "CC", "<ROOT-POS>", "SYM"));
 	protected void clean(Document doc) {
 		List<Sentence> sents = doc.getSentences();
 		for(Sentence sent : sents) {

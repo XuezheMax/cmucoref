@@ -16,28 +16,21 @@ public class Feature extends TLinkableAdapter{
 	public int index;
 
 	public int gid;
-	
-	public double val;
 
 	
-	public Feature(int i, int gid, double val) {
+	public Feature(int i, int gid) {
 		index = i;
 		this.gid = gid;
-		this.val = val;
-	}
-
-	public Feature(int i, int gid) {
-		this(i, gid, 1.0);
 	}
 	
 	@Override
 	public final Feature clone() {
-		return new Feature(index, gid, val);
+		return new Feature(index, gid);
 	}
 
 	@Override
 	public final String toString() {
-		return index + "|" + gid + ":" + val;
+		return index + "|" + gid;
 	}
 	
 	private void writeObject(ObjectOutputStream out) throws IOException {
@@ -48,7 +41,6 @@ public class Feature extends TLinkableAdapter{
 	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
 		index = in.readInt();
 		gid = in.readInt();
-		val = 1.0;
 	}
 }
 

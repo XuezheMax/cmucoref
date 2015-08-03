@@ -12,6 +12,7 @@ import cmucoref.io.DocumentWriter;
 import cmucoref.io.ObjectReader;
 import cmucoref.manager.CorefManager;
 import cmucoref.mention.Mention;
+import cmucoref.mention.eventextractor.EventExtractor;
 import cmucoref.mention.extractor.MentionExtractor;
 import cmucoref.model.CorefModel;
 import cmucoref.model.Options;
@@ -34,11 +35,19 @@ public class CorefSystem {
 		if(options.getMode().equals("train")){
 			CorefModel model = new CorefModel(options);
 			Mention.options = options;
-			Trainer trainer = (Trainer) Class.forName(options.getTrainer()).newInstance();
-			MentionExtractor mentionExtractor = (MentionExtractor) Class.forName(options.getMentionExtractor()).newInstance();
+			//initialize trainer
+			Trainer trainer = Trainer.createTrainer(options.getTrainer());
+			//initialize mention extractor
+			MentionExtractor mentionExtractor = MentionExtractor.createExtractor(options.getMentionExtractor());
 			mentionExtractor.createDict(options.getPropFile());
+			//initialize event extractor
+			EventExtractor eventExtractor = EventExtractor.createExtractor(options.getEventExtractor());
+			eventExtractor.createDict(options.getPropFile());
+			mentionExtractor.setEventExtractor(eventExtractor);
+			//initialize coref manager
 			CorefManager manager = new CorefManager(mentionExtractor);
-			Decoder decoder = (Decoder) Class.forName(options.getDecoder()).newInstance();
+			//initialize decoder
+			Decoder decoder = Decoder.createDecoder(options.getDecoder());
 			trainer.train(manager, decoder, model, options.getTrainingFile(), options.getDevFile(),
 					options.getLogFile(), options.getModelFile());
 		}
@@ -50,17 +59,24 @@ public class CorefSystem {
 			
 			clock = System.currentTimeMillis() / 1000;
 			Mention.options = model.options;
-			Decoder decoder = (Decoder) Class.forName(options.getDecoder()).newInstance();
+			//initialize customized options
 			model.options.putDocReader(options.getDocReader());
 			model.options.putDocWriter(options.getDocWriter());
 			model.options.setPostProcessing(options.postProcessing());
 			model.options.setOntoNotes(options.OntoNotes());
 			model.options.setUseDemonym(options.useDemonym());
 			model.options.setCleanDoc(options.cleanDoc());
-			
-			MentionExtractor mentionExtractor = (MentionExtractor) Class.forName(model.options.getMentionExtractor()).newInstance();
+			//initialize mention extractor
+			MentionExtractor mentionExtractor = MentionExtractor.createExtractor(options.getMentionExtractor());
 			mentionExtractor.createDict(model.options.getPropFile());
+			//initialize event extractor
+			EventExtractor eventExtractor = EventExtractor.createExtractor(options.getEventExtractor());
+			eventExtractor.createDict(options.getPropFile());
+			mentionExtractor.setEventExtractor(eventExtractor);
+			//initialize coref manager
 			CorefManager manager = new CorefManager(mentionExtractor);
+			//initialize decoder
+			Decoder decoder = Decoder.createDecoder(options.getDecoder());
 			
 			DocumentReader docReader = DocumentReader.createDocumentReader(model.options.getDocReader());
 			DocumentWriter docWriter = DocumentWriter.createDocumentWriter(model.options.getDocWriter());
@@ -69,9 +85,10 @@ public class CorefSystem {
 			docWriter.startWriting(options.getOutFile());
 			
 			Document doc = docReader.getNextDocument(model.options, false);
+			boolean useEvent = model.options.useEventFeature();
 			while(doc != null){
 				System.out.println("Processing Doc: " + doc.getFileName() + " part: " + doc.getDocId());
-				List<List<Mention>> mentionList = decoder.decode(doc, manager, model);
+				List<List<Mention>> mentionList = decoder.decode(doc, manager, model, useEvent);
 				doc.assignCorefClustersToDocument(mentionList, model.options.postProcessing());
 				docWriter.writeDocument(doc, true);
 				doc = docReader.getNextDocument(model.options, false);

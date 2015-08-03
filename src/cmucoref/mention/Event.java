@@ -4,11 +4,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 import cmucoref.document.Sentence;
-import cmucoref.mention.eventextractor.EventExtractor;
 
 public class Event {
-	public static final String unknownRole = "<DEP>";
-	public static final String unknownPredicate = "<UNKNOWN>";
 	public int sentID;
 	public int predPosition;
 	public String predicate = null;
@@ -20,8 +17,6 @@ public class Event {
 		sentID = -1;
 		predPosition = 0;
 	}
-	
-	//public static Set<String> roleSet = new HashSet<String>();
 	
 	private void getParents(Sentence sent, int predPosition) {
 		int parent = sent.getLexicon(predPosition).basic_head;
@@ -49,22 +44,21 @@ public class Event {
 		else if(this.grammaticRole.equals("xsubj")) {
 			this.grammaticRole = "nsubj";
 		}
+		else if(this.grammaticRole.equals("pobj")) {
+			this.grammaticRole = "dobj";
+		}
+		else if(this.grammaticRole.endsWith("mod")) {
+			this.grammaticRole = "xmod";
+		}
 		
 		// normalize prep roles
 		if(this.grammaticRole.startsWith("prep_")) {
 			this.grammaticRole = "prep_all";
 		}
 		
-		if(EventExtractor.acceptableGrammRole(this.grammaticRole, true)) {
-			if(isPart) {
-				this.grammaticRole = "part_of<" + this.grammaticRole + ">";
-			}
+		if(isPart) {
+			this.grammaticRole = "part_of<" + this.grammaticRole + ">";
 		}
-		else {
-			this.grammaticRole = unknownRole;
-		}
-		
-		//roleSet.add(this.grammaticRole);
 	}
 	
 	@Override
@@ -97,5 +91,9 @@ public class Event {
 	
 	public String toString() {
 		return "[" + predPosition + ":" + predicate + ", " + grammaticRole + "]";
+	}
+	
+	public String toFeature() {
+		return "[" + predicate + ", " + grammaticRole + "]";
 	}
 }

@@ -14,14 +14,18 @@ public class Util {
 			return Double.NEGATIVE_INFINITY;
 		}
 		
-		double vmax = x > y ? x : y;
-		double vmin = x > y ? y : x;
+		if(x == Double.POSITIVE_INFINITY && y == Double.POSITIVE_INFINITY) {
+			return Double.POSITIVE_INFINITY;
+		}
 		
-		if (vmax > vmin + MINUS_LOG_EPSILON) {
-			return vmax;
-		}
-		else {
-			return vmax + Math.log(1.0 + Math.exp(vmin - vmax));
-		}
+		double vmax = Math.max(x, y);
+		double vmin = Math.min(x, y);
+		
+		return (vmax > vmin + MINUS_LOG_EPSILON) ? vmax : vmax + Math.log(1.0 + Math.exp(vmin - vmax));
+		
+//		if(Double.isNaN(ret)) {
+//			throw new RuntimeException("NaN: x=" + x + "y=" + y);
+//		}
+//		return ret;
 	}
 }

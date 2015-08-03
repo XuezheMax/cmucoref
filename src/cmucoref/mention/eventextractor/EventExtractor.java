@@ -1,18 +1,36 @@
 package cmucoref.mention.eventextractor;
 
-import java.util.Arrays;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 
 import cmucoref.mention.*;
+import cmucoref.mention.extractor.MentionExtractor;
 import cmucoref.model.Options;
 import cmucoref.document.*;
 
 public abstract class EventExtractor {
+	protected Set<String> eventSet = new HashSet<String>();
 	
-	protected static final Set<String> copulas = new HashSet<String>(Arrays.asList("appear", "be", "become", "seem", "remain"));
-	private static final Set<String> roles = new HashSet<String>(Arrays.asList("nsubj", "nsubjpass", "iobj", "dobj", "agent", "xsubj", "xcomp"));
+	protected EventDictionaries edict;
+	
+	protected void addEvent2Set(Event event) {
+		if(event != null) {
+			eventSet.add(event.toFeature());
+		}
+	}
+	
+	public void createDict(String propfile) throws FileNotFoundException, IOException {
+		Properties props = new Properties();
+		InputStream in = MentionExtractor.class.getClassLoader().getResourceAsStream(propfile);
+		props.load(new InputStreamReader(in));
+		this.edict = new EventDictionaries(props);
+	}
 	
 	public static EventExtractor createExtractor(String extractorClassName) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
 		return (EventExtractor) Class.forName(extractorClassName).newInstance();
@@ -22,11 +40,37 @@ public abstract class EventExtractor {
 	
 	public abstract void extractEvents(Document doc, List<List<Mention>> mentionList, Options options);
 	
+	public int sizeOfEvent() {
+		return eventSet.size();
+	}
+	
 	protected boolean indexOutsideMention(int index, Mention mention) {
 		return index < mention.startIndex || mention.endIndex <= index;
 	}
 	
-	public static boolean acceptableGrammRole(String grammRole, boolean includePrep) {
-		return roles.contains(grammRole) || includePrep && grammRole.startsWith("prep_");
+	public boolean acceptableGrammRole(String grammRole, boolean includePrep) {
+		return edict.roles.contains(grammRole) || includePrep && grammRole.startsWith("prep_");
+	}
+	
+	protected String normalize(String str) {
+		int pos_of_dash = str.indexOf('-');
+		if(pos_of_dash < 0) {
+			return str;
+		}
+		else {
+			return str.substring(0, pos_of_dash) + str.substring(pos_of_dash + 1, str.length());
+		}
+	}
+	
+	protected boolean isNumber(String str) {
+		if(edict.numbers.contains(str)) {
+			return true;
+		}
+		
+		String[] tokens = str.split("-|:");
+		if(tokens.length == 0) {
+			return false;
+		}
+		return tokens[0].matches("[0-9]+(th|st|nd|rd)?|[0-9]+\\.[0-9]+|[0-9]+[0-9,]+(th|st|nd|rd)?");
 	}
 }

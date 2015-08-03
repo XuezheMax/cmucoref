@@ -18,36 +18,41 @@ public class Parameters implements Serializable{
 	
 	public Parameters(){}
 	
-	public Parameters(int size, ParameterInitializer initializer){
+	public Parameters(int size, ParameterInitializer initializer, boolean isMentionParam) {
 		parameters = new double[size];
-		this.initialize(initializer);
+		this.initialize(initializer, isMentionParam);
 	}
 	
-	private void initialize(ParameterInitializer initializer){
-		initializer.initializeParams(this.parameters);
+	private void initialize(ParameterInitializer initializer, boolean isMentionParam) {
+		if(isMentionParam) {
+			initializer.initializeMentionParams(this.parameters);
+		}
+		else {
+			initializer.initializeEventParams(this.parameters);
+		}
 	}
 	
-	public Parameters(double[] parameters){
+	public Parameters(double[] parameters) {
 		this.parameters = parameters;
 	}
 	
-	public double getScore(FeatureVector fv){
+	public double getScore(FeatureVector fv) {
 		return fv.getScore(parameters);
 	}
 	
-	public void update(int index, double val){
+	public void update(int index, double val) {
 		parameters[index] = val;
 	}
 	
-	public double paramAt(int index){
+	public double paramAt(int index) {
 		return parameters[index];
 	}
 	
-	private void writeObject(ObjectOutputStream out) throws IOException{
+	private void writeObject(ObjectOutputStream out) throws IOException {
 		out.writeObject(this.parameters);
 	}
 	
-	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException{
+	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
 		parameters = (double[]) in.readObject();
 	}
 }

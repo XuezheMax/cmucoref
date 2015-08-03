@@ -78,11 +78,14 @@ public class Options implements Serializable{
 								DEFAULT_PROPERTY_FILE = "cmucoref_models/properties/default.properties",
 								CONLL_SCORER = "conll-scorer",
 								MAX_ITER = "maxIter",
-								DEFAULE_MAX_ITER = "1000";
+								DEFAULT_MAX_ITER = "1000",
+								INIT_ITER = "initIter", 
+								DEFAULT_ITIN_ITER = "5";
 	
 	private gnu.trove.map.hash.THashMap<String, String> argToValueMap = null;
 	private HashSet<String> valid_opt_set = null;
 	private int maxIter = 1000;
+	private int initIter = 5;
 	private final double stop_eta = 0.000001;
 	private final String train_tmp = "tmp/train.tmp";
 	
@@ -160,7 +163,10 @@ public class Options implements Serializable{
 		valid_opt_set.add(CONLL_SCORER);
 		//maxIter
 		valid_opt_set.add(MAX_ITER);
-		argToValueMap.put(MAX_ITER, DEFAULE_MAX_ITER);
+		argToValueMap.put(MAX_ITER, DEFAULT_MAX_ITER);
+		//initIter
+		valid_opt_set.add(INIT_ITER);
+		argToValueMap.put(INIT_ITER, DEFAULT_ITIN_ITER);
 		//file name
 		valid_opt_set.add(TRAININGFILE);
 		valid_opt_set.add(TESTFILE);
@@ -210,6 +216,7 @@ public class Options implements Serializable{
 		//check error
 		checkError();
 		maxIter = Integer.parseInt(argToValueMap.get(MAX_ITER));
+		initIter = Integer.parseInt(argToValueMap.get(INIT_ITER));
 	}
 	
 	private void parseOptions(String configfile) throws OptionException {
@@ -354,6 +361,10 @@ public class Options implements Serializable{
 	
 	public int maxIter() {
 		return maxIter;
+	}
+	
+	public int initIter() {
+		return initIter;
 	}
 	
 	public double stopEta() {

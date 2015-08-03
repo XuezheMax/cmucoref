@@ -16,79 +16,136 @@ public class CorefModel implements Serializable{
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	private Parameters params = null;
+	private Parameters mentionParams = null;
 	private Parameters eventParams = null;
 	public Options options = null;
-	private Alphabet featAlphabet = null;
+	private Alphabet mentionAlphabet = null;
 	private Alphabet eventAlphabet = null;
+	
+	private int sizeOfEvent = 0;
 	
 	public CorefModel(Options options){
 		this.options = options;
-		featAlphabet = new Alphabet();
+		mentionAlphabet = new Alphabet();
 		if(options.useEventFeature()) {
 			eventAlphabet = new Alphabet(100000000);
 		}
 	}
 	
-	public void createParameters() throws InstantiationException, IllegalAccessException, ClassNotFoundException{
+	public void createParameters(int sizeOfEvent) throws InstantiationException, IllegalAccessException, ClassNotFoundException{
+		this.sizeOfEvent = sizeOfEvent;
 		ParameterInitializer initializer = (ParameterInitializer) Class.forName(options.getParamInitializer()).newInstance();
 		initializer.setModel(this);
-		params = new Parameters(featAlphabet.size(), initializer);
+		mentionParams = new Parameters(mentionAlphabet.size(), initializer, true);
+		if(options.useEventFeature()) {
+			eventParams = new Parameters(eventAlphabet.size(), initializer, false);
+		}
 	}
 	
 	public void closeAlphabets(){
-		featAlphabet.stopGrowth();
+		mentionAlphabet.stopGrowth();
+		eventAlphabet.stopGrowth();
 	}
 	
-	public double getScore(FeatureVector fv){
-		return params.getScore(fv);
+	public double getScore(FeatureVector mfv, FeatureVector efv){
+		return getMentionScore(mfv) + getEventScore(efv);
 	}
 	
-	public void update(int index, double val){
-		params.update(index, val);
+	private double getMentionScore(FeatureVector mfv) {
+		return mentionParams.getScore(mfv);
 	}
 	
-	public double paramAt(int index){
-		return params.paramAt(index);
+	private double getEventScore(FeatureVector efv) {
+		return efv == null ? 0.0 : eventParams.getScore(efv);
 	}
 	
-	//get feature index
-	public Pair<Integer, Integer> getFeatureIndex(String feat, String given){
-		return featAlphabet.lookupIndex(feat, given);
+	public void updateMentionParams(int index, double val) {
+		mentionParams.update(index, val);
 	}
 	
-	public int getGidFromIndex(int index){
-		return featAlphabet.getGidFromIndex(index);
+	public void updateEventParams(int index, double val) {
+		eventParams.update(index, val);
+	}
+	
+	public double mentionParamAt(int index) {
+		return mentionParams.paramAt(index);
+	}
+	
+	public double eventParamAt(int index) {
+		return eventParams.paramAt(index);
+	}
+	
+	//get mention feature index
+	public Pair<Integer, Integer> getMentionFeatureIndex(String feat, String given) {
+		return mentionAlphabet.lookupIndex(feat, given);
+	}
+	
+	//get event feature index
+	public Pair<Integer, Integer> getEventFeatureIndex(String feat, String given) {
+		return eventAlphabet.lookupIndex(feat, given);
+	}
+	
+	public int getMentionGidFromIndex(int index) {
+		return mentionAlphabet.getGidFromIndex(index);
+	}
+	
+	public int getEventGidFromIndex(int index) {
+		return eventAlphabet.getGidFromIndex(index);
 	}
 	
 	//thread number
-	public int threadNum(){
+	public int threadNum() {
 		return options.getThreadNum();
 	}
 
-	//get given size
-	public int givenSize(){
-		return featAlphabet.sizeOfGiven();
+	//get event size
+	public int sizeOfEvent() {
+		return sizeOfEvent;
 	}
 	
-	//get feature size
-	public int featureSize(){
-		return featAlphabet.size();
+	//get mention given size
+	public int givenSizeofMention() {
+		return mentionAlphabet.sizeOfGiven();
 	}
 	
-	public void displayAlphabet(PrintStream printer){
-		featAlphabet.display(printer, this.params);
+	//get event given size
+	public int givenSizeofEvent() {
+		return eventAlphabet.sizeOfGiven();
 	}
 	
-	private void writeObject(ObjectOutputStream out) throws IOException{
+	//get mention feature size
+	public int mentionFeatureSize() {
+		return mentionAlphabet.size();
+	}
+	
+	//get event feature size
+	public int eventFeatureSize() {
+		return eventAlphabet.size();
+	}
+	
+	public void displayMentionAlphabet(PrintStream printer) {
+		mentionAlphabet.display(printer, this.mentionParams);
+	}
+	
+	public void displayEventAlphabet(PrintStream printer) {
+		eventAlphabet.display(printer, this.eventParams);		
+	}
+	
+	private void writeObject(ObjectOutputStream out) throws IOException {
+		out.writeInt(sizeOfEvent);
 		out.writeObject(options);
-		out.writeObject(featAlphabet);
-		out.writeObject(params);
+		out.writeObject(mentionAlphabet);
+		out.writeObject(mentionParams);
+		out.writeObject(eventAlphabet);
+		out.writeObject(eventParams);
 	}
 	
-	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException{
+	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+		sizeOfEvent = in.readInt();
 		options = (Options) in.readObject();
-		featAlphabet = (Alphabet) in.readObject();
-		params = (Parameters) in.readObject();
+		mentionAlphabet = (Alphabet) in.readObject();
+		mentionParams = (Parameters) in.readObject();
+		eventAlphabet = (Alphabet) in.readObject();
+		eventParams = (Parameters) in.readObject();
 	}
 }

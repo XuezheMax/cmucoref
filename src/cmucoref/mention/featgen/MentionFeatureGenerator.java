@@ -16,22 +16,24 @@ import edu.stanford.nlp.dcoref.Dictionaries;
 public class MentionFeatureGenerator {
 	public MentionFeatureGenerator(){}
 	
-	public void genCoreferentFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, int mode, Dictionaries dict, CorefModel model, FeatureVector fv){
+	public void genCoreferentFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, 
+			int mode, Dictionaries dict, CorefModel model, boolean useEvent, FeatureVector mfv, FeatureVector efv) {
 		if(mode == 0) {
 			//attribute match features
-			genAttrMatchFeatures(anaph, anaphSent, antec, antecSent, dict, model, fv);			
+			genAttrMatchFeatures(anaph, anaphSent, antec, antecSent, dict, model, useEvent, mfv, efv);			
 		}
 		else if(mode == 1) {
 			//string match features
-			genStringMatchFeatures(anaph, anaphSent, antec, antecSent, dict, model, fv);
+			genStringMatchFeatures(anaph, anaphSent, antec, antecSent, dict, model, useEvent, mfv, efv);
 		}
 		else if(mode == 2) {
 			//precise match features
-			genPreciseMatchFeatures(anaph, anaphSent, antec, antecSent, dict, model, fv);
+			genPreciseMatchFeatures(anaph, anaphSent, antec, antecSent, dict, model, useEvent, mfv, efv);
 		}
 	}
 	
-	protected void genPreciseMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, Dictionaries dict, CorefModel model, FeatureVector fv) {
+	protected void genPreciseMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, 
+			Dictionaries dict, CorefModel model, boolean useEvent, FeatureVector mfv, FeatureVector efv) {
 		//mention type features
 		StringBuilder given = new StringBuilder();
 		given.append("ANTECTYPE=" +  antec.getMentionType());
@@ -49,10 +51,15 @@ public class MentionFeatureGenerator {
 		//precise match features
 		feat.append(", " + "PRECMAT=true");
 		
-		addFeature(feat.toString(), given.toString(), model, fv);
+		addMentionFeature(feat.toString(), given.toString(), model, mfv);
+		
+		if(useEvent) {
+			genPreciseMatchEventFeatures(anaph, anaphSent, antec, antecSent, dict, model, efv);
+		}
 	}
 	
-	protected void genStringMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, Dictionaries dict, CorefModel model, FeatureVector fv) {
+	protected void genStringMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, 
+			Dictionaries dict, CorefModel model, boolean useEvent, FeatureVector mfv, FeatureVector efv) {
 		//mention type features
 		StringBuilder given = new StringBuilder();
 		given.append("ANTECTYPE=" +  antec.getMentionType());
@@ -99,17 +106,22 @@ public class MentionFeatureGenerator {
 				feat.append(", " + "RLXMAT=" + relaxedMatch);
 				feat.append(", " + "EXTMAT=" + exactMatch);
 				
-//				if(anaph.isDemonym(anaphSent, antec, antecSent, dict) && !anaph.exactSpanMatch(anaphSent, antec, antecSent)) {
+//				if(!compatibleModifier && exactMatch) {
 //					System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%");
 //					antec.display(antecSent, System.out);
 //					anaph.display(anaphSent, System.out);
 //				}
 			}
 		}
-		addFeature(feat.toString(), given.toString(), model, fv);
+		addMentionFeature(feat.toString(), given.toString(), model, mfv);
+		
+		if(useEvent) {
+			genStringMatchEventFeatures(anaph, anaphSent, antec, antecSent, dict, model, efv);
+		}
 	}
 	
-	protected void genAttrMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, Dictionaries dict, CorefModel model, FeatureVector fv){
+	protected void genAttrMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, 
+			Dictionaries dict, CorefModel model, boolean useEvent, FeatureVector mfv, FeatureVector efv){
 		
 		//mention type features
 		StringBuilder given = new StringBuilder();
@@ -161,10 +173,15 @@ public class MentionFeatureGenerator {
 			}
 		}
 		
-		addFeature(feat.toString(), given.toString(), model, fv);
+		addMentionFeature(feat.toString(), given.toString(), model, mfv);
+		
+		if(useEvent) {
+			genAttrMatchEventFeatures(anaph, anaphSent, antec, antecSent, dict, model, efv);
+		}
 	}
 	
-	public void genNewClusterFeatures(Mention anaph, Sentence anaphSent, CorefModel model, FeatureVector fv){
+	public void genNewClusterFeatures(Mention anaph, Sentence anaphSent, 
+			CorefModel model, boolean useEvent, FeatureVector mfv, FeatureVector efv) {
 		// anaph starts a new cluster
 		//type features
 		String given = "NEWCLUSTER";
@@ -188,13 +205,66 @@ public class MentionFeatureGenerator {
 			feat.append(", " + "LOCATTRMATDEFINITE=" + localAttrMatchDefinite);
 		}
 		
-		addFeature(feat.toString(), given, model, fv);
+		addMentionFeature(feat.toString(), given, model, mfv);
+		
+		if(useEvent) {
+			genEventNewClusterFeatures(anaph, anaphSent, model, efv);
+		}
 	}
 	
-	protected final void addFeature(String feat, String given, CorefModel model, FeatureVector fv){
-		Pair<Integer, Integer> ids = model.getFeatureIndex(feat, given);
-		if(fv != null && ids != null){
-			fv.addFeature(ids.first, ids.second, 1.0);
+	protected void genPreciseMatchEventFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, 
+			Dictionaries dict, CorefModel model, FeatureVector efv) {
+		StringBuilder given = new StringBuilder();
+		given.append("ANTECEVENT=");
+		given.append(antec.getMainEvent().toFeature());
+		StringBuilder feat = new StringBuilder();
+		feat.append("ANAPHEVENT=");
+		feat.append(anaph.getMainEvent().toFeature());
+		addEventFeature(feat.toString(), given.toString(), model, efv);
+	}
+	
+	protected void genStringMatchEventFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, 
+			Dictionaries dict, CorefModel model, FeatureVector efv) {
+		StringBuilder given = new StringBuilder();
+		given.append("ANTECEVENT=");
+		given.append(antec.getMainEvent().toFeature());
+		StringBuilder feat = new StringBuilder();
+		feat.append("ANAPHEVENT=");
+		feat.append(anaph.getMainEvent().toFeature());
+		addEventFeature(feat.toString(), given.toString(), model, efv);
+	}
+	
+	protected void genAttrMatchEventFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, 
+			Dictionaries dict, CorefModel model, FeatureVector efv) {
+		StringBuilder given = new StringBuilder();
+		given.append("ANTECEVENT=");
+		given.append(antec.getMainEvent().toFeature());
+		StringBuilder feat = new StringBuilder();
+		feat.append("ANAPHEVENT=");
+		feat.append(anaph.getMainEvent().toFeature());
+		addEventFeature(feat.toString(), given.toString(), model, efv);
+	}
+	
+	public void genEventNewClusterFeatures(Mention anaph, Sentence anaphSent, 
+			CorefModel model, FeatureVector efv) {
+		String given = "NEWCLUSEVENT";
+		StringBuilder feat = new StringBuilder();
+		feat.append("EVENT=");
+		feat.append(anaph.getMainEvent().toFeature());
+		addEventFeature(feat.toString(), given, model, efv);
+	}
+	
+	protected final void addMentionFeature(String feat, String given, CorefModel model, FeatureVector mfv){
+		Pair<Integer, Integer> ids = model.getMentionFeatureIndex(feat, given);
+		if(mfv != null && ids != null){
+			mfv.addFeature(ids.first, ids.second);
+		}
+	}
+	
+	protected final void addEventFeature(String feat, String given, CorefModel model, FeatureVector efv){
+		Pair<Integer, Integer> ids = model.getEventFeatureIndex(feat, given);
+		if(efv != null && ids != null){
+			efv.addFeature(ids.first, ids.second);
 		}
 	}
 }

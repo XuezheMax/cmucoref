@@ -32,17 +32,31 @@ public abstract class MentionExtractor {
 	
 	protected Dictionaries dict;
 	
+	protected EventExtractor eventExtractor;
+	
 	public MentionExtractor(){}
 	
-	public void createDict(String propfile) throws FileNotFoundException, IOException{
+	public void createDict(String propfile) throws FileNotFoundException, IOException {
 		Properties props = new Properties();
 		InputStream in = MentionExtractor.class.getClassLoader().getResourceAsStream(propfile);
 		props.load(new InputStreamReader(in));
 		this.dict = new Dictionaries(props);
 	}
 	
-	public Dictionaries getDict(){
+	public void setEventExtractor(EventExtractor eventExtractor) {
+		this.eventExtractor = eventExtractor;
+	}
+	
+	public Dictionaries getDict() {
 		return dict;
+	}
+	
+	public int getSizeOfEvent() {
+		return eventExtractor.sizeOfEvent();
+	}
+	
+	public static MentionExtractor createExtractor(String extractorClassName) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
+		return (MentionExtractor) Class.forName(extractorClassName).newInstance();
 	}
 	
 	public abstract List<List<Mention>> extractPredictedMentions(Document doc, Options options) throws IOException;
@@ -62,13 +76,13 @@ public abstract class MentionExtractor {
 		mentions.removeAll(remove);
 	}
 	
-	protected void deleteSpuriousNamedEntityMentions(List<Mention> mentions, Sentence sent){
+	protected void deleteSpuriousNamedEntityMentions(List<Mention> mentions, Sentence sent) {
 		//remove overlap mentions
 		Set<Mention> remove = new HashSet<Mention>();
-		for(Mention mention1 : mentions){
-			if(mention1.isPureNerMention(sent)){
-				for(Mention mention2 : mentions){
-					if(mention1.overlap(mention2)){
+		for(Mention mention1 : mentions) {
+			if(mention1.isPureNerMention(sent)) {
+				for(Mention mention2 : mentions) {
+					if(mention1.overlap(mention2)) {
 						remove.add(mention1);
 					}
 				}
@@ -180,9 +194,8 @@ public abstract class MentionExtractor {
 	 * @param allMentions
 	 */
 	protected void findSpeakers(Document doc, List<Mention> allMentions, List<List<Mention>> mentionList) {
-		SpeakerInfo.reset();
 		Map<String, SpeakerInfo> speakersMap = new HashMap<String, SpeakerInfo>();
-		speakersMap.put("<DEFAULT_SPEAKER>", new SpeakerInfo("<DEFAULT_SPEAKER>", false));
+		speakersMap.put("<DEFAULT_SPEAKER>", new SpeakerInfo(0, "<DEFAULT_SPEAKER>", false));
 		// find default speakers from the speaker tags of document doc
 		findDefaultSpeakers(doc, allMentions, speakersMap);
 		
@@ -323,16 +336,19 @@ public abstract class MentionExtractor {
 								&& mention.headIndex == speakerHeadIndex 
 								&& mention.startIndex >= startIndex && mention.endIndex < endIndex) {
 								if(mention.utteranceInfo == null) {
-									String speakerKey = mention.getSpan(sent);
-									SpeakerInfo speakerInfo = new SpeakerInfo(speakerKey, true);
-									speakersMap.put(speakerKey, speakerInfo);
+									String speakerName = mention.getSpan(sent);
+									SpeakerInfo speakerInfo = new SpeakerInfo(speakersMap.size(), speakerName, true);
+									speakersMap.put(speakerInfo.toString(), speakerInfo);
 									speakerInfo.setSpeaker(mention);
 									mention.utteranceInfo = speakerInfo;
 								}
 								return mention.utteranceInfo;
 							}
 						}
-						return new SpeakerInfo(sent.getLexicon(speakerHeadIndex).form, true);
+						String speakerName = sent.getLexicon(speakerHeadIndex).form;
+						SpeakerInfo speakerInfo = new SpeakerInfo(speakersMap.size(), speakerName, true);
+						speakersMap.put(speakerInfo.toString(), speakerInfo);
+						return speakerInfo;
 					}
 				}
 			}
@@ -383,7 +399,7 @@ public abstract class MentionExtractor {
 			String speaker = sent.getSpeaker().equals("-") ? "<DEFAULT_SPEAKER>" : sent.getSpeaker();
 			SpeakerInfo speakerInfo = speakersMap.get(speaker);
 			if(speakerInfo == null) {
-				speakerInfo = new SpeakerInfo(speaker, false);
+				speakerInfo = new SpeakerInfo(speakersMap.size(), speaker, false);
 				speakersMap.put(speaker, speakerInfo);
 			}
 			mention.setSpeakerInfo(speakerInfo);
@@ -411,7 +427,7 @@ public abstract class MentionExtractor {
 			if(!anaph.isPronominal()) {
 				continue;
 			}
-			for(int j = i - 1; j >=0; --j) {
+			for(int j = i - 1; j >= 0; --j) {
 				Mention antec = allMentions.get(j);
 				if(anaph.ruleout(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)) {
 					continue;
@@ -436,7 +452,6 @@ public abstract class MentionExtractor {
 	}
 	
 	protected void extractEvents(List<List<Mention>> mentionList, Document doc, Options options) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
-		EventExtractor eventExtractor = EventExtractor.createExtractor(options.getEventExtractor());
 		eventExtractor.extractEvents(doc, mentionList, options);
 	}
 	

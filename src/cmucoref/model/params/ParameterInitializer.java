@@ -11,5 +11,7 @@ public abstract class ParameterInitializer {
 		this.model = model;
 	}
 	
-	public abstract void initializeParams(double[] parameters);
+	public abstract void initializeMentionParams(double[] parameters);
+	
+	public abstract void initializeEventParams(double[] parameters);
 }
