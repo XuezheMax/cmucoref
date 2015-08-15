@@ -7,7 +7,7 @@ import cmucoref.util.Pair;
 public class PriorKnowledgeInitializer extends ParameterInitializer{
 
 	@Override
-	public void initializeMentionParams(double[] parameters) {
+	public void initializeMentionParams(double[] parameters, double[] nils, double[] uni_parameters) {
 		Arrays.fill(parameters, 1);
 		
 		String[] mentionTypes = {"NOMINAL", "PRONOMINAL", "PROPER"};
@@ -91,7 +91,7 @@ public class PriorKnowledgeInitializer extends ParameterInitializer{
 	}
 
 	@Override
-	public void initializeEventParams(double[] parameters) {
+	public void initializeEventParams(double[] parameters, double[] nils, double[] uni_parameters) {
 		// TODO Auto-generated method stub
 		
 	}

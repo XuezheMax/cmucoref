@@ -14,6 +14,7 @@ public class EventDictionaries {
 
 	public final Set<String> englishWords = new HashSet<String>();
 	public final Set<String> englishVerbs = new HashSet<String>();
+	public final Set<String> englishPreps = new HashSet<String>();
 	public final Set<String> copulas = new HashSet<String>(Arrays.asList("appear", "be", "become", "seem", "remain"));
 	public final Set<String> roles = new HashSet<String>(Arrays.asList("nsubj", "nsubjpass", "iobj", 
 			"npadvmod", "tmod", "amod", "advmod", "quantmod", "vmod", 
@@ -31,6 +32,7 @@ public class EventDictionaries {
 	public EventDictionaries(Properties props) throws IOException {
 		loadEnglishWords(props.getProperty("cmucoref.englishwords", "cmucoref_models/models/wordsEn.txt"));
 		loadEnglishVerbs(props.getProperty("cmucoref.englishverbs", "cmucoref_models/models/verbsEn.txt"));
+		loadEnglishPreps(props.getProperty("cmucoref.englishpreps", "cmucoref_models/models/prepsEn.txt"));
 	}
 	
 	private void loadEnglishWords(String wordfile) throws IOException {
@@ -59,5 +61,33 @@ public class EventDictionaries {
 			line = reader.readLine();
 		}
 		reader.close();
+	}
+	
+	private void loadEnglishPreps(String prepfile) throws IOException {
+//		InputStream in = MentionExtractor.class.getClassLoader().getResourceAsStream(prepfile);
+//		BufferedReader reader = new BufferedReader(new InputStreamReader(in, "UTF-8"));
+//		String line = reader.readLine();
+//		while(line != null) {
+//			line = line.trim();
+//			if(line.length() > 0) {
+//				englishPreps.add(line);
+//			}
+//			line = reader.readLine();
+//		}
+//		reader.close();
+		englishPreps.add("about");
+		englishPreps.add("after");
+		englishPreps.add("at");
+		englishPreps.add("before");
+		englishPreps.add("by");
+		englishPreps.add("for");
+		englishPreps.add("from");
+		englishPreps.add("in");
+		englishPreps.add("of");
+		englishPreps.add("off");
+		englishPreps.add("on");
+		englishPreps.add("to");
+		englishPreps.add("with");
+		englishPreps.add("without");
 	}
 }

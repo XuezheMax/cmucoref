@@ -51,7 +51,7 @@ public abstract class MentionExtractor {
 		return dict;
 	}
 	
-	public int getSizeOfEvent() {
+	public int sizeOfEvent() {
 		return eventExtractor.sizeOfEvent();
 	}
 	
@@ -429,22 +429,9 @@ public abstract class MentionExtractor {
 			}
 			for(int j = i - 1; j >= 0; --j) {
 				Mention antec = allMentions.get(j);
-				if(anaph.ruleout(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)) {
+				if(anaph.ruleout(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict, true)) {
 					continue;
 				}
-				
-				int distOfSent = anaph.getDistOfSent(antec);
-				if(antec.isPronominal()) {
-					if(distOfSent > 5) {
-						continue;
-					}
-				}
-				else {
-					if(distOfSent > 1) {
-						continue;
-					}
-				}
-				
 				anaph.localAttrMatch = antec;
 				break;
 			}
@@ -500,6 +487,20 @@ public abstract class MentionExtractor {
 						|| predN.isNominative() && Mention.temporals.contains(predN.headString)) {
 						remove.add(mention);
 						break;
+					}
+				}
+			}
+			else if(mention.isPronominal() && mention.headString.equals("it")) {
+				Lexicon headword = sent.getLexicon(mention.originalHeadIndex);
+				int head = headword.collapsed_head;
+				if(sent.getLexicon(head).lemma.equals("be") && headword.collapsed_deprel.equals("nsubj")) {
+					for(Mention mention2 : mentions) {
+						Lexicon headword2 = sent.getLexicon(mention2.originalHeadIndex);
+						if(headword2.collapsed_head == head && headword2.collapsed_deprel.startsWith("prep_")
+							&& (mention2.isProper() && mention2.headword.ner.equals("DATE")
+									|| mention2.isNominative() && Mention.temporals.contains(mention2.headString))) {
+							remove.add(mention);
+						}
 					}
 				}
 			}

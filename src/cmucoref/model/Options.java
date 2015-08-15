@@ -34,6 +34,13 @@ public class Options implements Serializable{
 								DEFAULT_THREAD_NUM = "1",
 								PARAMETER_INITIALIZER = "parameter-initializer",
 								DEFAULT_PARAMETER_INITIALIZER = cmucoref.model.params.UniformInitializer.class.getName(),
+								PARAMETER_SMOOTHER = "parameter-smoother",
+								DEFAULT_PARAMETER_SMOOTHER = cmucoref.model.params.Smoother.class.getSimpleName(),
+								SMOOTHER_ALPHA = "smoothing-alpha",
+								ALPHA_UPPER = "alpha-upper-limit",
+								ALPHA_LOWER = "alpha-lower-limit",
+								TUNE_ALPHA = "tune-alpha",
+								DEFAULT_TUNE_ALPHA = Boolean.FALSE.toString(),
 								MENTION_EXTRACTOR = "mention-extractor",
 								DEFAULT_MENTION_EXTRACTOR_CLASS = cmucoref.mention.extractor.CMUMentionExtractor.class.getName(),
 								USE_PRECISE_MATCH = "use-preicse-match",
@@ -116,6 +123,16 @@ public class Options implements Serializable{
 		//parameter initializer
 		valid_opt_set.add(PARAMETER_INITIALIZER);
 		argToValueMap.put(PARAMETER_INITIALIZER, DEFAULT_PARAMETER_INITIALIZER);
+		//parameter smoother
+		valid_opt_set.add(PARAMETER_SMOOTHER);
+		argToValueMap.put(PARAMETER_SMOOTHER, DEFAULT_PARAMETER_SMOOTHER);
+		//smoothing alpha
+		valid_opt_set.add(SMOOTHER_ALPHA);
+		valid_opt_set.add(ALPHA_LOWER);
+		valid_opt_set.add(ALPHA_UPPER);
+		//tune alpha
+		valid_opt_set.add(TUNE_ALPHA);
+		argToValueMap.put(TUNE_ALPHA, DEFAULT_TUNE_ALPHA);
 		//mention extractor
 		valid_opt_set.add(MENTION_EXTRACTOR);
 		argToValueMap.put(MENTION_EXTRACTOR, DEFAULT_MENTION_EXTRACTOR_CLASS);
@@ -260,7 +277,11 @@ public class Options implements Serializable{
 	}
 	
 	private String getArgValue(String argName) {
-		return argToValueMap.get(argName);
+		String value = argToValueMap.get(argName);
+		if(value == null) {
+			throw new RuntimeException("the value of argument " + argName + " is not available");
+		}
+		return value;
 	}
 	
 	private void putArgValue(String argName, String value) {
@@ -297,6 +318,26 @@ public class Options implements Serializable{
 	
 	public String getParamInitializer() {
 		return getArgValue(PARAMETER_INITIALIZER);
+	}
+	
+	public String getParamSmoother() {
+		return getArgValue(PARAMETER_SMOOTHER);
+	}
+	
+	public double getSmoothingAlpha() {
+		return Double.valueOf(argToValueMap.get(SMOOTHER_ALPHA));
+	}
+	
+	public double getUpperAlpha() {
+		return Double.valueOf(argToValueMap.get(ALPHA_UPPER));
+	}
+	
+	public double getLowerAlpha() {
+		return Double.valueOf(argToValueMap.get(ALPHA_LOWER));
+	}
+	
+	public boolean tuneAlpha() {
+		return Boolean.parseBoolean(getArgValue(TUNE_ALPHA));
 	}
 	
 	public String getMentionExtractor() {

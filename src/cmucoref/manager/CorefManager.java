@@ -40,7 +40,7 @@ public class CorefManager {
 		System.out.println("Done.");
 		System.out.println("Num Mention Features: " + model.mentionFeatureSize());
 		if(model.options.useEventFeature()) {
-			System.out.println("Num of Events: " + model.givenSizeofEvent() + " " + mentionExtractor.getSizeOfEvent());
+			System.out.println("Num of Events: " + model.givenSizeofEvent() + " " + mentionExtractor.sizeOfEvent());
 			System.out.println("Num Event Features: " + model.eventFeatureSize());
 		}
 		System.out.println("Num Documents: " + numInst);
@@ -86,7 +86,8 @@ public class CorefManager {
 			}
 		}
 		else if(file.isFile()) {
-			System.out.println(file.getName());
+			System.out.print(file.getName() + " ");
+			System.out.flush();
 			DocumentReader docReader = DocumentReader.createDocumentReader(model.options.getTrainReader());
 			docReader.startReading(file.getAbsolutePath());
 			Document doc = docReader.getNextDocument(model.options, false);
@@ -120,11 +121,15 @@ public class CorefManager {
 						continue;
 					}
 					
+					if(!anaph.isDefinite()) {
+						continue;
+					}
+					
 					for(int j = 0; j <= i; ++j) {
 						if(j < i) {
 							Mention antec = allMentions.get(j);
 							Sentence antecSent = doc.getSentence(antec.sentID);
-							if(anaph.ruleout(anaphSent, antec, antecSent, getDict())) {
+							if(anaph.ruleout(anaphSent, antec, antecSent, getDict(), false)) {
 								continue;
 							}
 							
@@ -201,13 +206,21 @@ public class CorefManager {
 				continue;
 			}
 			
+			if(!anaph.isDefinite()) {
+				mfvs = new FeatureVector[0];
+				efvs = useEvent ? new FeatureVector[0] : null;
+				out.writeObject(mfvs);
+				out.writeObject(efvs);
+				continue;
+			}
+			
 			mfvs = new FeatureVector[i + 1];
 			efvs = useEvent ? new FeatureVector[i + 1] : null;
 			for(int j = 0; j <= i; ++j) {
 				if(j < i) {
 					Mention antec = allMentions.get(j);
 					Sentence antecSent = doc.getSentence(antec.sentID);
-					if(anaph.ruleout(anaphSent, antec, antecSent, getDict())) {
+					if(anaph.ruleout(anaphSent, antec, antecSent, getDict(), false)) {
 						continue;
 					}
 					

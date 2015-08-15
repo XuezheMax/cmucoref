@@ -62,6 +62,16 @@ public abstract class EventExtractor {
 		}
 	}
 	
+	protected String addParticle(String predicate, int predPos, Sentence sent) {
+		for(int i = predPos + 1; i < sent.length(); ++i) {
+			Lexicon lex = sent.getLexicon(i);
+			if(lex.basic_head == predPos && lex.basic_deprel.equals("prt")) {
+				return predicate + "_" + lex.lemma;
+			}
+		}
+		return predicate;
+	}
+	
 	protected boolean isNumber(String str) {
 		if(edict.numbers.contains(str)) {
 			return true;

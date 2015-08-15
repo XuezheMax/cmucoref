@@ -37,7 +37,8 @@ public class MentionFeatureGenerator {
 		//mention type features
 		StringBuilder given = new StringBuilder();
 		given.append("ANTECTYPE=" +  antec.getMentionType());
-		given.append(", DEFINITE=" + antec.definite + ", COREF");
+//		given.append(", DEFINITE=" + antec.definite);
+		given.append(", PREC_COREF");
 		
 		StringBuilder feat = new StringBuilder();
 		feat.append("ANAPHTYPE=" + anaph.getMentionType());
@@ -46,7 +47,7 @@ public class MentionFeatureGenerator {
 		feat.append(", " + "DISTOFSENT=-1");
 		
 		//definiteness features
-		feat.append(", " + "DEFINITE=" + anaph.definite);
+//		feat.append(", " + "DEFINITE=" + anaph.definite);
 		
 		//precise match features
 		feat.append(", " + "PRECMAT=true");
@@ -60,11 +61,15 @@ public class MentionFeatureGenerator {
 	
 	protected void genStringMatchFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, 
 			Dictionaries dict, CorefModel model, boolean useEvent, FeatureVector mfv, FeatureVector efv) {
+		if(anaph.isPronominal() || antec.isPronominal()) {
+			throw new RuntimeException("string match feature does not apply to pronominals");
+		}
+		
 		//mention type features
 		StringBuilder given = new StringBuilder();
 		given.append("ANTECTYPE=" +  antec.getMentionType());
-		given.append(", DEFINITE=" + antec.definite);
-		given.append(", COREF");
+//		given.append(", DEFINITE=" + antec.definite);
+		given.append(", STR_COREF");
 		
 		StringBuilder feat = new StringBuilder();
 		feat.append("ANAPHTYPE=" + anaph.getMentionType());
@@ -73,45 +78,43 @@ public class MentionFeatureGenerator {
 		feat.append(", " + "DISTOFSENT=-1");
 		
 		//definiteness features
-		feat.append(", " + "DEFINITE=" + anaph.definite);
+//		feat.append(", " + "DEFINITE=" + anaph.definite);
 		
-		//string match features (does not apply for pronominals)
-		if(!anaph.isPronominal() && !antec.isPronominal()) {
-			if(anaph.isList() || antec.isList()) {
-				feat.append(", " + "HDMAT=true");
-				feat.append(", " + "CMPMOD=true");
-				feat.append(", " + "WDIND=true");
-				feat.append(", " + "RLXMAT=true");
-				feat.append(", " + "EXTMAT=true");
-			}
-			else {
-				boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent, dict);
-				feat.append(", " + "HDMAT=" + headMatch);
-				
-				//Acronym or Demonym
-				boolean ADNYM = (Mention.options.useDemonym() && anaph.isDemonym(anaphSent, antec, antecSent, dict))
-						|| anaph.acronymMatch(anaphSent, antec, antecSent, dict);
-				
-				//compatible modifier
-				boolean compatibleModifier = ADNYM || antec.compatibleModifier(antecSent, anaph, anaphSent, dict);
-				feat.append(", " + "CMPMOD=" + compatibleModifier);
-				//wordInclude
-				boolean wordIncluded = ADNYM || antec.wordsInclude(antecSent, anaph, anaphSent, dict);
-				feat.append(", " + "WDIND=" + wordIncluded);
-				//exact match
-				boolean exactMatch = ADNYM || anaph.exactSpanMatch(anaphSent, antec, antecSent);
-				//relaxed match
-				boolean relaxedMatch = exactMatch || anaph.relaxedSpanMatch(anaphSent, antec, antecSent);
-				
-				feat.append(", " + "RLXMAT=" + relaxedMatch);
-				feat.append(", " + "EXTMAT=" + exactMatch);
-				
-//				if(!compatibleModifier && exactMatch) {
-//					System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%");
-//					antec.display(antecSent, System.out);
-//					anaph.display(anaphSent, System.out);
-//				}
-			}
+		//string match features
+		if(anaph.isList() || antec.isList()) {
+			feat.append(", " + "HDMAT=true");
+			feat.append(", " + "CMPMOD=true");
+			feat.append(", " + "WDIND=true");
+			feat.append(", " + "RLXMAT=true");
+			feat.append(", " + "EXTMAT=true");
+		}
+		else {
+			boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent, dict);
+			feat.append(", " + "HDMAT=" + headMatch);
+			
+			//Acronym or Demonym
+			boolean ADNYM = (Mention.options.useDemonym() && anaph.isDemonym(anaphSent, antec, antecSent, dict))
+					|| anaph.acronymMatch(anaphSent, antec, antecSent, dict);
+			
+			//compatible modifier
+			boolean compatibleModifier = ADNYM || antec.compatibleModifier(antecSent, anaph, anaphSent, dict);
+			feat.append(", " + "CMPMOD=" + compatibleModifier);
+			//wordInclude
+			boolean wordIncluded = ADNYM || antec.wordsInclude(antecSent, anaph, anaphSent, dict);
+			feat.append(", " + "WDIND=" + wordIncluded);
+			//exact match
+			boolean exactMatch = ADNYM || anaph.exactSpanMatch(anaphSent, antec, antecSent);
+			//relaxed match
+			boolean relaxedMatch = exactMatch || anaph.relaxedSpanMatch(anaphSent, antec, antecSent);
+			
+			feat.append(", " + "RLXMAT=" + relaxedMatch);
+			feat.append(", " + "EXTMAT=" + exactMatch);
+			
+//			if(compatibleModifier && wordIncluded && relaxedMatch && !exactMatch) {
+//				System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%");
+//				antec.display(antecSent, System.out);
+//				anaph.display(anaphSent, System.out);
+//			}
 		}
 		addMentionFeature(feat.toString(), given.toString(), model, mfv);
 		
@@ -126,18 +129,19 @@ public class MentionFeatureGenerator {
 		//mention type features
 		StringBuilder given = new StringBuilder();
 		given.append("ANTECTYPE=" +  antec.getMentionType());
-		given.append(", DEFINITE=" + antec.definite);
+		//definiteness features
+//		given.append(", DEFINITE=" + antec.definite);
 		given.append(", COREF");
 		
 		StringBuilder feat = new StringBuilder();
 		feat.append("ANAPHTYPE=" + anaph.getMentionType());
 		
-		//definiteness features
+		//distance features
 		int distOfSent = anaph.getDistOfSent(antec);
 		feat.append(", " + "DISTOFSENT=" + distOfSent);
 		
 		//definiteness features
-		feat.append(", " + "DEFINITE=" + anaph.definite);
+//		feat.append(", " + "DEFINITE=" + anaph.definite);
 		
 		//string match features (does not apply for pronominals)
 		if(!anaph.isPronominal() && !antec.isPronominal()) {
@@ -171,6 +175,15 @@ public class MentionFeatureGenerator {
 				feat.append(", " + "RLXMAT=" + relaxedMatch);
 				feat.append(", " + "EXTMAT=" + exactMatch);
 			}
+			
+			//number features;
+			//feat.append(", " + "NUM=" + anaph.number);
+			
+			//animacy features
+			//feat.append(", " + "ANI=" + anaph.animacy);
+			
+			//gender features
+			//feat.append(", " + "GENDER=" + anaph.gender);
 		}
 		
 		addMentionFeature(feat.toString(), given.toString(), model, mfv);
@@ -188,21 +201,17 @@ public class MentionFeatureGenerator {
 		StringBuilder feat = new StringBuilder();
 		feat.append("TYPE=" + anaph.getMentionType());
 		
-		
-//		feat = feat  + ", " + "PRECMATPOS=" + anaph.closestPreciseMatchPos + ", " 
-//				+ "PRECMATTYPE=" + anaph.closestPreciseMatchType;
-		
 		//definiteness features
-		feat.append(", " + "DEFINITE=" + anaph.definite);
+//		feat.append(", " + "DEFINITE=" + anaph.definite);
 		
 		if(anaph.isPronominal()) {
 			int localAttrMatchOfSent = anaph.localAttrMatch == null ? -1 : anaph.getDistOfSent(anaph.localAttrMatch);
 			String localAttrMatchType = anaph.localAttrMatch == null ? null : anaph.localAttrMatch.getMentionType().toString();
-			String localAttrMatchDefinite = anaph.localAttrMatch == null ? null : anaph.localAttrMatch.definite.toString();
+//			String localAttrMatchDefinite = anaph.localAttrMatch == null ? null : anaph.localAttrMatch.definite.toString();
 			
 			feat.append(", " + "LOCATTRMATOFSENT=" + localAttrMatchOfSent);
 			feat.append(", " + "LOCATTRMATTYPE=" + localAttrMatchType); 
-			feat.append(", " + "LOCATTRMATDEFINITE=" + localAttrMatchDefinite);
+//			feat.append(", " + "LOCATTRMATDEFINITE=" + localAttrMatchDefinite);
 		}
 		
 		addMentionFeature(feat.toString(), given, model, mfv);
@@ -214,56 +223,60 @@ public class MentionFeatureGenerator {
 	
 	protected void genPreciseMatchEventFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, 
 			Dictionaries dict, CorefModel model, FeatureVector efv) {
-		StringBuilder given = new StringBuilder();
-		given.append("ANTECEVENT=");
-		given.append(antec.getMainEvent().toFeature());
-		StringBuilder feat = new StringBuilder();
-		feat.append("ANAPHEVENT=");
-		feat.append(anaph.getMainEvent().toFeature());
-		addEventFeature(feat.toString(), given.toString(), model, efv);
+		// get event feature of antec
+		addEventFeature(null, null, model, efv);
 	}
 	
 	protected void genStringMatchEventFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, 
 			Dictionaries dict, CorefModel model, FeatureVector efv) {
-		StringBuilder given = new StringBuilder();
-		given.append("ANTECEVENT=");
-		given.append(antec.getMainEvent().toFeature());
-		StringBuilder feat = new StringBuilder();
-		feat.append("ANAPHEVENT=");
-		feat.append(anaph.getMainEvent().toFeature());
-		addEventFeature(feat.toString(), given.toString(), model, efv);
+		// get event feature of antec
+		String antecFeat = null;
+		if(antec.getMainEvent() != null) {
+			antecFeat = antec.getMainEvent().toFeature();
+		}
+		// get event feature of anaph
+		String anaphFeat = null;
+		if(anaph.getMainEvent() != null) {
+			anaphFeat = anaph.getMainEvent().toFeature();
+		}
+		addEventFeature(anaphFeat, antecFeat, model, efv);
 	}
 	
 	protected void genAttrMatchEventFeatures(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, 
 			Dictionaries dict, CorefModel model, FeatureVector efv) {
-		StringBuilder given = new StringBuilder();
-		given.append("ANTECEVENT=");
-		given.append(antec.getMainEvent().toFeature());
-		StringBuilder feat = new StringBuilder();
-		feat.append("ANAPHEVENT=");
-		feat.append(anaph.getMainEvent().toFeature());
-		addEventFeature(feat.toString(), given.toString(), model, efv);
+		// get event feature of antec
+		String antecFeat = null;
+		if(antec.getMainEvent() != null) {			
+			antecFeat = antec.getMainEvent().toFeature();
+		}
+		// get event feature of anaph
+		String anaphFeat = null;
+		if(anaph.getMainEvent() != null) {
+			anaphFeat = anaph.getMainEvent().toFeature();
+		}
+		addEventFeature(anaphFeat, antecFeat, model, efv);
 	}
 	
 	public void genEventNewClusterFeatures(Mention anaph, Sentence anaphSent, 
 			CorefModel model, FeatureVector efv) {
 		String given = "NEWCLUSEVENT";
-		StringBuilder feat = new StringBuilder();
-		feat.append("EVENT=");
-		feat.append(anaph.getMainEvent().toFeature());
-		addEventFeature(feat.toString(), given, model, efv);
+		String anaphFeat = null;
+		if(anaph.getMainEvent() != null) {
+			anaphFeat = anaph.getMainEvent().toFeature();
+		}
+		addEventFeature(anaphFeat, given, model, efv);
 	}
 	
 	protected final void addMentionFeature(String feat, String given, CorefModel model, FeatureVector mfv){
 		Pair<Integer, Integer> ids = model.getMentionFeatureIndex(feat, given);
-		if(mfv != null && ids != null){
+		if(mfv != null){
 			mfv.addFeature(ids.first, ids.second);
 		}
 	}
 	
 	protected final void addEventFeature(String feat, String given, CorefModel model, FeatureVector efv){
 		Pair<Integer, Integer> ids = model.getEventFeatureIndex(feat, given);
-		if(efv != null && ids != null){
+		if(efv != null){
 			efv.addFeature(ids.first, ids.second);
 		}
 	}

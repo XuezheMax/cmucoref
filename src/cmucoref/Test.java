@@ -34,8 +34,9 @@ import cmucoref.model.Feature;
 import cmucoref.model.FeatureVector;
 import cmucoref.model.Options;
 import cmucoref.util.Pair;
+import gnu.trove.iterator.TObjectIntIterator;
+import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.hash.TObjectIntHashMap;
-
 
 
 public class Test {
@@ -108,18 +109,19 @@ public class Test {
 		Options options = new Options(args);
 		Mention.options = options;
 		
-		DocumentReader reader = new AnnotatedDocumentReader();
+//		DocumentReader reader = new AnnotatedDocumentReader();
+		DocumentReader reader = new CoNLLXDocumentReader();
 		DocumentWriter writer = new CoNLLXDocumentWriter();
 		
-//		reader.startReading("data/test/original/conllx/gold/conll2012.eng.test.gold.nw.wsj.conllx");
-//		writer.startWriting("outfile/oracle.test.gold.nw.wsj.conllx");
-//		PrintStream printer = new PrintStream(new File("mention.conllx.test.gold.nw.wsj.txt"));
+		reader.startReading("data/test/original/conllx/gold/conll2012.eng.test.gold.tc.conllx");
+		writer.startWriting("outfile/oracle.test.gold.tc.conllx");
+		PrintStream printer = new PrintStream(new File("mention.conllx.test.gold.tc.txt"));
 		
-		reader.startReading("data/train/nyt_eng_200810.anno");
-		writer.startWriting("outfile/200810.conllx");
-		PrintStream printer = new PrintStream(new File("mention-200810.txt"));
+//		reader.startReading("data/train/nyt_eng_200810.anno");
+//		writer.startWriting("outfile/200810.conllx");
+//		PrintStream printer = new PrintStream(new File("mention-200810.txt"));
 		
-		Document doc = reader.getNextDocument(options, false);
+		Document doc = reader.getNextDocument(options, true);
 		
 		MentionExtractor mentionExtractor = new CMUMentionExtractor();
 		mentionExtractor.createDict(options.getPropFile());
@@ -133,10 +135,10 @@ public class Test {
 			List<List<Mention>> mentionList = mentionExtractor.extractPredictedMentions(doc, options);
 			mentionExtractor.getSingleMentionList(doc, mentionList, options);
 			mentionExtractor.displayMentions(doc, mentionList, printer);
-//			doc.getCorefClustersFromDocument(mentionList);
-//			doc.assignCorefClustersToDocument(mentionList, false);
-			writer.writeDocument(doc, false);
-			doc = reader.getNextDocument(options, false);
+			doc.getCorefClustersFromDocument(mentionList);
+			doc.assignCorefClustersToDocument(mentionList, false);
+			writer.writeDocument(doc, true);
+			doc = reader.getNextDocument(options, true);
 		}
 		
 		printer.close();

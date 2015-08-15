@@ -55,7 +55,7 @@ public class Mention implements Serializable{
 			"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
 			"eleven", "twelve", "thirteen", "fourteen", "fiveteen", "sixteen", "seventeen", "eighteen", "nineteen", 
 			"twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety",
-			"hundred", "thousand", "million", "billion"));
+			"hundred", "thousand", "million", "billion", "some", "most", "all"));
 	
 	public static final Set<String> dates = new HashSet<String>(Arrays.asList(
 			"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "yesterday", 
@@ -228,6 +228,10 @@ public class Mention implements Serializable{
 		eventSet.add(event);
 	}
 	
+	public void removeEvents(Set<Event> events) {
+		eventSet.removeAll(events);
+	}
+	
 	public void setMainEvent(Event mainEvent, boolean strict) {
 		if(mainEvent == null) {
 			return;
@@ -342,7 +346,7 @@ public class Mention implements Serializable{
 		return this.definite == Definiteness.DEFINITE;
 	}
 	
-	public boolean ruleout(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict) {
+	public boolean ruleout(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict, boolean strict) {
 		//attribute does not match ---> rule out
 		if(!antec.attrAgree(this, dict)) {
 			return true;
@@ -383,6 +387,27 @@ public class Mention implements Serializable{
 			return true;
 		}
 		
+		if(strict) {
+			int distOfSent = this.getDistOfSent(antec);
+			if(this.isPronominal()) {
+				if(antec.isPronominal()) {
+					if(distOfSent > 5) {
+						return true;
+					}
+				}
+				else {
+					if(distOfSent > 1) {
+						return true;
+					}
+				}
+			}
+			else if(antec.isPronominal()) {
+				if(distOfSent > 1) {
+					return true;
+				}
+			}
+		}
+		
 		return false;
 	}
 	
@@ -391,7 +416,7 @@ public class Mention implements Serializable{
 	 * @param mention
 	 * @return
 	 */
-	private int samePredicateSubjandObj(Mention mention, Dictionaries dict) {
+	public int samePredicateSubjandObj(Mention mention, Dictionaries dict) {
 		for(Event thisEvent : this.eventSet) {
 			for(Event mEvent : mention.eventSet) {
 				if(thisEvent.samePredicateWithSubjObj(mEvent)) {
@@ -697,7 +722,11 @@ public class Mention implements Serializable{
 	}
 	
 	public void addApposition(Mention appo, Dictionaries dict) throws MentionException {
-		if(!appo.attrAgree(this, dict)) {
+		if(!appo.numberAgree(this)) {
+			return;
+		}
+		
+		if(!appo.animateAgree(this)) {
 			return;
 		}
 		
@@ -742,7 +771,11 @@ public class Mention implements Serializable{
 			return;
 		}
 		
-		if(!role.attrAgree(this, dict)) {
+		if(!role.numberAgree(this)) {
+			return;
+		}
+		
+		if(!role.animateAgree(this)) {
 			return;
 		}
 		
@@ -1327,9 +1360,21 @@ public class Mention implements Serializable{
 				parts.contains("a " + headword.form.toLowerCase(Locale.ENGLISH)));
 	}
 	
+	private boolean isNumber(Lexicon word) {
+		if(word.postag.equals("CD") || numbers.contains(word.form.toLowerCase())) {
+			return true;
+		}
+		
+		String[] tokens = word.form.toLowerCase().split("-|:");
+		if(tokens.length == 0) {
+			return false;
+		}
+		return tokens[0].matches("[0-9]+(th|st|nd|rd)?|[0-9]+\\.[0-9]+|[0-9]+[0-9,]+(th|st|nd|rd)?");
+	}
+	
 	private boolean numberOfRule(Sentence sent) {
 		return (headIndex + 1 < endIndex) && 
-				headword.postag.equals("CD") 
+				isNumber(headword)
 				&& sent.getLexicon(headIndex + 1).form.equalsIgnoreCase("of");
 	}
 	
@@ -1486,10 +1531,11 @@ public class Mention implements Serializable{
 			}
 			
 			this.definite = Definiteness.GENERIC;
-			for(int i = this.startIndex; i <= this.headIndex; ++i) {
+			for(int i = this.startIndex; i < this.headIndex; ++i) {
 				String word = sent.getLexicon(i).form.toLowerCase();
 				String pos = sent.getLexicon(i).postag;
-				if(word.equals("its") || pos.equals("POS") || dict.determiners.contains(word) || quantDeterminers.contains(word)) {
+				if(word.equals("its") || pos.equals("POS") 
+						|| dict.determiners.contains(word) || quantDeterminers.contains(word)) {
 					this.definite = Definiteness.DEFINITE;
 					return;
 				}
@@ -1500,10 +1546,11 @@ public class Mention implements Serializable{
 			}
 			
 			if(this.belongTo != null) {
-				for(int i = this.belongTo.startIndex; i <= this.belongTo.headIndex; ++i) {
+				for(int i = this.belongTo.startIndex; i < this.belongTo.headIndex; ++i) {
 					String word = sent.getLexicon(i).form.toLowerCase();
 					String pos = sent.getLexicon(i).postag;
-					if(word.equals("its") || pos.equals("POS") || dict.determiners.contains(word) || quantDeterminers.contains(word)) {
+					if(word.equals("its") || pos.equals("POS") 
+							|| dict.determiners.contains(word) || quantDeterminers.contains(word)) {
 						this.definite = Definiteness.DEFINITE;
 						return;
 					}
@@ -1824,6 +1871,27 @@ public class Mention implements Serializable{
 				}
 				else if(inanimatePronouns.contains(headString)) {
 					animacy = Animacy.INANIMATE;
+				}
+				else if(headString.equals("$")) {
+					animacy = Animacy.INANIMATE;
+				}
+				else if(numberOfRule(sent)) {
+					for(int i = startIndex; i < endIndex; ++i) {
+						if(i == headIndex) {
+							continue;
+						}
+						Lexicon lex = sent.getLexicon(i);
+						if(lex.basic_head == headIndex || lex.basic_head == headIndex + 1) {
+							if(dict.animateWords.contains(lex.form)) {
+								animacy = Animacy.ANIMATE;
+								return;
+							}
+							else if(dict.inanimateWords.contains(lex.form)) {
+								animacy = Animacy.INANIMATE;
+								return;
+							}
+						}
+					}
 				}
 				else {
 					animacy = Animacy.UNKNOWN;

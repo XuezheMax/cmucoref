@@ -1,6 +1,8 @@
 package cmucoref.mention.eventextractor;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import cmucoref.document.Document;
 import cmucoref.document.Lexicon;
@@ -30,6 +32,33 @@ public class BasicEventExtractor extends EventExtractor {
 		
 		//find event with collapsed dependencies
 		findEventsWithCollapsedDep(sent, mention, options);
+		
+		//delete useless event
+		deleteUselessEvent(sent, mention, options);
+	}
+	
+	/**
+	 * delete useless event like [want, nsubj] in "I want to eat food" 
+	 * @param sent
+	 * @param mention
+	 * @param options
+	 */
+	protected void deleteUselessEvent(Sentence sent, Mention mention, Options options) {
+		Set<Event> removed = new HashSet<Event>();
+		for(Event event : mention.getEventSet()) {
+			for(Event xcomp : mention.getEventSet()) {
+				if(event.predPosition + 2 < sent.length()
+					&& event.predPosition + 2 == xcomp.predPosition 
+					&& sent.getLexicon(event.predPosition + 1).form.equals("to")
+					&& sent.getLexicon(xcomp.predPosition).basic_deprel.equals("xcomp")) {
+					removed.add(event);
+					if(mention.getMainEvent().equals(event)) {
+						mention.setMainEvent(xcomp, true);
+					}
+				}
+			}
+		}
+		mention.removeEvents(removed);
 	}
 	
 	protected void findEventsWithCollapsedDep(Sentence sent, Mention mention, Options options) {
@@ -48,25 +77,31 @@ public class BasicEventExtractor extends EventExtractor {
 				mention.addEvent(copulaEvent);
 				mention.setMainEvent(copulaEvent, true);
 				this.addEvent2Set(copulaEvent);
+				if(copulaEvent.grammaticRole.startsWith("nsubj")) {
+					findXCOMPEventWithBasicDep(sent, headword.collapsed_head, mention, isPart, options);
+					findConjEventsWithBasicDep(sent, headword.collapsed_head, mention, isPart, options);
+				}
 			}
 			else {		
 				String predicate = collapsed_headword.lemma;
 				Event collapsedEvent = null;
 				if(edict.englishVerbs.contains(predicate)) {
 					collapsedEvent = new Event(mention.sentID, sent, collapsed_headword.id, 
-							predicate, collapsed_deprel, isPart);
+							addParticle(predicate, collapsed_headword.id, sent), 
+							collapsed_deprel, isPart, edict);
 				}
 				else if(edict.englishVerbs.contains(normalize(predicate))) {
 					collapsedEvent = new Event(mention.sentID, sent, collapsed_headword.id, 
-							normalize(predicate), collapsed_deprel, isPart);
+							addParticle(normalize(predicate), collapsed_headword.id, sent), 
+							collapsed_deprel, isPart, edict);
 				}
 				else if(predicate.equals("$")) {
 					collapsedEvent = new Event(mention.sentID, sent, collapsed_headword.id, 
-							"be_$", collapsed_deprel, isPart);
+							"be_$", collapsed_deprel, isPart, edict);
 				}
 				else if(this.isNumber(predicate)) {
 					collapsedEvent = new Event(mention.sentID, sent, collapsed_headword.id, 
-							"be_<num>", collapsed_deprel, isPart);
+							"be_<num>", collapsed_deprel, isPart, edict);
 				}
 //				else {
 //					unknownVerbs.add(predicate);
@@ -74,6 +109,10 @@ public class BasicEventExtractor extends EventExtractor {
 				mention.addEvent(collapsedEvent);
 				mention.setMainEvent(collapsedEvent, true);
 				this.addEvent2Set(collapsedEvent);
+				if(collapsedEvent != null && collapsedEvent.grammaticRole.endsWith("subj")) {
+					findXCOMPEventWithBasicDep(sent, headword.collapsed_head, mention, isPart, options);
+					findConjEventsWithBasicDep(sent, headword.collapsed_head, mention, isPart, options);
+				}
 			}
 		}
 		else {
@@ -82,22 +121,25 @@ public class BasicEventExtractor extends EventExtractor {
 			if(this.acceptableGrammRole(collapsed_deprel, true)) {
 				if(edict.englishVerbs.contains(predicate)) {
 					collapsedEvent = new Event(mention.sentID, sent, collapsed_headword.id, 
-							predicate, collapsed_deprel, isPart);
+							addParticle(predicate, collapsed_headword.id, sent), 
+							collapsed_deprel, isPart, edict);
 				}
 				else if(edict.englishVerbs.contains(normalize(predicate))) {
 					collapsedEvent = new Event(mention.sentID, sent, collapsed_headword.id, 
-							normalize(predicate), collapsed_deprel, isPart);
+							addParticle(normalize(predicate), collapsed_headword.id, sent), 
+							collapsed_deprel, isPart, edict);
 				}
 				else if(predicate.equals("$")) {
 					collapsedEvent = new Event(mention.sentID, sent, collapsed_headword.id, 
-							"be_$", collapsed_deprel, isPart);
+							"be_$", collapsed_deprel, isPart, edict);
 				}
 				else if(this.isNumber(predicate)) {
 					collapsedEvent = new Event(mention.sentID, sent, collapsed_headword.id, 
-							"be_<num>", collapsed_deprel, isPart);
+							"be_<num>", collapsed_deprel, isPart, edict);
 				}
 			}
-			else {
+			
+			if(collapsedEvent == null) {
 				boolean[] used = new boolean[sent.length()];
 				used[headword.id] = true;
 				while(!used[collapsed_headword.id] && !collapsed_headword.postag.startsWith("VB") 
@@ -118,19 +160,21 @@ public class BasicEventExtractor extends EventExtractor {
 					predicate = collapsed_headword.lemma;
 					if(edict.englishVerbs.contains(predicate)) {
 						collapsedEvent = new Event(mention.sentID, sent, collapsed_headword.id, 
-								predicate, collapsed_deprel, isPart);
+								addParticle(predicate, collapsed_headword.id, sent), 
+								collapsed_deprel, isPart, edict);
 					}
 					else if(edict.englishVerbs.contains(normalize(predicate))) {
 						collapsedEvent = new Event(mention.sentID, sent, collapsed_headword.id, 
-								normalize(predicate), collapsed_deprel, isPart);
+								addParticle(normalize(predicate), collapsed_headword.id, sent), 
+								collapsed_deprel, isPart, edict);
 					}
 					else if(predicate.equals("$")) {
 						collapsedEvent = new Event(mention.sentID, sent, collapsed_headword.id, 
-								"be_$", collapsed_deprel, isPart);
+								"be_$", collapsed_deprel, isPart, edict);
 					}
 					else if(this.isNumber(predicate)) {
 						collapsedEvent = new Event(mention.sentID, sent, collapsed_headword.id, 
-								"be_<num>", collapsed_deprel, isPart);
+								"be_<num>", collapsed_deprel, isPart, edict);
 					}
 //					else {
 //						unknownVerbs.add(predicate);
@@ -163,6 +207,7 @@ public class BasicEventExtractor extends EventExtractor {
 					
 					//find conjunction verbs/events
 					if(copulaEvent.grammaticRole.startsWith("nsubj")) {
+						findXCOMPEventWithBasicDep(sent, headword.basic_head, mention, isPart, options);
 						findConjEventsWithBasicDep(sent, headword.basic_head, mention, isPart, options);
 					}
 				}
@@ -172,19 +217,21 @@ public class BasicEventExtractor extends EventExtractor {
 					Event basicEvent = null;
 					if(edict.englishVerbs.contains(predicate)) {
 						basicEvent = new Event(mention.sentID, sent, headword.basic_head, 
-								predicate, basic_deprel, isPart);
+								addParticle(predicate, headword.basic_head, sent), 
+								basic_deprel, isPart, edict);
 					}
 					else if(edict.englishVerbs.contains(normalize(predicate))) {
 						basicEvent = new Event(mention.sentID, sent, headword.basic_head, 
-								normalize(predicate), basic_deprel, isPart);
+								addParticle(normalize(predicate), headword.basic_head, sent), 
+								basic_deprel, isPart, edict);
 					}
 					else if(predicate.equals("$")) {
 						basicEvent = new Event(mention.sentID, sent, headword.basic_head, 
-								"be_$", basic_deprel, isPart);
+								"be_$", basic_deprel, isPart, edict);
 					}
 					else if(this.isNumber(predicate)) {
 						basicEvent = new Event(mention.sentID, sent, headword.basic_head, 
-								"be_<num>", basic_deprel, isPart);
+								"be_<num>", basic_deprel, isPart, edict);
 					}
 //					else {
 //						unknownVerbs.add(predicate);
@@ -195,6 +242,7 @@ public class BasicEventExtractor extends EventExtractor {
 					
 					//find conjunction verbs/events
 					if(basicEvent != null && basicEvent.grammaticRole.startsWith("nsubj")) {
+						findXCOMPEventWithBasicDep(sent, headword.basic_head, mention, isPart, options);
 						findConjEventsWithBasicDep(sent, headword.basic_head, mention, isPart, options);
 					}
 				}
@@ -204,19 +252,21 @@ public class BasicEventExtractor extends EventExtractor {
 				String predicate = basic_headword.lemma;
 				if(edict.englishVerbs.contains(predicate)) {
 					basicEvent = new Event(mention.sentID, sent, basic_headword.id, 
-							predicate, basic_deprel, isPart);
+							addParticle(predicate, basic_headword.id, sent), 
+							basic_deprel, isPart, edict);
 				}
 				else if(edict.englishVerbs.contains(normalize(predicate))) {
 					basicEvent = new Event(mention.sentID, sent, basic_headword.id, 
-							normalize(predicate), basic_deprel, isPart);
+							addParticle(normalize(predicate), basic_headword.id, sent), 
+							basic_deprel, isPart, edict);
 				}
 				else if(predicate.equals("$")) {
 					basicEvent = new Event(mention.sentID, sent, basic_headword.id, 
-							"be_$", basic_deprel, isPart);
+							"be_$", basic_deprel, isPart, edict);
 				}
 				else if(this.isNumber(predicate)) {
 					basicEvent = new Event(mention.sentID, sent, basic_headword.id, 
-							"be_<num>", basic_deprel, isPart);
+							"be_<num>", basic_deprel, isPart, edict);
 				}
 				else {
 					boolean[] used = new boolean[sent.length()];
@@ -231,19 +281,21 @@ public class BasicEventExtractor extends EventExtractor {
 						predicate = basic_headword.lemma;
 						if(edict.englishVerbs.contains(predicate)) {
 							basicEvent = new Event(mention.sentID, sent, basic_headword.id, 
-									predicate, basic_deprel, isPart);
+									addParticle(predicate, basic_headword.id, sent), 
+									basic_deprel, isPart, edict);
 						}
 						else if(edict.englishVerbs.contains(normalize(predicate))) {
 							basicEvent = new Event(mention.sentID, sent, basic_headword.id, 
-									normalize(predicate), basic_deprel, isPart);
+									addParticle(normalize(predicate), basic_headword.id, sent), 
+									basic_deprel, isPart, edict);
 						}
 						else if(predicate.equals("$")) {
 							basicEvent = new Event(mention.sentID, sent, basic_headword.id, 
-									"be_$", basic_deprel, isPart);
+									"be_$", basic_deprel, isPart, edict);
 						}
 						else if(this.isNumber(predicate)) {
 							basicEvent = new Event(mention.sentID, sent, basic_headword.id, 
-									"be_<num>", basic_deprel, isPart);
+									"be_<num>", basic_deprel, isPart, edict);
 						}
 //						else {
 //							unknownVerbs.add(predicate);
@@ -260,17 +312,42 @@ public class BasicEventExtractor extends EventExtractor {
 	protected Event findCopulaEventWithBasicDep(Sentence sent, int copulaPos, String gramRole, Mention mention, boolean isPart, Options options) {
 		Lexicon copula = sent.getLexicon(copulaPos);
 		if(!gramRole.startsWith("nsubj") && !gramRole.startsWith("xsubj")) {
-			return new Event(mention.sentID, sent, copulaPos, copula.lemma, gramRole, isPart);
+			return new Event(mention.sentID, sent, copulaPos, copula.lemma, gramRole, isPart, edict);
 		}
 		
 		for(int i = copulaPos + 1; i < sent.length(); ++i) {
 			Lexicon lexi = sent.getLexicon(i);
 			if(lexi.basic_head == copulaPos && lexi.basic_deprel.equals("acomp")) {
 				String acomp = this.isNumber(lexi.lemma) ? "<num>" : lexi.lemma;
-				return new Event(mention.sentID, sent, copulaPos, copula.lemma + "_" + acomp, gramRole, isPart);
+				return new Event(mention.sentID, sent, copulaPos, copula.lemma + "_" + acomp, gramRole, isPart, edict);
 			}
 		}
-		return new Event(mention.sentID, sent, copulaPos, copula.lemma, gramRole, isPart);
+		return new Event(mention.sentID, sent, copulaPos, copula.lemma, gramRole, isPart, edict);
+	}
+	
+	protected void findXCOMPEventWithBasicDep(Sentence sent, int verbPos, Mention mention, boolean isPart, Options options) {
+		if(verbPos + 2 < sent.length() && sent.getLexicon(verbPos + 1).form.equals("to")) {
+			Lexicon xverb = sent.getLexicon(verbPos + 2);
+			if(xverb.basic_head == verbPos && xverb.basic_deprel.equals("xcomp")) {
+				Event xcompEvent = null;
+				String predicate = xverb.lemma;
+				if(edict.englishVerbs.contains(predicate)) {
+					xcompEvent = new Event(mention.sentID, sent, xverb.id, 
+							addParticle(predicate, xverb.id, sent), "nsubj", isPart, edict);
+				}
+				else if(edict.englishVerbs.contains(normalize(predicate))) {
+					xcompEvent = new Event(mention.sentID, sent, xverb.id, 
+							addParticle(normalize(predicate), xverb.id, sent), "nsubj", isPart, edict);
+				}
+				mention.addEvent(xcompEvent);
+				mention.setMainEvent(xcompEvent, true);
+				this.addEvent2Set(xcompEvent);
+				
+				if(xcompEvent != null) {
+					findConjEventsWithBasicDep(sent, xverb.id, mention, isPart, options);
+				}
+			}
+		}
 	}
 	
 	protected void findConjEventsWithBasicDep(Sentence sent, int verbPos, Mention mention, boolean isPart, Options options) {
@@ -289,16 +366,18 @@ public class BasicEventExtractor extends EventExtractor {
 				if(!hasSubj) {
 					Event conjEvent = null;
 					if(edict.englishVerbs.contains(lexi.lemma)) {
-						conjEvent = new Event(mention.sentID, sent, i, lexi.lemma, "nsubj", isPart);
+						conjEvent = new Event(mention.sentID, sent, i, 
+								addParticle(lexi.lemma, i, sent), "nsubj", isPart, edict);
 					}
 					else if(edict.englishVerbs.contains(normalize(lexi.lemma))) {
-						conjEvent = new Event(mention.sentID, sent, i, normalize(lexi.lemma), "nsubj", isPart);
+						conjEvent = new Event(mention.sentID, sent, i, 
+								addParticle(normalize(lexi.lemma), i, sent), "nsubj", isPart, edict);
 					}
 					else if(lexi.lemma.equals("$")) {
-						conjEvent = new Event(mention.sentID, sent, i, "be_$", "nsubj", isPart);
+						conjEvent = new Event(mention.sentID, sent, i, "be_$", "nsubj", isPart, edict);
 					}
 					else if(this.isNumber(lexi.lemma)) {
-						conjEvent = new Event(mention.sentID, sent, i, "be_<num>", "nsubj", isPart);
+						conjEvent = new Event(mention.sentID, sent, i, "be_<num>", "nsubj", isPart, edict);
 					}
 //					else {
 //						unknownVerbs.add(lexi.lemma);
@@ -306,6 +385,8 @@ public class BasicEventExtractor extends EventExtractor {
 					mention.addEvent(conjEvent);
 					mention.setMainEvent(conjEvent, false);
 					this.addEvent2Set(conjEvent);
+					findXCOMPEventWithBasicDep(sent, i, mention, isPart, options);
+					findConjEventsWithBasicDep(sent, i, mention, isPart, options);
 					prev = i;
 				}
 				else {

@@ -182,6 +182,12 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 				&& negWords.contains(m.originalSpan.get(0).get(CoreAnnotations.TextAnnotation.class).toLowerCase(Locale.ENGLISH)))) {
 				remove.add(m);
 			}
+			
+			//single quantifiers
+			if(m.originalSpan.size() == 1
+				&& dict.quantifiers.contains(m.headString)) {
+				remove.add(m);
+			}
 
 			/*
 			// quantRule : not starts with 'any', 'all' etc
@@ -219,6 +225,11 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 			}
 			
 			if (headNE.equals("PERCENT")) {
+				remove.add(m);
+			}
+			
+			//other pronouns like "when", "who" ...
+			if(m.originalSpan.size() == 1 && dict.otherPronouns.contains(m.headString)) {
 				remove.add(m);
 			}
 
@@ -293,6 +304,9 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 				"@NP < (PRP=m1) $.. (@VP < (/^V.*/ < /^(?i:is|was|be|'s|becomes|become|became)$/ $.. (@VP < (VBN $.. @S|SBAR))))",// in practice, go with this one (best results)
 				"@NP < (NP < (PRP=m1)) $.. (@VP < (/^V.*/ < /^(?i:is|was|be|'s|becomes|become|became)$/ $.. (@VP < (VBN $.. @S|SBAR))))", // by Max
 
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|'s)/) $.. (SBAR < ((IN < /^(?:like)/) $.. S))))",
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|'s)/) $.. (SBAR < ((IN < /^(?:like)/) $.. S))))",
+				
 				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became)/) $.. (ADJP $.. (/S|SBAR/))))",
 				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became)/) $.. (ADJP $.. (/S|SBAR/))))", //by Max
 				
@@ -329,8 +343,8 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 				"NP < (NP < (PRP=m1)) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become)/) $.. (NP $.. ADVP $.. /S|SBAR/)))))", // by Max
 
 				//some other VBs
-				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:seems|seemed|appeared|appears|means|follows)/) $.. /S|SBAR/))",
-				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:seems|seemed|appeared|appears|means|follows)/) $.. /S|SBAR/))", // by Max
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:seems|seemed|appeared|appears|means|follows|helps)/) $.. /S|SBAR/))",
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:seems|seemed|appeared|appears|means|follows|helps)/) $.. /S|SBAR/))", // by Max
 
 				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:happens|happened)/) $.. SBAR))",
 				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:happens|happened)/) $.. SBAR))", // by Max

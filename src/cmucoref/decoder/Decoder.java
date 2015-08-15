@@ -13,6 +13,24 @@ import cmucoref.model.FeatureVector;
 public class Decoder {
 	public Decoder(){}
 	
+//	protected boolean ruleout(Mention anaph, Sentence anaphSent, Mention antec, Sentence antecSent, Dictionaries dict) {
+//		// same predicate with subj and obj role
+//		if(anaph.samePredicateSubjandObj(antec, dict) == -1) {
+//			return true;
+//		}
+//		
+//		return false;
+//	}
+//	protected boolean ruleoutByCluster(Mention anaph, Mention antec, Set<Mention> rule_outs) {
+//		for(Mention mention : antec.corefCluster.mentionSet) {
+//			if(rule_outs.contains(mention)) {
+//				return true;
+//			}
+//		}
+//		return false;
+//	}
+	
+	
 	public static Decoder createDecoder(String extractorClassName) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
 		return (Decoder) Class.forName(extractorClassName).newInstance();
 	}
@@ -53,14 +71,27 @@ public class Decoder {
 				}
 			}
 		}
-		else {
+		else if(anaph.isDefinite()) {
+//			Set<Mention> rule_outs = new HashSet<Mention>();
+//			for(int j = 0; j < anaphId; ++j) {
+//				Mention antec = allMentions.get(j);
+//				Sentence antecSent = doc.getSentence(antec.sentID);
+//				if(ruleout(anaph, anaphSent, antec, antecSent, manager.getDict())) {
+//					rule_outs.add(antec);
+//				}
+//			}
+			
 			for(int j = anaphId - 1; j >= 0; --j) {
 				Mention antec = allMentions.get(j);
 				Sentence antecSent = doc.getSentence(antec.sentID);
 				
-				if(anaph.ruleout(anaphSent, antec, antecSent, manager.getDict())) {
+				if(anaph.ruleout(anaphSent, antec, antecSent, manager.getDict(), true)) {
 					continue;
 				}
+				
+//				if(ruleoutByCluster(anaph, antec, rule_outs)) {
+//					continue;
+//				}
 				
 				FeatureVector mfv = new FeatureVector();
 				manager.mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 0, 
@@ -126,14 +157,27 @@ public class Decoder {
 				}
 			}
 		}
-		else {
+		else if(anaph.isDefinite()) {
+//			Set<Mention> rule_outs = new HashSet<Mention>();
+//			for(int j = 0; j < anaphId; ++j) {
+//				Mention antec = allMentions.get(j);
+//				Sentence antecSent = doc.getSentence(antec.sentID);
+//				if(ruleout(anaph, anaphSent, antec, antecSent, manager.getDict())) {
+//					rule_outs.add(antec);
+//				}
+//			}
+			
 			for(int j = anaphId - 1; j >= 0; --j) {
 				Mention antec = allMentions.get(j);
 				Sentence antecSent = doc.getSentence(antec.sentID);
 				
-				if(anaph.ruleout(anaphSent, antec, antecSent, manager.getDict())) {
+				if(anaph.ruleout(anaphSent, antec, antecSent, manager.getDict(), true)) {
 					continue;
 				}
+				
+//				if(ruleoutByCluster(anaph, antec, rule_outs)) {
+//					continue;
+//				}
 				
 				FeatureVector mfv = new FeatureVector();
 				FeatureVector efv = new FeatureVector();
@@ -155,16 +199,11 @@ public class Decoder {
 			}
 		}
 		
-		if(score == Double.NEGATIVE_INFINITY) {
-			decodeMention(doc, anaph, anaphId, allMentions, manager, model);
+		if(antecedent == null) {
+			anaph.setRepres();
 		}
-		else {
-			if(antecedent == null) {
-				anaph.setRepres();
-			}
-			else{
-				anaph.setAntec(antecedent);
-			}
+		else{
+			anaph.setAntec(antecedent);
 		}
 	}
 	

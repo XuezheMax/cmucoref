@@ -13,6 +13,8 @@ public class Event {
 	private Sentence sent = null;
 	private Set<Integer> parentSet = new HashSet<Integer>();
 	
+//	public static Set<String> roleSet = new HashSet<String>();
+	
 	public Event() {
 		sentID = -1;
 		predPosition = 0;
@@ -26,39 +28,51 @@ public class Event {
 		}
 	}
 	
+	private static String normalizeGrammaticRole(String role, EventDictionaries edict) {
+		if(role.equals("agent")) {
+			return "prep_by";
+		}
+		else if(role.equals("xsubj")) {
+			return "nsubj";
+		}
+		else if(role.equals("pobj")) {
+			return "dobj";
+		}
+		else if(role.endsWith("mod")) {
+			return "xmod";
+		}
+		else if(role.startsWith("prep_")) {
+			String prep = role.substring(5);
+			if(edict.englishPreps.contains(prep)) {
+				return role;
+			}
+			else {
+				return "prep_<other>";
+			}
+		}
+		else {
+			return role;
+		}
+	}
+	
 	public boolean isChildOf(Event e) {
 		return this.parentSet.contains(e.predPosition);
 	}
 	
-	public Event(int sentID, Sentence sent, int predPosition, String predicate, String role, boolean isPart) {
+	public Event(int sentID, Sentence sent, int predPosition, String predicate, String role, boolean isPart, EventDictionaries edict) {
 		this.sentID = sentID;
 		this.sent = sent;
 		this.predPosition = predPosition;
 		getParents(this.sent, this.predPosition);
 		
 		this.predicate = predicate;
-		this.grammaticRole = role;
-		if(this.grammaticRole.equals("agent")) {
-			this.grammaticRole = "prep_by";
-		}
-		else if(this.grammaticRole.equals("xsubj")) {
-			this.grammaticRole = "nsubj";
-		}
-		else if(this.grammaticRole.equals("pobj")) {
-			this.grammaticRole = "dobj";
-		}
-		else if(this.grammaticRole.endsWith("mod")) {
-			this.grammaticRole = "xmod";
-		}
-		
-		// normalize prep roles
-		if(this.grammaticRole.startsWith("prep_")) {
-			this.grammaticRole = "prep_all";
-		}
+		this.grammaticRole = normalizeGrammaticRole(role, edict);
 		
 		if(isPart) {
-			this.grammaticRole = "part_of<" + this.grammaticRole + ">";
+			this.grammaticRole = "part_of[" + this.grammaticRole + "]";
 		}
+		
+//		roleSet.add(this.grammaticRole);
 	}
 	
 	@Override

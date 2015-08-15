@@ -11,6 +11,8 @@ import cmucoref.util.Pair;
 
 public class AppositionRelationDepExtractor extends RelationExtractor {
 
+//	private static final TregexPattern appositionPattern = TregexPattern.compile("NP=m1 < (NP $. NP=m2)");
+	
 	@Override
 	public Set<Pair<Integer, Integer>> extractRelation(Sentence sent, List<Mention> mentions) {
 		Set<Pair<Integer, Integer>> relationSet = new HashSet<Pair<Integer, Integer>>();

@@ -34,18 +34,4 @@ public class FeatureVector extends TLinkedList {
 		}
 		return new Pair<int[], int[]>(keys, gids);
 	}
-	
-	public final double getScore(double[] params){
-		if(this.size() == 0){
-			return Double.NEGATIVE_INFINITY;
-		}
-		
-		double score = 0.0;
-		
-		for(Object b : this){
-			Feature f = (Feature)(b);
-			score += params[f.index];
-		}
-		return score;
-	}
 }
