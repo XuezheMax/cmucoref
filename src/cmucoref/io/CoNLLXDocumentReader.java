@@ -38,10 +38,10 @@ public class CoNLLXDocumentReader extends DocumentReader {
 	
 	protected Sentence getNextSentence(int id, boolean readCorefLabel) throws IOException {
 		String line = inputReader.readLine();
-		if(line == null){
+		if(line == null) {
 			throw new IOException("reading sentence error: no document end");
 		}
-		else if(line.equals("#end document")){
+		else if(line.equals("#end document")) {
 			return null;
 		}
 		
@@ -65,13 +65,13 @@ public class CoNLLXDocumentReader extends DocumentReader {
 		int i = 1;
 		String speaker = null;
 		
-		for(String[] info : lineList){
+		for(String[] info : lineList) {
 			//speaker
-			if(speaker == null){
+			if(speaker == null) {
 				speaker = info[12];
 			}
 			else {
-				if(!speaker.equals(info[12])){
+				if(!speaker.equals(info[12])) {
 					throw new IOException("speaker info error: " + speaker + " " + info[12]);
 				}
 			}

@@ -75,6 +75,7 @@ public class MentionFeatureGenerator {
 		feat.append("ANAPHTYPE=" + anaph.getMentionType());
 		
 		//distance of sentences
+//		int distOfStrMat = anaph.getDistOfStringMatch(antec);
 		feat.append(", " + "DISTOFSENT=-1");
 		
 		//definiteness features
@@ -110,7 +111,7 @@ public class MentionFeatureGenerator {
 			feat.append(", " + "RLXMAT=" + relaxedMatch);
 			feat.append(", " + "EXTMAT=" + exactMatch);
 			
-//			if(compatibleModifier && wordIncluded && relaxedMatch && !exactMatch) {
+//			if(!compatibleModifier && exactMatch) {
 //				System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%");
 //				antec.display(antecSent, System.out);
 //				anaph.display(anaphSent, System.out);
@@ -150,30 +151,17 @@ public class MentionFeatureGenerator {
 				feat.append(", " + "HDMAT=" + headMatch);
 				feat.append(", " + "CMPMOD=false");
 				feat.append(", " + "WDIND=false");
-				feat.append(", " + "RLXMAT=false");
-				feat.append(", " + "EXTMAT=false");
 			}
 			else {
 				boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent, dict);
 				feat.append(", " + "HDMAT=" + headMatch);
 				
-				//Acronym or Demonym
-				boolean ADNYM = (Mention.options.useDemonym() && anaph.isDemonym(anaphSent, antec, antecSent, dict))
-						|| anaph.acronymMatch(anaphSent, antec, antecSent, dict);
-				
 				//compatible modifier
-				boolean compatibleModifier = ADNYM || antec.compatibleModifier(antecSent, anaph, anaphSent, dict);
+				boolean compatibleModifier = antec.compatibleModifier(antecSent, anaph, anaphSent, dict);
 				feat.append(", " + "CMPMOD=" + compatibleModifier);
 				//wordInclude
-				boolean wordIncluded = ADNYM || antec.wordsInclude(antecSent, anaph, anaphSent, dict);
+				boolean wordIncluded = antec.wordsInclude(antecSent, anaph, anaphSent, dict);
 				feat.append(", " + "WDIND=" + wordIncluded);
-				//exact match
-				boolean exactMatch = ADNYM || anaph.exactSpanMatch(anaphSent, antec, antecSent);
-				//relaxed match
-				boolean relaxedMatch = exactMatch || anaph.relaxedSpanMatch(anaphSent, antec, antecSent);
-				
-				feat.append(", " + "RLXMAT=" + relaxedMatch);
-				feat.append(", " + "EXTMAT=" + exactMatch);
 			}
 			
 			//number features;

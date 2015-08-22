@@ -18,26 +18,26 @@ public class Parameters implements Serializable{
 	private double[] parameters = null;
 	private double[] nils = null;
 	private double[] uni_parameters = null;
-	private double uni_val;
+	private double nil;
 	private double uni_nil;
 	
 	public Parameters(){}
 	
 	public Parameters(int featSize, int givenSize, ParameterInitializer initializer, boolean isMentionParam) {
-		uni_val = Double.NEGATIVE_INFINITY;
-		uni_nil = Double.NEGATIVE_INFINITY;
 		parameters = new double[featSize];
+		nil = Double.NEGATIVE_INFINITY;
 		nils = new double[givenSize];
 		uni_parameters = new double[givenSize];
+		uni_nil = Double.NEGATIVE_INFINITY;
 		this.initialize(initializer, isMentionParam);
 	}
 	
 	private void initialize(ParameterInitializer initializer, boolean isMentionParam) {
 		if(isMentionParam) {
-			initializer.initializeMentionParams(this.parameters, this.nils, this.uni_parameters);
+			initializer.initializeMentionParams(this);
 		}
 		else {
-			initializer.initializeEventParams(this.parameters, this.nils, this.uni_parameters);
+			initializer.initializeEventParams(this);
 		}
 	}
 	
@@ -73,11 +73,11 @@ public class Parameters implements Serializable{
 			Feature f = (Feature)(b);
 			if(f.gid == -1) {
 				if(f.index == -1) {
-					score += Util.logsumexp(uni_val, uni_nil);
+					score += Util.logsumexp(nil, uni_nil);
 				}
 				else if(f.index < 0) {
 					int eid = -f.index - 2;
-					score += Util.logsumexp(uni_val, uni_parameters[eid]);
+					score += Util.logsumexp(nil, uni_parameters[eid]);
 				}
 				else {
 					throw new RuntimeException("f.index should be negative: " + f.index);
@@ -105,12 +105,12 @@ public class Parameters implements Serializable{
 		nils[gid] = val;
 	}
 	
-	public void updateUniParam(int index, double val) {
-		uni_parameters[index] = val;
+	public void updateNil(double nil) {
+		this.nil = nil;
 	}
 	
-	public void updateUni_Val(double uni_val) {
-		this.uni_val = uni_val;
+	public void updateUniParam(int index, double val) {
+		uni_parameters[index] = val;
 	}
 	
 	public void updateUni_Nil(double uni_nil) {
@@ -129,12 +129,24 @@ public class Parameters implements Serializable{
 		return uni_parameters[eid];
 	}
 	
-	public double uni_val() {
-		return uni_val;
+	public double nil() {
+		return nil;
 	}
 	
 	public double uni_nil() {
 		return uni_nil;
+	}
+	
+	public int sizeOfFeat() {
+		return parameters.length;
+	}
+	
+	public int sizeOfNil() {
+		return nils.length;
+	}
+	
+	public int sizeOfUni() {
+		return uni_parameters.length;
 	}
 	
 	private void writeObject(ObjectOutputStream out) throws IOException {
@@ -142,7 +154,7 @@ public class Parameters implements Serializable{
 		out.writeObject(this.nils);
 		out.writeObject(this.uni_parameters);
 		out.writeDouble(uni_nil);
-		out.writeDouble(uni_val);
+		out.writeDouble(nil);
 	}
 	
 	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
@@ -150,7 +162,7 @@ public class Parameters implements Serializable{
 		nils = (double[]) in.readObject();
 		uni_parameters = (double[]) in.readObject();
 		uni_nil = in.readDouble();
-		uni_val = in.readDouble();
+		nil = in.readDouble();
 		
 	}
 }

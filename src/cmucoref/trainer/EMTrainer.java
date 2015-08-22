@@ -37,7 +37,7 @@ public class EMTrainer extends Trainer{
 		System.out.println("Num Features: " + model.mentionFeatureSize());
 		System.out.println("Num Documents: " + nums[threadNum]);
 		if(model.options.useEventFeature()) {
-			System.out.println("Num of Events: " + model.givenSizeofEvent() + " " + model.sizeOfEvent());
+			System.out.println("Num of Events: " + model.givenSizeofEvent() + " " + model.eventV());
 			System.out.println("Num Event Features: " + model.eventFeatureSize());
 			System.out.println("Smoother: " + model.options.getParamSmoother());
 			System.out.println("Smoothing Alpha: " + model.options.getSmoothingAlpha());
@@ -192,6 +192,7 @@ public class EMTrainer extends Trainer{
 			model.displayMentionAlphabet(new PrintStream(new File("mFeat." + alpha + ".txt")));
 			model.displayEventAlphabet(new PrintStream(new File("eFeat." + alpha + ".txt")));
 			logWriter.close();
+			saveModel(model, modelfile + "." + alpha);
 			System.out.println("---------------------------------------------");
 			System.out.flush();
 		}
@@ -233,7 +234,7 @@ public class EMTrainer extends Trainer{
 			}
 		}
 		smoother.smooth(threads[0].mFeatC, threads[0].mGivenC, threads[0].mGivenCNoNil, 0.0, 
-						null, null, null, 0.0, model);
+						null, null, null, null, threads[0].eUnigramN, 0.0, model);
 	}
 	
 	protected void EMIterationWithEvent(CorefManager manager, CorefModel model, Smoother smoother, double alpha_e, PrintWriter logWriter, int[] nums, String traintmp, int threadNum) {
@@ -281,10 +282,13 @@ public class EMTrainer extends Trainer{
 			for(int j = 0; j < gsizeOfE; ++j) {
 				threads[0].eGivenC[j] = Util.logsumexp(threads[0].eGivenC[j], threads[i].eGivenC[j]);
 				threads[0].eGivenCNoNil[j] = Util.logsumexp(threads[0].eGivenCNoNil[j], threads[i].eGivenCNoNil[j]);
+				threads[0].eUnigramC[j] = Util.logsumexp(threads[0].eUnigramC[j], threads[i].eUnigramC[j]);
 			}
+			threads[0].eUnigramN = Util.logsumexp(threads[0].eUnigramN, threads[i].eUnigramN);
 		}
 		smoother.smooth(threads[0].mFeatC, threads[0].mGivenC, threads[0].mGivenCNoNil, 0.0, 
-						threads[0].eFeatC, threads[0].eGivenC, threads[0].eGivenCNoNil, alpha_e, model);
+						threads[0].eFeatC, threads[0].eGivenC, threads[0].eGivenCNoNil, 
+						threads[0].eUnigramC, threads[0].eUnigramN, alpha_e, model);
 	}
 	
 	protected void evaluateCurrentAcc(CorefManager manager, Decoder decoder, CorefModel model, boolean useEvent, 
@@ -347,6 +351,8 @@ class EMThread extends Thread {
 	public double[] eFeatC = null;
 	public double[] eGivenC = null;
 	public double[] eGivenCNoNil = null;
+	public double[] eUnigramC = null;
+	public double eUnigramN = Double.NEGATIVE_INFINITY;
 	
 	boolean updateEvent = false;
 	
@@ -367,9 +373,12 @@ class EMThread extends Thread {
 			eFeatC = new double[model.eventFeatureSize()];
 			eGivenC = new double[model.givenSizeofEvent()];
 			eGivenCNoNil = new double[model.givenSizeofEvent()];
+			eUnigramC = new double[model.givenSizeofEvent()];
 			Arrays.fill(eFeatC, Double.NEGATIVE_INFINITY);
 			Arrays.fill(eGivenC, Double.NEGATIVE_INFINITY);
 			Arrays.fill(eGivenCNoNil, Double.NEGATIVE_INFINITY);
+			Arrays.fill(eUnigramC, Double.NEGATIVE_INFINITY);
+			eUnigramN = Double.NEGATIVE_INFINITY;
 		}
 	}
 	
@@ -425,6 +434,11 @@ class EMThread extends Thread {
 									eFeatC[f.index] = Util.logsumexp(eFeatC[f.index], val);
 									eGivenCNoNil[f.gid] = Util.logsumexp(eGivenCNoNil[f.gid], val);
 								}
+							}
+							eUnigramN = Util.logsumexp(eUnigramN, val);
+							if(f.index != -1) {
+								int eid = model.getEventIdFromIndex(f.index);
+								eUnigramC[eid] = Util.logsumexp(eUnigramC[eid], val);
 							}
 						}
 					}

@@ -56,10 +56,7 @@ public class Decoder {
 			}
 		}
 		else if(anaph.stringMatchs != null) {
-			int length = anaph.stringMatchs.size();
-			for(int j = length - 1; j >= 0; --j) {
-//			for(int j = 0; j < length; ++j) {
-				Mention antec = anaph.stringMatchs.get(j);
+			for(Mention antec : anaph.stringMatchs) {
 				Sentence antecSent = doc.getSentence(antec.sentID);
 				FeatureVector mfv = new FeatureVector();
 				manager.mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 1,
@@ -141,10 +138,7 @@ public class Decoder {
 			}
 		}
 		else if(anaph.stringMatchs != null) {
-			int length = anaph.stringMatchs.size();
-			for(int j = length - 1; j >= 0; --j) {
-//			for(int j = 0; j < length; ++j) {
-				Mention antec = anaph.stringMatchs.get(j);
+			for(Mention antec : anaph.stringMatchs) {
 				Sentence antecSent = doc.getSentence(antec.sentID);
 				FeatureVector mfv = new FeatureVector();
 				FeatureVector efv = new FeatureVector();

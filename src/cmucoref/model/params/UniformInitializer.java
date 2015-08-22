@@ -1,18 +1,24 @@
 package cmucoref.model.params;
 
-import java.util.Arrays;
+import cmucoref.model.Parameters;
 
 public class UniformInitializer extends ParameterInitializer{
 
 	public UniformInitializer(){}
 	
 	@Override
-	public void initializeMentionParams(double[] parameters, double[] nils, double[] uni_parameters) {
-		Arrays.fill(nils, Double.NEGATIVE_INFINITY);
-		Arrays.fill(uni_parameters, Double.NEGATIVE_INFINITY);
-		for(int j = 0; j < parameters.length; ++j) {
+	public void initializeMentionParams(Parameters parameters) {
+		for(int j = 0; j < parameters.sizeOfNil(); ++j) {
+			parameters.updateNil(j, Double.NEGATIVE_INFINITY);
+		}
+		
+		for(int j = 0; j < parameters.sizeOfUni(); ++j) {
+			parameters.updateUniParam(j, Double.NEGATIVE_INFINITY);
+		}
+		
+		for(int j = 0; j < parameters.sizeOfFeat(); ++j) {
 			int gid = model.getMentionGidFromIndex(j);
-			parameters[j] = -Math.log(model.getSizeOfMentionFeatFromGid(gid));
+			parameters.updateParam(j, -Math.log(model.getSizeOfMentionFeatFromGid(gid)));
 		}
 		
 //		for(int j = 0; j < parameters.length; ++j) {
@@ -21,10 +27,21 @@ public class UniformInitializer extends ParameterInitializer{
 	}
 
 	@Override
-	public void initializeEventParams(double[] parameters, double[] nils, double[] uni_parameters) {
-		double val = -Math.log(model.sizeOfEvent() + 2);
-		Arrays.fill(parameters, val);
-		Arrays.fill(nils, val);
-		Arrays.fill(uni_parameters, Double.NEGATIVE_INFINITY);
+	public void initializeEventParams(Parameters parameters) {
+		double val = -Math.log(model.eventV());
+		for(int j = 0; j < parameters.sizeOfNil(); ++j) {
+			parameters.updateNil(j, val);
+		}
+		
+		for(int j = 0; j < parameters.sizeOfUni(); ++j) {
+			parameters.updateUniParam(j, val);
+		}
+		
+		for(int j = 0; j < parameters.sizeOfFeat(); ++j) {
+			parameters.updateParam(j, val);
+		}
+		
+		parameters.updateUni_Nil(Double.NEGATIVE_INFINITY);
+		parameters.updateNil(val);
 	}
 }

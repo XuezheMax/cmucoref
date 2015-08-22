@@ -9,16 +9,16 @@ public class AdditiveSmoother extends Smoother {
 	}
 	
 	@Override
-	protected void smoothEventParams(double[] eFeatC, double[] eGivenC, double[] eGivenCNoNil, double alpha_e, CorefModel model) {
+	protected void smoothEventParams(double[] eFeatC, double[] eGivenC, double[] eGivenCNoNil, double[] eUnigramC, double eUnigramN, double alpha_e, CorefModel model) {
 		int nsizeOfE = model.eventFeatureSize();
 		int gsizeOfE = model.givenSizeofEvent();
 		
-		int d = model.sizeOfEvent() + 2;
+		int d = model.eventV();
 		double logD = Math.log(d);
 		double logAlpha = Math.log(alpha_e);
 		
 		//update uni_val
-		model.updateEventUni_Val(-logD);
+		model.updateEventNil(-logD);
 		
 		//update event parameters
 		for(int j = 0; j < nsizeOfE; ++j) {

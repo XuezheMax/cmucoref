@@ -1,6 +1,7 @@
 package cmucoref.model.params;
 
 import cmucoref.model.CorefModel;
+import cmucoref.model.Parameters;
 
 public abstract class ParameterInitializer {
 	protected CorefModel model = null;
@@ -11,7 +12,7 @@ public abstract class ParameterInitializer {
 		this.model = model;
 	}
 	
-	public abstract void initializeMentionParams(double[] parameters, double[] nils, double[] uni_parameters);
+	public abstract void initializeMentionParams(Parameters parameters);
 	
-	public abstract void initializeEventParams(double[] parameters, double[] nils, double[] uni_parameters);
+	public abstract void initializeEventParams(Parameters parameters);
 }

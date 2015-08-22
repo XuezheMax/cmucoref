@@ -159,6 +159,8 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 //	private static final Set<String> determiners = new HashSet<String>(Arrays.asList("these", "those", "this", "that"));
 	private static final Set<String> nonWords = new HashSet<String>(Arrays.asList("mm", "hmm", "ahem", "um", "uh", "%mm", "%hmm", "%ahem", "%um", "%uh"));
 	private static final Set<String> negWords = new HashSet<String>(Arrays.asList("nobody", "none", "nothing", "no", "not"));
+	private static final Set<String> bareNPWords = new HashSet<String>(Arrays.asList("sense", "case"));
+	
 	protected static void removeSpuriousMentions(CoreMap s, List<Mention> mentions, Dictionaries dict) {
 		Tree tree = s.get(TreeCoreAnnotations.TreeAnnotation.class);
 //		List<CoreLabel> sent = s.get(CoreAnnotations.TokensAnnotation.class);
@@ -204,14 +206,11 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 			}
 			*/
 			
-			/*
 			String headPOS = m.headWord.get(CoreAnnotations.PartOfSpeechAnnotation.class);
 			// bareNPRule
-			if(headPOS.equals("NN") && !dict.temporals.contains(m.headString) && !m.headString.equals("today")
-					&& !bareNNs.contains(m.headString) && m.originalSpan.size() == 1) {
+			if(headPOS.equals("NN") && m.originalSpan.size() == 1 && bareNPWords.contains(m.headString)) {
 				remove.add(m);
 			}
-			*/
 			
 			/*
 			//remove this, that, these and those
@@ -296,10 +295,6 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 		final String[] patterns = {
 				// cdm 2013: I spent a while on these patterns. I fixed a syntax error in five patterns ($.. split with space), so it now shouldn't exception in checkPleonastic. This gave 0.02% on CoNLL11 dev
 				// I tried some more precise patterns but they didn't help. Indeed, they tended to hurt vs. the higher recall patterns.
-
-//				"@NP <: (DT=m1) $. (@VP < (/^V.*/ < /^(?i:is|was|be|becomes|become|became)$/ $.. (@VP < (VBN $.. @S|SBAR))))",// in practice, go with this one (best results)
-//				"NP <: (DT=m1) $. (VP < ((/^V.*/ < /^(?:is|was|become|became)/) $.. (ADJP $.. (/S|SBAR/))))",
-//				"NP <: (DT=m1) $. (VP < ((/^V.*/ < /^(?:is|was|become|became)/) $.. (ADJP < (/S|SBAR/))))",
 				
 				"@NP < (PRP=m1) $.. (@VP < (/^V.*/ < /^(?i:is|was|be|'s|becomes|become|became)$/ $.. (@VP < (VBN $.. @S|SBAR))))",// in practice, go with this one (best results)
 				"@NP < (NP < (PRP=m1)) $.. (@VP < (/^V.*/ < /^(?i:is|was|be|'s|becomes|become|became)$/ $.. (@VP < (VBN $.. @S|SBAR))))", // by Max
@@ -320,6 +315,9 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became|takes|took)/) $.. (NP $.. (/S|SBAR/))))", // by Max
 				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became|takes|took)/) $.. (NP $.. (/S|SBAR/))))", // by Max
 				
+				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:makes|made)/) $.. ((NP < (NN < /^(?:sense)/)) $.. S)))", // by Max
+				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:makes|made)/) $.. ((NP < (NN < /^(?:sense)/)) $.. S)))", // by Max
+				
 				"NP < (PRP=m1) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became)/) $.. (NP $.. ADVP $.. /S|SBAR/)))",
 				"NP < (NP < (PRP=m1)) $.. (VP < ((/^V.*/ < /^(?:is|was|'s|becomes|become|became)/) $.. (NP $.. ADVP $.. /S|SBAR/)))", // by Max
 				
@@ -338,6 +336,10 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 				
 				"NP < (PRP=m1) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become|take)/) $.. (NP $.. /S|SBAR/)))))", // by Max
 				"NP < (NP < (PRP=m1)) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become|take)/) $.. (NP $.. /S|SBAR/)))))", // by Max
+				
+				//it would make sense to do...
+				"NP < (PRP=m1) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:make)/) $.. ((NP < (NN < /^(?:sense)/)) $.. S)))))", // by Max
+				"NP < (NP < (PRP=m1)) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:make)/) $.. ((NP < (NN < /^(?:sense)/)) $.. S)))))", // by Max
 				
 				"NP < (PRP=m1) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become)/) $.. (NP $.. ADVP $.. /S|SBAR/)))))",
 				"NP < (NP < (PRP=m1)) $.. (VP < (MD $.. (VP < ((/^V.*/ < /^(?:be|become)/) $.. (NP $.. ADVP $.. /S|SBAR/)))))", // by Max

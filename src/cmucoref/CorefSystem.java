@@ -52,10 +52,10 @@ public class CorefSystem {
 					options.getLogFile(), options.getModelFile());
 		}
 		else if(options.getMode().equals("test")){
-			System.out.print("Loading Model...");
+			System.err.print("Loading Model...");
 			long clock = System.currentTimeMillis() / 1000;
 			CorefModel model = loadModel(options.getModelFile());
-			System.out.println("Done. Took: " + (System.currentTimeMillis() / 1000 - clock) + "s.");
+			System.err.println("Done. Took: " + (System.currentTimeMillis() / 1000 - clock) + "s.");
 			
 			clock = System.currentTimeMillis() / 1000;
 			Mention.options = model.options;
@@ -87,7 +87,7 @@ public class CorefSystem {
 			Document doc = docReader.getNextDocument(model.options, false);
 			boolean useEvent = model.options.useEventFeature();
 			while(doc != null){
-				System.out.println("Processing Doc: " + doc.getFileName() + " part: " + doc.getDocId());
+				System.err.println("Processing Doc: " + doc.getFileName() + " part: " + doc.getDocId());
 				List<List<Mention>> mentionList = decoder.decode(doc, manager, model, useEvent);
 				doc.assignCorefClustersToDocument(mentionList, model.options.postProcessing());
 				docWriter.writeDocument(doc, true);
@@ -95,7 +95,7 @@ public class CorefSystem {
 			}
 			docReader.close();
 			docWriter.close();
-			System.out.println("Done. Took: " + (System.currentTimeMillis() / 1000 - clock) + "s.");
+			System.err.println("Done. Took: " + (System.currentTimeMillis() / 1000 - clock) + "s.");
 			
 			String scorer = options.getCoNLLScorer();
 			String goldfile = options.getGoldFile();

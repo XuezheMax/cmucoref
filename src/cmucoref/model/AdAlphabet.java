@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 
 import cmucoref.util.Pair;
+import cmucoref.util.Util;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
@@ -69,15 +70,15 @@ public class AdAlphabet extends Alphabet {
 	public void display(PrintStream printer, Parameters params) {
 		List<String> givens = new ArrayList<String>(givenMap.keySet());
 		Collections.sort(givens);
-		printer.println("uni_val: " + params.uni_val());
 		printer.println("unigram probability: " + givens.size());
-		printer.println("uni_nil: " + params.uni_nil());
+		printer.println("uni_nil: " + params.uni_nil() + ", nil|nil: " + Util.logsumexp(params.nil(), params.uni_nil()));
 		for(String given : givens) {
 			int gid = givenMap.get(given);
-			printer.println(given + ": " + params.uniParamAt(gid));
+			printer.println(given + ": " + params.uniParamAt(gid) + ", " + given + "|nil: " + Util.logsumexp(params.nil(), params.uniParamAt(gid)));
 		}
 		printer.println("------------------");
 		printer.println("bigram probability:");
+		printer.println("nil: " + params.nil() + ", nil|nil: " + Util.logsumexp(params.nil(), params.uni_nil()));
 		super.display(printer, params);
 	}
 }

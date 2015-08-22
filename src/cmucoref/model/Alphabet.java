@@ -16,6 +16,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import cmucoref.util.Pair;
+import cmucoref.util.Util;
 import cmucoref.util.trove.EqualsHashingStrategy;
 
 public class Alphabet implements Serializable{
@@ -138,7 +139,7 @@ public class Alphabet implements Serializable{
 			TObjectIntHashMap<String> subMap = map.get(given);
 			int gid = givenMap.get(given);
 			printer.println("num of feat: " + sizes.get(gid));
-			printer.println("nil: " + params.nilAt(gid));
+			printer.println("nil[" + given + "]: " + params.nilAt(gid) + ", nil|" + given + ": " + Util.logsumexp(params.nilAt(gid), params.uni_nil()));
 			List<String> feats = new ArrayList<String>(subMap.keySet());
 			Collections.sort(feats);
 			for(Object feat : feats) {

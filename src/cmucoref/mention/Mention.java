@@ -55,7 +55,9 @@ public class Mention implements Serializable{
 			"one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
 			"eleven", "twelve", "thirteen", "fourteen", "fiveteen", "sixteen", "seventeen", "eighteen", "nineteen", 
 			"twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety",
-			"hundred", "thousand", "million", "billion", "some", "most", "all"));
+			"hundred", "thousand", "million", "billion"));
+	
+	private static final Set<String> quantifiers = new HashSet<String>(Arrays.asList("both", "all", "some", "most", "any"));
 	
 	public static final Set<String> dates = new HashSet<String>(Arrays.asList(
 			"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "yesterday", 
@@ -396,13 +398,13 @@ public class Mention implements Serializable{
 					}
 				}
 				else {
-					if(distOfSent > 1) {
+					if(distOfSent > 3) {
 						return true;
 					}
 				}
 			}
 			else if(antec.isPronominal()) {
-				if(distOfSent > 1) {
+				if(distOfSent > 3) {
 					return true;
 				}
 			}
@@ -440,21 +442,14 @@ public class Mention implements Serializable{
 		return 0;
 	}
 	
-//	public int getDistOfMention(Mention mention){
-////		int distOfSent = this.getDistOfSent(mention);
-////		int lowerbound = distOfSent * 10;
-////		int upperbound = (distOfSent + 1) * 10 - 1;
-////		
-////		int distOfMention = (this.mentionID - mention.mentionID) / 5;
-////		if(distOfMention < lowerbound){
-////			distOfMention = lowerbound;
-////		}
-////		if(distOfMention > upperbound){
-////			distOfMention = upperbound;
-////		}
-////		return distOfMention;
-//		return this.mentionID - mention.mentionID;
-//	}
+	public int getDistOfStringMatch(Mention stringMatch) {
+		int index = this.stringMatchs.indexOf(stringMatch);
+		if(index < 0) {
+			throw new RuntimeException("cannot find string match mention");
+		}
+		
+		return Math.min(index, 10);
+	}
 	
 	public int getAbsoluteDistOfSent(Mention mention) {
 		int distOfSent = 0;
@@ -780,12 +775,7 @@ public class Mention implements Serializable{
 		}
 		
 		String thisString = this.getSpan(sent);
-		if(thisString.contains("'") || thisString.contains("and")) {
-			return;
-		}
-		
-		if(dict.demonymSet.contains(thisString.toLowerCase()) 
-			|| dict.demonymSet.contains(role.getSpan(sent).toLowerCase())) {
+		if(thisString.contains("'")) {
 			return;
 		}
 		
@@ -1023,10 +1013,10 @@ public class Mention implements Serializable{
 		else if(options.useDemonym() && this.isDemonym(sent, anaph, anaphSent, dict)) {
 			return true;
 		}
-		else if((this.headword.ner.startsWith("PER") && anaph.headword.ner.startsWith("PER") 
-				|| this.headword.ner.startsWith("ORG") && anaph.headword.ner.startsWith("ORG") 
-				|| this.headword.ner.startsWith("LOC") && anaph.headword.ner.startsWith("LOC")
-				|| this.headword.ner.startsWith("GPE") && anaph.headword.ner.startsWith("GPE"))
+		else if((this.headword.ner.startsWith("PER") && anaph.headword.ner.startsWith("PER") )
+//				|| this.headword.ner.startsWith("ORG") && anaph.headword.ner.startsWith("ORG")
+//				|| this.headword.ner.startsWith("LOC") && anaph.headword.ner.startsWith("LOC")
+//				|| this.headword.ner.startsWith("GPE") && anaph.headword.ner.startsWith("GPE"))
 				&& this.wordsInclude(sent, anaph, anaphSent, dict)) {
 			return true;
 		}
@@ -1035,51 +1025,26 @@ public class Mention implements Serializable{
 		}
 	}
 	
-	@SuppressWarnings("unused")
-	private boolean compatibleModifierforProper(Sentence sent, Mention anaph, Sentence anaphSent, Dictionaries dict) {
-		Set<String> locModifiersOfAntec = new HashSet<String>();
-		Set<String> numModifiersOfAntec = new HashSet<String>();
-		for(int i = this.startIndex; i < this.endIndex; ++i) {
-			Lexicon antecLex = sent.getLexicon(i);
-			if(locationModifiers.contains(antecLex.form.toLowerCase()) && antecLex.basic_head == this.headIndex ) {
-				locModifiersOfAntec.add(antecLex.form.toLowerCase());
-			}
-			if(antecLex.postag.equals("CD")) {
-				numModifiersOfAntec.add(antecLex.form.toLowerCase());
-			}
+	private boolean isNumber(Lexicon word) {
+		if(word.postag.equals("CD") 
+			|| numbers.contains(word.form.toLowerCase())) {
+			return true;
 		}
 		
-		Set<String> locModifiersOfAnaph = new HashSet<String>();
-		Set<String> numModifiersOfAnaph = new HashSet<String>();
-		for(int i = anaph.startIndex; i < anaph.endIndex; ++i) {
-			Lexicon anaphLex = anaphSent.getLexicon(i);
-			if(locationModifiers.contains(anaphLex.form.toLowerCase())) {
-				locModifiersOfAnaph.add(anaphLex.form.toLowerCase());
-			}
-			if(anaphLex.postag.equals("CD") && !entityWordsToExclude.contains(anaphLex.form.toLowerCase())) {
-				numModifiersOfAnaph.add(anaphLex.form.toLowerCase());
-			}
-		}
-		
-		if(!numModifiersOfAnaph.containsAll(numModifiersOfAntec) || !numModifiersOfAntec.containsAll(numModifiersOfAnaph)) {
+		String[] tokens = word.form.toLowerCase().split("-|:");
+		if(tokens.length == 0) {
 			return false;
 		}
-		
-		if((anaph.headword.ner.equals("GPE") || anaph.headword.ner.startsWith("LOC")) && 
-				(!locModifiersOfAnaph.containsAll(locModifiersOfAntec) || !locModifiersOfAntec.containsAll(locModifiersOfAnaph))) {
-			return false;
-		}
-		
-		return true;
-	}
-	
-	private boolean isNumber(String str) {
-		return str.matches("[0-9]+|[0-9]+\\.[0-9]+|[0-9]+[0-9,]+");
+		return tokens[0].matches("[0-9]+(th|st|nd|rd)?|[0-9]+\\.[0-9]+|[0-9]+[0-9,]+(th|st|nd|rd)?");
 	}
 	
 	public boolean compatibleModifier(Sentence sent, Mention anaph, Sentence anaphSent, Dictionaries dict) {
 		if(this.isPronominal() || anaph.isPronominal()){
 			throw new RuntimeException("error: compatible modifiers does not apply for pronominals");
+		}
+		
+		if(this.exactSpanMatch(sent, anaph, anaphSent)) {
+			return true;
 		}
 		
 		Set<String> modifiersOfAntec = new HashSet<String>();
@@ -1092,9 +1057,7 @@ public class Mention implements Serializable{
 			if(antecLex.postag.equals("PRP$") || dict.possessivePronouns.contains(antecLex.form.toLowerCase())) {
 				possessivePronsOfAntec.add(antecLex.form.toLowerCase());
 			}
-			else if((numbers.contains(antecLex.form.toLowerCase()) 
-						|| isNumber(antecLex.form.toLowerCase()))
-					&& antecLex.basic_head == this.headIndex) {
+			else if(isNumber(antecLex) && antecLex.basic_head == this.headIndex) {
 				numberModifiersOfAntec.add(antecLex.form.toLowerCase());
 			}
 			else if(locationModifiers.contains(antecLex.form.toLowerCase()) && antecLex.basic_head == this.headIndex) {
@@ -1120,15 +1083,14 @@ public class Mention implements Serializable{
 					|| anaphLex.postag.startsWith("V") || anaphLex.postag.equals("CD")) {
 				
 				modifiersOfAnaph.add(anaphLex.form.toLowerCase());
-				
-				if(locationModifiers.contains(anaphLex.form.toLowerCase())) {
-					locModifiersOfAnaph.add(anaphLex.form.toLowerCase());
-				}
-				else if(anaphLex.postag.equals("CD") 
-						|| numbers.contains(anaphLex.form.toLowerCase()) 
-						|| isNumber(anaphLex.form.toLowerCase())) {
-					numberModifierOfAnaph.add(anaphLex.form.toLowerCase());
-				}
+			}
+			
+			if(locationModifiers.contains(anaphLex.form.toLowerCase())) {
+				locModifiersOfAnaph.add(anaphLex.form.toLowerCase());
+			}
+			
+			if(isNumber(anaphLex)) {
+				numberModifierOfAnaph.add(anaphLex.form.toLowerCase());
 			}
 		}
 		
@@ -1323,21 +1285,21 @@ public class Mention implements Serializable{
 		StringBuilder span = new StringBuilder();
 		int posComma = -1;
 		int posWH = -1;
-		for(int i = startIndex; i < endIndex; ++i){
+		for(int i = startIndex; i < endIndex; ++i) {
 			String postag = sent.getLexicon(i).postag;
-			if(posComma == -1 && postag.equals(",")){
+			if(posComma == -1 && postag.equals(",")) {
 				posComma = i;
 			}
-			if(posWH == -1 && postag.startsWith("W")){
+			if(posWH == -1 && postag.startsWith("W")) {
 				posWH = i;
 			}
 		}
 		
 		int posEnd = this.endIndex;
-		if(posComma != -1 && this.headIndex < posComma){
+		if(posComma != -1 && this.headIndex < posComma) {
 			posEnd = posComma;
 		}
-		if(posComma==-1 && posWH != -1 && this.headIndex < posWH){
+		if(posComma==-1 && posWH != -1 && this.headIndex < posWH) {
 			posEnd = posWH;
 		}
 		
@@ -1360,21 +1322,13 @@ public class Mention implements Serializable{
 				parts.contains("a " + headword.form.toLowerCase(Locale.ENGLISH)));
 	}
 	
-	private boolean isNumber(Lexicon word) {
-		if(word.postag.equals("CD") || numbers.contains(word.form.toLowerCase())) {
-			return true;
-		}
-		
-		String[] tokens = word.form.toLowerCase().split("-|:");
-		if(tokens.length == 0) {
-			return false;
-		}
-		return tokens[0].matches("[0-9]+(th|st|nd|rd)?|[0-9]+\\.[0-9]+|[0-9]+[0-9,]+(th|st|nd|rd)?");
+	private boolean isPureNumberMention() {
+		return this.endIndex - this.startIndex == 1 && isNumber(this.headword);
 	}
 	
-	private boolean numberOfRule(Sentence sent) {
+	private boolean quantityOfRule(Sentence sent) {
 		return (headIndex + 1 < endIndex) && 
-				isNumber(headword)
+				(isNumber(headword) || quantifiers.contains(headString))
 				&& sent.getLexicon(headIndex + 1).form.equalsIgnoreCase("of");
 	}
 	
@@ -1384,7 +1338,7 @@ public class Mention implements Serializable{
 			int start = headIndex;
 			while(start >= 0){
 				String head = sent.getLexicon(start).form.toLowerCase();
-				if (knownSuffix(head)) {
+				if (knownSuffix(head) || head.equals("'s") || head.equals("of")) {
 					start--;
 				}
 				else {
@@ -1437,7 +1391,7 @@ public class Mention implements Serializable{
 		}
 		
 		// make sure that the NER of a number-of mention is O
-		if(numberOfRule(sent)) {
+		if(quantityOfRule(sent)) {
 			headword.ner = "O";
 		}
 		// make sure partitive mention's head is correct
@@ -1602,7 +1556,7 @@ public class Mention implements Serializable{
 				number = Number.UNKNOWN;
 			}
 		}
-		else if(numberOfRule(sent)) {
+		else if(quantityOfRule(sent)) {
 			if(headword.form.equalsIgnoreCase("one")) {
 				number = Number.SINGULAR;
 			}
@@ -1666,6 +1620,9 @@ public class Mention implements Serializable{
 				}
 				else if(dict.pluralWords.contains(headString)){
 					number = Number.PLURAL;
+				}
+				else if(this.isPureNumberMention()) {
+					number = Number.SINGULAR;
 				}
 			}
 		}
@@ -1754,7 +1711,10 @@ public class Mention implements Serializable{
 					}
 				}
 				else{
-					if(dict.maleWords.contains(headString) || dict.maleWords.contains(headword.lemma.toLowerCase())) {
+					if(this.isPureNumberMention()) {
+						gender = Gender.NEUTRAL;
+					}
+					else if(dict.maleWords.contains(headString) || dict.maleWords.contains(headword.lemma.toLowerCase())) {
 						gender = Gender.MALE;
 					}
 					else if(dict.femaleWords.contains(headString) || dict.femaleWords.contains(headword.lemma.toLowerCase())) {
@@ -1875,7 +1835,10 @@ public class Mention implements Serializable{
 				else if(headString.equals("$")) {
 					animacy = Animacy.INANIMATE;
 				}
-				else if(numberOfRule(sent)) {
+				else if(this.isPureNumberMention()) {
+					animacy = Animacy.INANIMATE;
+				}
+				else if(quantityOfRule(sent)) {
 					for(int i = startIndex; i < endIndex; ++i) {
 						if(i == headIndex) {
 							continue;

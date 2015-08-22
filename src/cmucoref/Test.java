@@ -65,7 +65,17 @@ public class Test {
 		if(tokens.length == 0) {
 			return false;
 		}
-		return tokens[0].matches("[0-9]+(th|st|nd|rd)?|[0-9]+\\.[0-9]+|[0-9]+[0-9,]+(th|st|nd|rd)?");
+		
+		int i = 0;
+		while(i < tokens.length && (tokens[i].length() == 0 || tokens[i].equals("lrb"))) {
+			i++;
+		}
+		
+		if(i == tokens.length) {
+			return false;
+		}
+		
+		return tokens[i].matches("(-)?+[0-9]+(th|st|nd|rd)?|(-)?+[0-9]*\\.[0-9]+|(-)?+[0-9]+[0-9,]+(th|st|nd|rd)?");
 	}
 	
 	public static void main(String[] args) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, MentionException {
@@ -113,13 +123,13 @@ public class Test {
 		DocumentReader reader = new CoNLLXDocumentReader();
 		DocumentWriter writer = new CoNLLXDocumentWriter();
 		
-		reader.startReading("data/test/original/conllx/gold/conll2012.eng.test.gold.tc.conllx");
-		writer.startWriting("outfile/oracle.test.gold.tc.conllx");
-		PrintStream printer = new PrintStream(new File("mention.conllx.test.gold.tc.txt"));
+		reader.startReading("data/test/original/conllx/gold/conll2012.eng.test.gold.nw.wsj.conllx");
+		writer.startWriting("outfile/oracle.test.gold.nw.wsj.conllx");
+		PrintStream printer = new PrintStream(new File("mention.conllx.test.gold.nw.wsj.txt"));
 		
-//		reader.startReading("data/train/nyt_eng_200810.anno");
-//		writer.startWriting("outfile/200810.conllx");
-//		PrintStream printer = new PrintStream(new File("mention-200810.txt"));
+//		reader.startReading("data/train/apw_eng_200406.anno");
+//		writer.startWriting("outfile/200406.conllx");
+//		PrintStream printer = new PrintStream(new File("mention-200406.txt"));
 		
 		Document doc = reader.getNextDocument(options, true);
 		

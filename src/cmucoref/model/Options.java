@@ -54,7 +54,7 @@ public class Options implements Serializable{
 								USE_EVENT_FEATURE = "use-event-feature",
 								DEFAULT_USE_EVENT = Boolean.TRUE.toString(),
 								EVENT_EXTRACTOR = "event-extractor",
-								DEFAULT_EVENT_EXTRACTOR = cmucoref.mention.eventextractor.BasicEventExtractor.class.getName(),
+								DEFAULT_EVENT_EXTRACTOR = cmucoref.mention.eventextractor.BasicEventExtractor.class.getSimpleName(),
 								APPOSITION_EXTRACTOR = "apposition-extractor",
 								DEFAULT_APPOSITION_EXTRACTOR = cmucoref.mention.extractor.relationextractor.AppositionRelationDepExtractor.class.getName(),
 								ROLEAPPOSITION_EXTRACTOR = "role-apposition-extractor",

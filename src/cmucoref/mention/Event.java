@@ -59,7 +59,7 @@ public class Event {
 		return this.parentSet.contains(e.predPosition);
 	}
 	
-	public Event(int sentID, Sentence sent, int predPosition, String predicate, String role, boolean isPart, EventDictionaries edict) {
+	public Event(int sentID, Sentence sent, int predPosition, String predicate, String role, EventDictionaries edict) {
 		this.sentID = sentID;
 		this.sent = sent;
 		this.predPosition = predPosition;
@@ -67,10 +67,6 @@ public class Event {
 		
 		this.predicate = predicate;
 		this.grammaticRole = normalizeGrammaticRole(role, edict);
-		
-		if(isPart) {
-			this.grammaticRole = "part_of[" + this.grammaticRole + "]";
-		}
 		
 //		roleSet.add(this.grammaticRole);
 	}

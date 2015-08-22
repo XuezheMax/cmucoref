@@ -33,7 +33,7 @@ public abstract class EventExtractor {
 	}
 	
 	public static EventExtractor createExtractor(String extractorClassName) throws InstantiationException, IllegalAccessException, ClassNotFoundException {
-		return (EventExtractor) Class.forName(extractorClassName).newInstance();
+		return (EventExtractor) Class.forName(EventExtractor.class.getPackage().getName() + "." + extractorClassName).newInstance();
 	}
 	
 	public EventExtractor() {}
@@ -81,6 +81,16 @@ public abstract class EventExtractor {
 		if(tokens.length == 0) {
 			return false;
 		}
-		return tokens[0].matches("[0-9]+(th|st|nd|rd)?|[0-9]+\\.[0-9]+|[0-9]+[0-9,]+(th|st|nd|rd)?");
+		
+		int i = 0;
+		while(i < tokens.length && (tokens[i].length() == 0 || tokens[i].equals("lrb"))) {
+			i++;
+		}
+		
+		if(i == tokens.length) {
+			return false;
+		}
+		
+		return tokens[i].matches("(-)?+[0-9]+(th|st|nd|rd)?|(-)?+[0-9]*\\.[0-9]+|(-)?+[0-9]+[0-9,]+(th|st|nd|rd)?");
 	}
 }

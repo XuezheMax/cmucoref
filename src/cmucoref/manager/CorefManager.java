@@ -40,7 +40,7 @@ public class CorefManager {
 		System.out.println("Done.");
 		System.out.println("Num Mention Features: " + model.mentionFeatureSize());
 		if(model.options.useEventFeature()) {
-			System.out.println("Num of Events: " + model.givenSizeofEvent() + " " + mentionExtractor.sizeOfEvent());
+			System.out.println("Num of Events: " + mentionExtractor.sizeOfEvent());
 			System.out.println("Num Event Features: " + model.eventFeatureSize());
 		}
 		System.out.println("Num Documents: " + numInst);

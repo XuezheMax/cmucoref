@@ -3,8 +3,9 @@ package cmucoref.model.params;
 import cmucoref.model.CorefModel;
 import cmucoref.util.Util;
 
-public class InterpolationSmoother extends Smoother {
-	public InterpolationSmoother() {
+public class InterpolationSmootherLinearD extends Smoother {
+
+	public InterpolationSmootherLinearD() {
 		super();
 	}
 	
@@ -47,31 +48,22 @@ public class InterpolationSmoother extends Smoother {
 			model.updateEventParams(j, val);
 		}
 		
-		double sumNil = Double.NEGATIVE_INFINITY;
-		x = 0;
+		double logD = Math.log(d);
+		double nil = logA - logD;
+		model.updateEventNil(nil);
+		
 		//update event nils
 		for(int j = 0; j < gsizeOfE; ++j) {
 			if(eGivenC[j] == Double.NEGATIVE_INFINITY) {
 				if(model.getSizeOfEventFeatFromGid(j) > 0) {
 					throw new RuntimeException("size should be zero: " + model.getSizeOfEventFeatFromGid(j));
 				}
-				x++;
+				model.updateEventNils(j, nil);
 			}
 			else {
 				double val = logA + Util.logsubsexp(eGivenC[j], eGivenCNoNil[j]) - eGivenC[j]
 						- Math.log(d - model.getSizeOfEventFeatFromGid(j));
 				model.updateEventNils(j, val);
-				sumNil = Util.logsumexp(sumNil, val);
-			}
-		}
-		
-		//update uni_val
-		double nil = sumNil - Math.log(gsizeOfE - x);
-		model.updateEventNil(nil);
-		
-		for(int j = 0; j < gsizeOfE; ++j) {
-			if(eGivenC[j] == Double.NEGATIVE_INFINITY) {
-				model.updateEventNils(j, nil);
 			}
 		}
 	}

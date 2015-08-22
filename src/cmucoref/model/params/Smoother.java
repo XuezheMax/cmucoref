@@ -14,11 +14,11 @@ public class Smoother {
 	}
 	
 	public final void smooth(double[] mFeatC, double[] mGivenC, double[] mGivenCNoNil, double alpha_m, 
-			double[] eFeatC, double[] eGivenC, double[] eGivenCNoNil, double alpha_e, 
+			double[] eFeatC, double[] eGivenC, double[] eGivenCNoNil, double[] eUnigramC, double eUnigramN, double alpha_e, 
 			CorefModel model) {
 		smoothMentionParams(mFeatC, mGivenC, mGivenCNoNil, alpha_m, model);
 		if(eFeatC != null) {
-			smoothEventParams(eFeatC, eGivenC, eGivenCNoNil, alpha_e, model);
+			smoothEventParams(eFeatC, eGivenC, eGivenCNoNil, eUnigramC, eUnigramN, alpha_e, model);
 		}
 	}
 	
@@ -38,18 +38,18 @@ public class Smoother {
 			model.updateMentionNils(j, val);
 		}
 		
-		model.updateMentionUni_Val(Double.NEGATIVE_INFINITY);
+		model.updateMentionNil(Double.NEGATIVE_INFINITY);
 	}
 	
-	protected void smoothEventParams(double[] eFeatC, double[] eGivenC, double[] eGivenCNoNil, double alpha_e, CorefModel model) {
+	protected void smoothEventParams(double[] eFeatC, double[] eGivenC, double[] eGivenCNoNil, double[] eUnigramC, double eUnigramN, double alpha_e, CorefModel model) {
 		int nsizeOfE = model.eventFeatureSize();
 		int gsizeOfE = model.givenSizeofEvent();
 		
-		int d = model.sizeOfEvent() + 2;
+		int d = model.eventV();
 		double logD = Math.log(d);
 		
 		//update uni_val
-		model.updateEventUni_Val(-logD);
+		model.updateEventNil(-logD);
 		
 		//update event parameters
 		for(int j = 0; j < nsizeOfE; ++j) {

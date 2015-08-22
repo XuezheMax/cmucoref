@@ -413,11 +413,14 @@ public abstract class MentionExtractor {
 			//find precise match
 			for(int j = 0; j < i; ++j) {
 				Mention antec = allMentions.get(j);
-				
 				if(anaph.preciseMatch(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)) {
 					anaph.addPreciseMatch(antec);
 				}
-				
+			}
+			
+			//find string match
+			for(int j = i - 1; j >= 0; --j) {
+				Mention antec = allMentions.get(j);
 				if(anaph.stringMatch(doc.getSentence(anaph.sentID), antec, doc.getSentence(antec.sentID), dict)) {
 					anaph.addStringMatch(antec);
 				}
@@ -496,7 +499,7 @@ public abstract class MentionExtractor {
 				if(sent.getLexicon(head).lemma.equals("be") && headword.collapsed_deprel.equals("nsubj")) {
 					for(Mention mention2 : mentions) {
 						Lexicon headword2 = sent.getLexicon(mention2.originalHeadIndex);
-						if(headword2.collapsed_head == head && headword2.collapsed_deprel.startsWith("prep_")
+						if(headword2.id > head && headword2.collapsed_head == head && headword2.collapsed_deprel.startsWith("prep_")
 							&& (mention2.isProper() && mention2.headword.ner.equals("DATE")
 									|| mention2.isNominative() && Mention.temporals.contains(mention2.headString))) {
 							remove.add(mention);
@@ -569,7 +572,6 @@ public abstract class MentionExtractor {
 				}
 				else{
 					for(Pair<Integer, Integer> pair : foundPairs) {
-//						if(pair.first == mention1.headIndex && pair.second == mention2.headIndex) {
 						if(pair.first == mention1.originalHeadIndex && pair.second == mention2.originalHeadIndex) {
 							if(relation.equals("APPOSITION")) {
 								mention2.addApposition(mention1, dict);
