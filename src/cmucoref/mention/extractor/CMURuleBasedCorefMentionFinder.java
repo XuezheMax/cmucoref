@@ -98,6 +98,11 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 		removeSpuriousNamedEntityMentions(s, mentions, mentionSpanSet, namedEntitySpanSet);
 	}
 	
+	private static final Set<String> dates = new HashSet<String>(Arrays.asList(
+            "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "yesterday", 
+            "tomorrow", "today", "tonight", "january", "february", "march", "april", "may", "june", "july", 
+            "august", "september", "october", "november", "december"));
+	
 	private static void removeSpuriousNamedEntityMentions(CoreMap s, List<Mention> mentions, Set<IntPair> mentionSpanSet, Set<IntPair> namedEntitySpanSet) {
 		Set<Mention> remove = Generics.newHashSet();
 		Set<IntPair> removeSpan = Generics.newHashSet();
@@ -111,7 +116,7 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 					remove.add(m);
 					removeSpan.add(mSpan);
 				}
-				else if(!cmucoref.mention.Mention.dates.contains(word) && !posTag.equals("CD")) {
+				else if(!dates.contains(word) && !posTag.equals("CD")) {
 					remove.add(m);
 					removeSpan.add(mSpan);
 				}
@@ -156,10 +161,10 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 		return false;
 	}
 	
-//	private static final Set<String> determiners = new HashSet<String>(Arrays.asList("these", "those", "this", "that"));
 	private static final Set<String> nonWords = new HashSet<String>(Arrays.asList("mm", "hmm", "ahem", "um", "uh", "%mm", "%hmm", "%ahem", "%um", "%uh"));
 	private static final Set<String> negWords = new HashSet<String>(Arrays.asList("nobody", "none", "nothing", "no", "not"));
-	private static final Set<String> bareNPWords = new HashSet<String>(Arrays.asList("sense", "case"));
+	private static final Set<String> bareNPWords = new HashSet<String>(Arrays.asList("sense", "case", "now", "here", "there", "who", "whom", "whose", "where", "when","which"));
+	private static final Set<String> quantifiers = new HashSet<String>(Arrays.asList("not","every","any","none","everything","anything","nothing","all","enough"));
 	
 	protected static void removeSpuriousMentions(CoreMap s, List<Mention> mentions, Dictionaries dict) {
 		Tree tree = s.get(TreeCoreAnnotations.TreeAnnotation.class);
@@ -187,28 +192,13 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 			
 			//single quantifiers
 			if(m.originalSpan.size() == 1
-				&& dict.quantifiers.contains(m.headString)) {
+				&& quantifiers.contains(m.headString)) {
 				remove.add(m);
 			}
-
-			/*
-			// quantRule : not starts with 'any', 'all' etc
-			if (m.originalSpan.size() > 0 
-				&& dict.quantifiers.contains(m.originalSpan.get(0).get(CoreAnnotations.TextAnnotation.class).toLowerCase(Locale.ENGLISH))) {
-				remove.add(m);
-			}
-			*/
-
-			/*
-			// partitiveRule
-			if (partitiveRule(m, sent, dict)) {
-				remove.add(m);
-			}
-			*/
 			
-			String headPOS = m.headWord.get(CoreAnnotations.PartOfSpeechAnnotation.class);
+			//String headPOS = m.headWord.get(CoreAnnotations.PartOfSpeechAnnotation.class);
 			// bareNPRule
-			if(headPOS.equals("NN") && m.originalSpan.size() == 1 && bareNPWords.contains(m.headString)) {
+			if(m.originalSpan.size() == 1 && bareNPWords.contains(m.headString)) {
 				remove.add(m);
 			}
 			
@@ -231,13 +221,6 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 			if(m.originalSpan.size() == 1 && dict.otherPronouns.contains(m.headString)) {
 				remove.add(m);
 			}
-
-			/*
-			// adjective form of nations
-			if (dict.isAdjectivalDemonym(m.spanToString())) {
-				remove.add(m);
-			}
-			*/
 
 			// stop list (e.g., U.S., there)
 			if (inStopList(m)) {
@@ -267,14 +250,6 @@ public class CMURuleBasedCorefMentionFinder extends RuleBasedCorefMentionFinder 
 
 		return false;
 	}
-	
-//	private static final Set<String> parts = new HashSet<String>(Arrays.asList("hundreds", "thousands", "millions", "billions", "tens", "dozens", "group", "groups", "bunch", "a number", "numbers", "a pinch", "a total"));
-
-//	private static boolean partitiveRule(Mention m, List<CoreLabel> sent, Dictionaries dict) {
-//		return m.startIndex >= 2
-//				&& sent.get(m.startIndex - 1).get(CoreAnnotations.TextAnnotation.class).equalsIgnoreCase("of")
-//				&& sent.get(m.startIndex - 2).get(CoreAnnotations.TextAnnotation.class).equalsIgnoreCase("all");
-//	}
 	
 	/** Check whether pleonastic 'it'. E.g., It is possible that ... */
 	private static final TregexPattern[] pleonasticPatterns = getPleonasticPatterns();

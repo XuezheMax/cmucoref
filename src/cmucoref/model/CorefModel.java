@@ -60,7 +60,7 @@ public class CorefModel implements Serializable{
 	}
 	
 	private double getEventScore(FeatureVector efv) {
-		return efv == null ? 0.0 : eventParams.getScoreWithNil(efv);
+		return (efv == null || efv.size() == 0) ? 0.0 : eventParams.getScoreWithNil(efv);
 	}
 	
 	public void updateMentionParams(int index, double val) {

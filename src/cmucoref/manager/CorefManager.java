@@ -10,12 +10,12 @@ import cmucoref.document.Document;
 import cmucoref.document.Sentence;
 import cmucoref.exception.CreatingInstanceException;
 import cmucoref.io.DocumentReader;
+import cmucoref.mention.Dictionaries;
 import cmucoref.mention.Mention;
 import cmucoref.mention.extractor.MentionExtractor;
 import cmucoref.mention.featgen.MentionFeatureGenerator;
 import cmucoref.model.CorefModel;
 import cmucoref.model.FeatureVector;
-import edu.stanford.nlp.dcoref.Dictionaries;
 
 public class CorefManager {
 	
@@ -103,6 +103,12 @@ public class CorefManager {
 					Mention anaph = allMentions.get(i);
 					Sentence anaphSent = doc.getSentence(anaph.sentID);
 					
+					//mode=3
+					if(!anaph.isDefinite()) {
+						continue;
+					}
+					
+					//mode=1;
 					if(anaph.stringMatchs != null) {
 						for(Mention antec : anaph.stringMatchs) {
 							Sentence antecSent = doc.getSentence(antec.sentID);
@@ -112,6 +118,7 @@ public class CorefManager {
 						continue;
 					}
 					
+					//mode=2;
 					if(anaph.preciseMatchs != null) {
 						for(Mention antec : anaph.preciseMatchs) {
 							Sentence antecSent = doc.getSentence(antec.sentID);
@@ -121,25 +128,16 @@ public class CorefManager {
 						continue;
 					}
 					
-					if(!anaph.isDefinite()) {
-						continue;
-					}
-					
+					//mode=0;
 					for(int j = 0; j <= i; ++j) {
-						if(j < i) {
-							Mention antec = allMentions.get(j);
-							Sentence antecSent = doc.getSentence(antec.sentID);
-							if(anaph.ruleout(anaphSent, antec, antecSent, getDict(), false)) {
-								continue;
-							}
+						Mention antec = (j == i ? null : allMentions.get(j));
+						Sentence antecSent = (antec == null ? null : doc.getSentence(antec.sentID));
+						if(antec != null && anaph.ruleout(anaphSent, antec, antecSent, getDict(), false)) {
+							continue;
+						}
 							
-							mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 0, 
-									getDict(), model, useEvent, null, null);
-						}
-						else {
-							mentionFeatGen.genNewClusterFeatures(anaph, anaphSent, 
-									model, useEvent, null, null);
-						}
+						mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 0, 
+								getDict(), model, useEvent, null, null);
 					}
 				}
 				doc = docReader.getNextDocument(model.options, false);
@@ -168,6 +166,16 @@ public class CorefManager {
 			FeatureVector[] mfvs = null;
 			FeatureVector[] efvs = null;
 			
+			//mode=3
+			if(!anaph.isDefinite()) {
+				mfvs = new FeatureVector[0];
+				efvs = useEvent ? new FeatureVector[0] : null;
+				out.writeObject(mfvs);
+				out.writeObject(efvs);
+				continue;
+			}
+			
+			//mode=1
 			if(anaph.stringMatchs != null) {
 				mfvs = new FeatureVector[anaph.stringMatchs.size()];
 				efvs = useEvent ? new FeatureVector[anaph.stringMatchs.size()] : null;
@@ -187,6 +195,7 @@ public class CorefManager {
 				continue;
 			}
 			
+			//mode=2
 			if(anaph.preciseMatchs != null) {
 				mfvs = new FeatureVector[anaph.preciseMatchs.size()];
 				efvs = useEvent ? new FeatureVector[anaph.preciseMatchs.size()] : null;
@@ -206,39 +215,22 @@ public class CorefManager {
 				continue;
 			}
 			
-			if(!anaph.isDefinite()) {
-				mfvs = new FeatureVector[0];
-				efvs = useEvent ? new FeatureVector[0] : null;
-				out.writeObject(mfvs);
-				out.writeObject(efvs);
-				continue;
-			}
-			
+			//mode=0;
 			mfvs = new FeatureVector[i + 1];
 			efvs = useEvent ? new FeatureVector[i + 1] : null;
 			for(int j = 0; j <= i; ++j) {
-				if(j < i) {
-					Mention antec = allMentions.get(j);
-					Sentence antecSent = doc.getSentence(antec.sentID);
-					if(anaph.ruleout(anaphSent, antec, antecSent, getDict(), false)) {
-						continue;
-					}
+				Mention antec = (j == i ? null : allMentions.get(j));
+				Sentence antecSent = (antec == null ? null : doc.getSentence(antec.sentID));
+				if(antec != null && anaph.ruleout(anaphSent, antec, antecSent, getDict(), false)) {
+					continue;
+				}
 					
-					mfvs[j] = new FeatureVector();
-					if(useEvent) {
-						efvs[j] = new FeatureVector();
-					}
-					mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 0, 
-							getDict(), model, useEvent, mfvs[j], useEvent ? efvs[j] : null);
+				mfvs[j] = new FeatureVector();
+				if(useEvent) {
+					efvs[j] = new FeatureVector();
 				}
-				else {
-					mfvs[j] = new FeatureVector();
-					if(useEvent) {
-						efvs[j] = new FeatureVector();
-					}
-					mentionFeatGen.genNewClusterFeatures(anaph, anaphSent, 
-							model, useEvent, mfvs[j], useEvent ? efvs[j] : null);
-				}
+				mentionFeatGen.genCoreferentFeatures(anaph, anaphSent, antec, antecSent, 0, 
+						getDict(), model, useEvent, mfvs[j], useEvent ? efvs[j] : null);
 			}
 			out.writeObject(mfvs);
 			out.writeObject(efvs);

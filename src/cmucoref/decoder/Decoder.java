@@ -78,11 +78,11 @@ public class Decoder {
 //				}
 //			}
 			
-			for(int j = anaphId - 1; j >= 0; --j) {
-				Mention antec = allMentions.get(j);
-				Sentence antecSent = doc.getSentence(antec.sentID);
+			for(int j = anaphId - 1; j >= -1; --j) {
+				Mention antec = (j == -1 ? null : allMentions.get(j));
+				Sentence antecSent = (antec == null ? null : doc.getSentence(antec.sentID));
 				
-				if(anaph.ruleout(anaphSent, antec, antecSent, manager.getDict(), true)) {
+				if(antec != null && anaph.ruleout(anaphSent, antec, antecSent, manager.getDict(), true)) {
 					continue;
 				}
 				
@@ -99,12 +99,6 @@ public class Decoder {
 					score = prob;
 					antecedent = antec;
 				}
-			}
-			FeatureVector mfv = new FeatureVector();
-			manager.mentionFeatGen.genNewClusterFeatures(anaph, anaphSent, model, useEvent, mfv, null);
-			double prob = model.getScore(mfv, null);
-			if(prob > score) {
-				antecedent = null;
 			}
 		}
 		
@@ -161,11 +155,11 @@ public class Decoder {
 //				}
 //			}
 			
-			for(int j = anaphId - 1; j >= 0; --j) {
-				Mention antec = allMentions.get(j);
-				Sentence antecSent = doc.getSentence(antec.sentID);
+			for(int j = anaphId - 1; j >= -1; --j) {
+				Mention antec = (j == -1 ? null : allMentions.get(j));
+				Sentence antecSent = (antec == null ? null : doc.getSentence(antec.sentID));
 				
-				if(anaph.ruleout(anaphSent, antec, antecSent, manager.getDict(), true)) {
+				if(antec != null && anaph.ruleout(anaphSent, antec, antecSent, manager.getDict(), true)) {
 					continue;
 				}
 				
@@ -183,13 +177,6 @@ public class Decoder {
 					score = prob;
 					antecedent = antec;
 				}
-			}
-			FeatureVector mfv = new FeatureVector();
-			FeatureVector efv = new FeatureVector();
-			manager.mentionFeatGen.genNewClusterFeatures(anaph, anaphSent, model, useEvent, mfv, efv);
-			double prob = model.getScore(mfv, efv);
-			if(prob > score) {
-				antecedent = null;
 			}
 		}
 		
