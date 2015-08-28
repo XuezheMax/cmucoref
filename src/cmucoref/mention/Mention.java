@@ -1600,7 +1600,7 @@ public class Mention implements Serializable{
                 animacy = Animacy.UNKNOWN;
             }
         }
-        else if(this.isProper() || this.isList()) {
+        else {
             if(headword.ner.equals("PERSON") || headword.ner.equals("PER")) {
                 animacy = Animacy.ANIMATE;
             }
