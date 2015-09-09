@@ -111,6 +111,9 @@ public abstract class MentionExtractor {
             }
         }
         mentions.removeAll(remove);
+        
+        //remove mentions with non-noun head
+        //TODO
     }
     
     protected void deleteSpuriousPronominalMentions(List<Mention> mentions, Sentence sent) {

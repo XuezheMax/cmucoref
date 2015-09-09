@@ -18,10 +18,12 @@ public class Dictionaries extends edu.stanford.nlp.dcoref.Dictionaries {
     public enum Gender { MALE, FEMALE, FeORM, NEUTRAL, UNKNOWN }
     
     //re-define pronouns
-    public final Set<String> animatePronouns = new HashSet<String>(Arrays.asList(new String[]{ "i", "me", "myself", "mine", "my", "we", "us", "ourself", "ourselves", "ours", "our", "you", "yourself", "yours", "your", "yourselves", "he", "him", "himself", "his", "she", "her", "herself", "hers", "her", "who", "whom"}));
-    public final Set<String> neutralPronouns = new HashSet<String>(Arrays.asList(new String[]{"it", "itself", "its", "where", "when", "the", "that", "this", "those", "these"}));
+    public final Set<String> animatePronouns = new HashSet<String>(Arrays.asList(new String[]{ "i", "me", "myself", "mine", "my", "we", "us", "'s", "ourself", "ourselves", "ours", "our", "you", "yourself", "yours", "your", "yourselves", "he", "him", "himself", "his", "she", "her", "herself", "hers", "her", "who", "whom", "one", "one's", "oneself"}));
+    public final Set<String> neutralPronouns = new HashSet<String>(Arrays.asList(new String[]{"it", "itself", "its", "where", "when", "the", "that", "this"}));
     public final Set<String> locationPronouns = new HashSet<String>(Arrays.asList("it", "its", "itself"));
-    public final Set<String> norpPronouns = new HashSet<String>(Arrays.asList("it", "its", "itself", "they", "them", "their", "theirs", "themself", "themselves"));
+    public final Set<String> norpPronouns = new HashSet<String>(Arrays.asList("it", "its", "itself", "they", "them", "their", "theirs", "themself", "themselves", "'em"));
+    public final Set<String> firstPersonPronouns = new HashSet<String>(Arrays.asList("i", "me", "myself", "mine", "my", "we", "us", "ourself", "ourselves", "ours", "our", "'s"));
+    public final Set<String> pluralPronouns = new HashSet<String>(Arrays.asList("we", "us", "'s", "ourself", "ourselves", "ours", "our", "yourself", "yourselves", "they", "them", "themself", "themselves", "theirs", "their", "'em"));
     
     public final String [] commonNESuffixes = {
             "Corp", "Co", "Inc", "Ltd", "Province", "State"
@@ -35,19 +37,21 @@ public class Dictionaries extends edu.stanford.nlp.dcoref.Dictionaries {
             "doctor", "dir.", "director", "fr.", "father", "gov.", "governor", "prof.", "professor");
     
     public final Set<String> excludePossessivePronouns = new HashSet<String>(Arrays.asList("our", "my", "your"));
+    
+    public final Set<String> determiners = new HashSet<String>(Arrays.asList("the", "this", "that", "these", "those", "its", "his", "her", "my", "your", "their", "our"));
     public final Set<String> quantDeterminers = new HashSet<String>(Arrays.asList("both", "each"));
-        
     public final Set<String> pluralDeterminers = new HashSet<String>(Arrays.asList("these", "those"));
-        
     public final Set<String> singularDeterminers = new HashSet<String>(Arrays.asList("this", "that", "the"));
     
     public final Set<String> numbers = new HashSet<String>(Arrays.asList(
-            "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+            "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
             "eleven", "twelve", "thirteen", "fourteen", "fiveteen", "sixteen", "seventeen", "eighteen", "nineteen", 
             "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety",
             "hundred", "thousand", "million", "billion"));
     
-    public final Set<String> quantifiers = new HashSet<String>(Arrays.asList("both", "all", "some", "most", "any", "each"));
+    public final Set<String> quantifiers = new HashSet<String>(Arrays.asList("some", "most", "any", "each"));
+    
+    public final Set<String> singularQuantifiers = new HashSet<String>(Arrays.asList("one", "zero", "any", "each"));
     
     public final Set<String> dates = new HashSet<String>(Arrays.asList(
             "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "yesterday", 
@@ -101,6 +105,7 @@ public class Dictionaries extends edu.stanford.nlp.dcoref.Dictionaries {
     
     public Dictionaries(Properties props) {
         super(props);
+        this.allPronouns.add("'s");
         
         loadAnimalList(props.getProperty("cmucoref.animal", "cmucoref_models/models/animals.txt"));
     }

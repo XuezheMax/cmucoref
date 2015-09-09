@@ -36,41 +36,49 @@ public class EMTrainer extends Trainer{
         int threadNum = model.threadNum();
         System.out.println("Num Features: " + model.mentionFeatureSize());
         System.out.println("Num Documents: " + nums[threadNum]);
+        System.out.println("Mention Parameter Smoother: " + model.options.getMentionParamSmoother());
+        System.out.println("Smoothing Beta: " + model.options.getSmoothingBeta());
         if(model.options.useEventFeature()) {
             System.out.println("Num of Events: " + model.givenSizeofEvent() + " " + model.eventV());
             System.out.println("Num Event Features: " + model.eventFeatureSize());
-            System.out.println("Smoother: " + model.options.getParamSmoother());
+            System.out.println("Event Parameter Smoother: " + model.options.getEventParamSmoother());
             System.out.println("Smoothing Alpha: " + model.options.getSmoothingAlpha());
         }
         System.out.println("Num Threads:   " + threadNum);
         
-        Smoother smoother = Smoother.createSmoother(model.options.getParamSmoother());
+        Smoother mentionSmoother = Smoother.createSmoother(model.options.getMentionParamSmoother());
+        Smoother eventSmoother = Smoother.createSmoother(model.options.getEventParamSmoother());
         boolean useEvent = model.options.useEventFeature();
         
         if(useEvent) {
             if(model.options.tuneAlpha()) {
-                trainWithEventTune(nums, threadNum, manager, smoother, decoder, model, trainfile, devfile, logfile, modelfile);
+                trainWithEventTune(nums, threadNum, manager, mentionSmoother, eventSmoother, 
+                        decoder, model, trainfile, devfile, logfile, modelfile);
             }
             else {
-                trainWithEvent(nums, threadNum, manager, smoother, decoder, model, trainfile, devfile, logfile, modelfile);
+                trainWithEvent(nums, threadNum, manager, mentionSmoother, eventSmoother, 
+                        decoder, model, trainfile, devfile, logfile, modelfile);
             }
         }
         else {
-            trainWOEvent(nums, threadNum, manager, smoother, decoder, model, trainfile, devfile, logfile, modelfile);
+            trainWOEvent(nums, threadNum, manager, mentionSmoother, 
+                    decoder, model, trainfile, devfile, logfile, modelfile);
         }
     }
     
-    protected void trainWOEvent(int[] nums, int threadNum, CorefManager manager, Smoother smoother, Decoder decoder, CorefModel model, String trainfile, String devfile, String logfile, String modelfile) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException {
+    protected void trainWOEvent(int[] nums, int threadNum, CorefManager manager, Smoother mentionSmoother,
+            Decoder decoder, CorefModel model, String trainfile, String devfile, String logfile, String modelfile) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException {
         final int maxIter = model.options.maxIter();
         EMThread.totalTrainInst = nums[threadNum];
         String traintmp = model.options.getTrainTmp();
         PrintWriter logWriter = new PrintWriter(new OutputStreamWriter(new FileOutputStream(logfile)));
+        double beta = model.options.getSmoothingBeta();
         
         for(int itr = 1; itr <= maxIter; ++itr){
             System.out.print("iter=" + itr + "[   ");
             System.out.flush();
             long clock = System.currentTimeMillis() / 1000;
-            EMIterationWOEvent(manager, model, smoother, logWriter, nums, traintmp, threadNum);
+            EMIterationWOEvent(manager, model, mentionSmoother, beta, logWriter, nums, traintmp, threadNum);
             System.out.println(EMThread.totalTrainInst + "|time=" + (System.currentTimeMillis() /1000 - clock) + "s." + "]");
             model.displayMentionAlphabet(new PrintStream(new File("mFeat" + itr + ".txt")));
             logWriter.println("Iter: " + itr);
@@ -86,12 +94,13 @@ public class EMTrainer extends Trainer{
         System.out.println("Done. Took: " + (System.currentTimeMillis() / 1000 - clock) + "s.");
     }
     
-    protected void trainWithEvent(int[] nums, int threadNum, CorefManager manager, Smoother smoother, Decoder decoder, CorefModel model, String trainfile, String devfile, String logfile, String modelfile) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException {
+    protected void trainWithEvent(int[] nums, int threadNum, CorefManager manager, Smoother mentionSmoother, Smoother eventSmoother, Decoder decoder, CorefModel model, String trainfile, String devfile, String logfile, String modelfile) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException {
         final int maxIter = model.options.maxIter();
         final int initIter = model.options.initIter();
         EMThread.totalTrainInst = nums[threadNum];
         String traintmp = model.options.getTrainTmp();
         PrintWriter logWriter = new PrintWriter(new OutputStreamWriter(new FileOutputStream(logfile)));
+        double beta = model.options.getSmoothingBeta();
         
         System.out.println();
         System.out.println("Initialize model without event features");
@@ -99,7 +108,7 @@ public class EMTrainer extends Trainer{
             System.out.print("init iter=" + itr + "[   ");
             System.out.flush();
             long clock = System.currentTimeMillis() / 1000;
-            EMIterationWOEvent(manager, model, smoother, logWriter, nums, traintmp, threadNum);
+            EMIterationWOEvent(manager, model, mentionSmoother, beta, logWriter, nums, traintmp, threadNum);
             System.out.println(EMThread.totalTrainInst + "|time=" + (System.currentTimeMillis() /1000 - clock) + "s." + "]");
             logWriter.println("Init_Iter: " + itr);
             evaluateCurrentAcc(manager, decoder, model, false, devfile, logWriter);
@@ -110,12 +119,13 @@ public class EMTrainer extends Trainer{
         
         System.out.println();
         System.out.println("Start training with event features");
-        double alpha_e = model.options.getSmoothingAlpha();
+        double alpha = model.options.getSmoothingAlpha();
         for(int itr = 1; itr <= maxIter; ++itr){
             System.out.print("iter=" + itr + "[   ");
             System.out.flush();
             long clock = System.currentTimeMillis() / 1000;
-            EMIterationWithEvent(manager, model, smoother, alpha_e, logWriter, nums, traintmp, threadNum);
+            EMIterationWithEvent(manager, model, mentionSmoother, beta, eventSmoother, alpha, 
+                    logWriter, nums, traintmp, threadNum);
             System.out.println(EMThread.totalTrainInst + "|time=" + (System.currentTimeMillis() /1000 - clock) + "s." + "]");
             logWriter.println("Iter: " + itr);
             evaluateCurrentAcc(manager, decoder, model, true, devfile, logWriter);
@@ -132,7 +142,7 @@ public class EMTrainer extends Trainer{
         System.out.println("Done. Took: " + (System.currentTimeMillis() / 1000 - clock) + "s.");
     }
     
-    protected void trainWithEventTune(int[] nums, int threadNum, CorefManager manager, Smoother smoother, Decoder decoder, CorefModel model, String trainfile, String devfile, String logfile, String modelfile) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException {
+    protected void trainWithEventTune(int[] nums, int threadNum, CorefManager manager, Smoother mentionSmoother, Smoother eventSmoother, Decoder decoder, CorefModel model, String trainfile, String devfile, String logfile, String modelfile) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException {
         final int maxIter = model.options.maxIter();
         final int initIter = model.options.initIter();
         EMThread.totalTrainInst = nums[threadNum];
@@ -140,6 +150,7 @@ public class EMTrainer extends Trainer{
         String prefix = logfile.substring(0, logfile.lastIndexOf('.'));
         String suffix = logfile.substring(logfile.lastIndexOf('.') + 1);
         PrintWriter logWriter = new PrintWriter(new OutputStreamWriter(new FileOutputStream(prefix + ".init." + suffix)));
+        double beta = model.options.getSmoothingBeta();
         
         System.out.println();
         System.out.println("Initialize model without event features");
@@ -147,7 +158,8 @@ public class EMTrainer extends Trainer{
             System.out.print("init iter=" + itr + "[   ");
             System.out.flush();
             long clock = System.currentTimeMillis() / 1000;
-            EMIterationWOEvent(manager, model, smoother, logWriter, nums, traintmp, threadNum);
+            EMIterationWOEvent(manager, model, mentionSmoother, beta, 
+                    logWriter, nums, traintmp, threadNum);
             System.out.println(EMThread.totalTrainInst + "|time=" + (System.currentTimeMillis() /1000 - clock) + "s." + "]");
             logWriter.println("Init_Iter: " + itr);
             evaluateCurrentAcc(manager, decoder, model, false, devfile, logWriter);
@@ -182,7 +194,8 @@ public class EMTrainer extends Trainer{
                 System.out.print("iter=" + itr + "[   ");
                 System.out.flush();
                 long clock = System.currentTimeMillis() / 1000;
-                EMIterationWithEvent(manager, model, smoother, alpha, logWriter, nums, traintmp, threadNum);
+                EMIterationWithEvent(manager, model, mentionSmoother, beta, eventSmoother, alpha, 
+                        logWriter, nums, traintmp, threadNum);
                 System.out.println(EMThread.totalTrainInst + "|time=" + (System.currentTimeMillis() /1000 - clock) + "s." + "]");
                 logWriter.println("Iter: " + itr);
                 evaluateCurrentAcc(manager, decoder, model, true, devfile, logWriter);
@@ -198,7 +211,7 @@ public class EMTrainer extends Trainer{
         }
     }
     
-    protected void EMIterationWOEvent(CorefManager manager, CorefModel model, Smoother smoother, PrintWriter logWriter, int[] nums, String traintmp, int threadNum) {
+    protected void EMIterationWOEvent(CorefManager manager, CorefModel model, Smoother mentionSmoother, double beta, PrintWriter logWriter, int[] nums, String traintmp, int threadNum) {
         int nsizeOfM = model.mentionFeatureSize();
         int gsizeOfM = model.givenSizeofMention();
         
@@ -230,14 +243,12 @@ public class EMTrainer extends Trainer{
             
             for(int j = 0; j < gsizeOfM; ++j) {
                 threads[0].mGivenC[j] = Util.logsumexp(threads[0].mGivenC[j], threads[i].mGivenC[j]);
-                threads[0].mGivenCNoNil[j] = Util.logsumexp(threads[0].mGivenCNoNil[j], threads[i].mGivenCNoNil[j]);
             }
         }
-        smoother.smooth(threads[0].mFeatC, threads[0].mGivenC, threads[0].mGivenCNoNil, 0.0, 
-                        null, null, null, null, threads[0].eUnigramN, 0.0, model);
+        mentionSmoother.smoothMentionParams(threads[0].mFeatC, threads[0].mGivenC, beta, model);
     }
     
-    protected void EMIterationWithEvent(CorefManager manager, CorefModel model, Smoother smoother, double alpha_e, PrintWriter logWriter, int[] nums, String traintmp, int threadNum) {
+    protected void EMIterationWithEvent(CorefManager manager, CorefModel model, Smoother mentionSmoother, double beta, Smoother eventSmoother, double alpha, PrintWriter logWriter, int[] nums, String traintmp, int threadNum) {
         int nsizeOfM = model.mentionFeatureSize();
         int gsizeOfM = model.givenSizeofMention();
         
@@ -272,7 +283,6 @@ public class EMTrainer extends Trainer{
             
             for(int j = 0; j < gsizeOfM; ++j) {
                 threads[0].mGivenC[j] = Util.logsumexp(threads[0].mGivenC[j], threads[i].mGivenC[j]);
-                threads[0].mGivenCNoNil[j] = Util.logsumexp(threads[0].mGivenCNoNil[j], threads[i].mGivenCNoNil[j]);
             }
             
             for(int j = 0; j < nsizeOfE; ++j) {
@@ -286,9 +296,10 @@ public class EMTrainer extends Trainer{
             }
             threads[0].eUnigramN = Util.logsumexp(threads[0].eUnigramN, threads[i].eUnigramN);
         }
-        smoother.smooth(threads[0].mFeatC, threads[0].mGivenC, threads[0].mGivenCNoNil, 0.0, 
-                        threads[0].eFeatC, threads[0].eGivenC, threads[0].eGivenCNoNil, 
-                        threads[0].eUnigramC, threads[0].eUnigramN, alpha_e, model);
+        
+        mentionSmoother.smoothMentionParams(threads[0].mFeatC, threads[0].mGivenC, beta, model);
+        eventSmoother.smoothEventParams(threads[0].eFeatC, threads[0].eGivenC, threads[0].eGivenCNoNil, 
+                threads[0].eUnigramC, threads[0].eUnigramN, alpha, model);
     }
     
     protected void evaluateCurrentAcc(CorefManager manager, Decoder decoder, CorefModel model, boolean useEvent, 
@@ -346,7 +357,6 @@ class EMThread extends Thread {
     
     public double[] mFeatC = null;
     public double[] mGivenC = null;
-    public double[] mGivenCNoNil = null;
     
     public double[] eFeatC = null;
     public double[] eGivenC = null;
@@ -363,10 +373,8 @@ class EMThread extends Thread {
         this.model = model;
         mFeatC = new double[model.mentionFeatureSize()];
         mGivenC = new double[model.givenSizeofMention()];
-        mGivenCNoNil = new double[model.givenSizeofMention()];
         Arrays.fill(mFeatC, Double.NEGATIVE_INFINITY);
         Arrays.fill(mGivenC, Double.NEGATIVE_INFINITY);
-        Arrays.fill(mGivenCNoNil, Double.NEGATIVE_INFINITY);
         
         this.updateEvent = updateEvent;
         if(this.updateEvent) {
@@ -421,7 +429,6 @@ class EMThread extends Thread {
                             mGivenC[f.gid] = Util.logsumexp(mGivenC[f.gid], val);
                             if(f.index != -1) {
                                 mFeatC[f.index] = Util.logsumexp(mFeatC[f.index], val);
-                                mGivenCNoNil[f.gid] = Util.logsumexp(mGivenCNoNil[f.gid], val);
                             }
                         }
                     }

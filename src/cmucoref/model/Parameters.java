@@ -41,29 +41,28 @@ public class Parameters implements Serializable{
 		}
 	}
 	
-	public double getScore(FeatureVector fv) {
-		if(fv.size() == 0) {
-			throw new RuntimeException("empty fv: " + fv.size());
-		}
-		
-		double score = 0.0;
-		for(Object b : fv) {
-			Feature f = (Feature)(b);
-			if(f.gid == -1) {
-				throw new RuntimeException("gid cannot be -1");
-			}
-			
-			if(f.index == -1) {
-				score += nils[f.gid];
-			}
-			else {
-				score += parameters[f.index];
-			}
-		}
-		return score;
+	public double getScoreWithNil(FeatureVector fv) {
+	    if(fv.size() == 0) {
+            throw new RuntimeException("empty fv: " + fv.size());
+        }
+        
+        double score = 0.0;
+        for(Object b : fv) {
+            Feature f = (Feature)(b);
+            if(f.gid == -1) {
+                score += nil;
+            }
+            else if(f.index == -1) {
+                score += nils[f.gid];
+            }
+            else {
+                score += parameters[f.index];
+            }
+        }
+        return score;
 	}
 	
-	public double getScoreWithNil(FeatureVector fv) {
+	public double getScoreWithNilAndUniGram(FeatureVector fv) {
 		if(fv.size() == 0) {
 			throw new RuntimeException("empty fv: " + fv.size());
 		}

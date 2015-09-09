@@ -132,7 +132,7 @@ public class CorefManager {
 					for(int j = 0; j <= i; ++j) {
 						Mention antec = (j == i ? null : allMentions.get(j));
 						Sentence antecSent = (antec == null ? null : doc.getSentence(antec.sentID));
-						if(antec != null && anaph.ruleout(anaphSent, antec, antecSent, getDict(), false)) {
+						if(anaph.ruleout(anaphSent, antec, antecSent, getDict(), false)) {
 							continue;
 						}
 							
@@ -221,7 +221,7 @@ public class CorefManager {
 			for(int j = 0; j <= i; ++j) {
 				Mention antec = (j == i ? null : allMentions.get(j));
 				Sentence antecSent = (antec == null ? null : doc.getSentence(antec.sentID));
-				if(antec != null && anaph.ruleout(anaphSent, antec, antecSent, getDict(), false)) {
+				if(anaph.ruleout(anaphSent, antec, antecSent, getDict(), false)) {
 					continue;
 				}
 					

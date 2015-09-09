@@ -10,13 +10,18 @@ public class InterpolationSmootherLinearD extends Smoother {
 	}
 	
 	@Override
-	protected void smoothEventParams(double[] eFeatC, double[] eGivenC, double[] eGivenCNoNil, double[] eUnigramC, double eUnigramN, double alpha_e, CorefModel model) {
+    public void smoothMentionParams(double[] mFeatC, double[] mGivenC, double beta, CorefModel model) {
+        throw new RuntimeException("unsupported method: " + this.getClass().getSimpleName() + ".smoothMentionParams");
+    }
+	
+	@Override
+	public void smoothEventParams(double[] eFeatC, double[] eGivenC, double[] eGivenCNoNil, double[] eUnigramC, double eUnigramN, double alpha, CorefModel model) {
 		int nsizeOfE = model.eventFeatureSize();
 		int gsizeOfE = model.givenSizeofEvent();
 		
 		int d = model.eventV();
-		double logA = Math.log(alpha_e);
-		double logOneminusA = Math.log(1- alpha_e);
+		double logA = Math.log(alpha);
+		double logOneminusA = Math.log(1 - alpha);
 		
 		//calculate total unigram count without nil
 		double N = Double.NEGATIVE_INFINITY;

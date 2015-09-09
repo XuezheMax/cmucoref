@@ -283,6 +283,16 @@ public class Mention implements Serializable{
     }
     
     public boolean ruleout(Sentence sent, Mention antec, Sentence antecSent, Dictionaries dict, boolean strict) {
+        //antec == null
+        if(antec == null) {
+            if(this.isPronominal()) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        }
+        
         //attribute does not match ---> rule out
         if(!antec.attrAgree(this, dict)) {
             return true;
@@ -323,27 +333,19 @@ public class Mention implements Serializable{
             return true;
         }
         
-        if(strict) {
-            int distOfSent = this.getDistOfSent(antec);
-            if(this.isPronominal()) {
-                if(antec.isPronominal()) {
-                    if(distOfSent > 5) {
-                        return true;
-                    }
-                }
-                else {
-                    if(distOfSent > 3) {
-                        return true;
-                    }
-                }
-            }
-            else if(antec.isPronominal()) {
-                if(distOfSent > 3) {
-                    return true;
-                }
-            }
+        int distOfSent = this.getDistOfSent(antec);
+        if(distOfSent > 19) {
+            return true;
         }
         
+        if(strict) {
+            if(this.isPronominal() && antec.isPronominal()) {
+                return distOfSent > 5;
+            }
+            else {
+                return distOfSent > 3;
+            }
+        }
         return false;
     }
     
@@ -400,15 +402,11 @@ public class Mention implements Serializable{
     public int getDistOfSent(Mention mention){
         int distOfSent = this.getAbsoluteDistOfSent(mention);
                 
-        if(distOfSent == 0 && (this.isPronominal() || mention.isPronominal())) {
-            distOfSent = 1;
-        }
+//        if(distOfSent == 0 && (this.isPronominal() || mention.isPronominal())) {
+//            distOfSent = 1;
+//        }
         
-        if(distOfSent > 49) {
-            distOfSent = 49;
-        }
-        
-        return distOfSent;
+        return Math.max(distOfSent, 1);
     }
     
     public boolean numberAgree(Mention mention) {
@@ -595,29 +593,6 @@ public class Mention implements Serializable{
         member.belongTo = this;
         
         this.number = Number.PLURAL;
-        if(this.mentionType == MentionType.PRONOMINAL) {
-            this.mentionType = MentionType.NOMINAL;
-        }
-        
-        if(this.person == Person.I) {
-            this.person = Person.WE;
-        }
-        else if(this.person == Person.HE || this.person == Person.SHE || this.person == Person.IT) {
-            this.person = Person.THEY;
-        }
-        else if(this.person == Person.UNKNOWN) {
-            this.person = Person.THEY;
-        }
-        
-        
-        if(member.person == Person.I || member.person == Person.WE) {
-            this.person = Person.WE;
-        }
-        else if(member.person == Person.YOU) {
-            if(this.person == Person.THEY) {
-                this.person = Person.YOU;
-            }
-        }
     }
     
     public int apposOrder(Mention mention) {
@@ -1267,7 +1242,7 @@ public class Mention implements Serializable{
     }
     
     private boolean quantityOfRule(Sentence sent, Dictionaries dict) {
-        return (headIndex + 1 < endIndex) && 
+        return this.isNominative() && (headIndex + 1 < endIndex) && 
                 (isNumber(headword, dict) || dict.quantifiers.contains(headString))
                 && sent.getLexicon(headIndex + 1).form.equalsIgnoreCase("of");
     }
@@ -1291,7 +1266,7 @@ public class Mention implements Serializable{
                     setAnimacy(sent, dict);
                     setGender(sent, dict, getGender(sent, dict));
                     setPerson(sent, dict);
-                    return;
+                    break;
                 }
             }
         }
@@ -1311,7 +1286,7 @@ public class Mention implements Serializable{
                     setAnimacy(sent, dict);
                     setGender(sent, dict, getGender(sent, dict));
                     setPerson(sent, dict);
-                    return;
+                    break;
                 }
                 else {
                     start++;
@@ -1319,8 +1294,15 @@ public class Mention implements Serializable{
             }
         }
         
-        // set definite for list member moentions
-//        setDefiniteness(sent, dict);
+        //reprocess list mentions
+        if(this.isList()) {
+            setTypeForList(sent, dict);
+            setDefiniteness(sent, dict);
+            setNumber(sent, dict);
+            setAnimacy(sent, dict);
+            setGender(sent, dict, getGender(sent, dict));
+            setPerson(sent, dict);
+        }
     }
     
     private void getHeadword(Sentence sent, List<Mention> mentions, Dictionaries dict, Set<Mention> remove){
@@ -1350,7 +1332,10 @@ public class Mention implements Serializable{
             
             int ofPos = headIndex + 1;
             for(int i = ofPos + 1; i < endIndex; ++i) {
-                if(sent.getLexicon(i).basic_head == ofPos) {
+                if(sent.getLexicon(i).basic_head == ofPos 
+                    && !sent.getLexicon(i).postag.startsWith("RB")
+                    && !sent.getLexicon(i).postag.startsWith("JJ")
+                    && !sent.getLexicon(i).postag.startsWith("IN")) {
                     headIndex = i;
                     this.headword = new Lexicon(sent.getLexicon(headIndex));
                     this.headString = headword.form.toLowerCase();
@@ -1359,8 +1344,12 @@ public class Mention implements Serializable{
             }
             //break if new headIndex does not exist
             if(headIndex + 1 == ofPos) {
+                remove.add(this);
                 break;
             }
+        }
+        if(!remove.contains(this) && dict.otherPronouns.contains(headString)) {
+            remove.add(this);
         }
     }
     
@@ -1386,21 +1375,48 @@ public class Mention implements Serializable{
         return false;
     }
     
-    private void setType(Sentence sent, Dictionaries dict) {
-        if(this.isList()) {
-            if(this.mentionType == MentionType.PRONOMINAL) {
+    private void setTypeForList(Sentence sent, Dictionaries dict) {
+        this.mentionType = MentionType.PROPER;
+        for(Mention member : this.listMember) {
+            if(member.mentionType != MentionType.PROPER) {
                 this.mentionType = MentionType.NOMINAL;
+                this.headword.ner = "O";
+                return;
+            }
+            else {
+                if(!this.headword.ner.equals(member.headword.ner)) {
+                    this.mentionType = MentionType.NOMINAL;
+                    this.headword.ner = "O";
+                    return;
+                }
             }
         }
-        else if((endIndex - startIndex) == 1 && headword.ner.equals("O") 
+    }
+    
+    private void setType(Sentence sent, Dictionaries dict) {
+        if((endIndex - startIndex) == 1 && headword.ner.equals("O") 
                 && (dict.allPronouns.contains(headString) 
                     || dict.relativePronouns.contains(headString)
-//                    || (headword.postag.startsWith("PRP") && headString.equals("'s"))
                     || dict.determiners.contains(headString)
                     || dict.quantDeterminers.contains(headString) 
                     || dict.singularDeterminers.contains(headString)
                     || dict.pluralDeterminers.contains(headString))) {
             mentionType = MentionType.PRONOMINAL;
+        }
+        else if(this.getSpan(sent).equalsIgnoreCase("the one") || this.getSpan(sent).equalsIgnoreCase("the one 's")
+                || this.getSpan(sent).equalsIgnoreCase("the one's")) {
+            mentionType = MentionType.PRONOMINAL;
+        }
+        else if((endIndex - startIndex) == 3 && this.headIndex + 1 == this.endIndex
+                && (sent.getLexicon(startIndex).form.equalsIgnoreCase("both") 
+                    || sent.getLexicon(startIndex).form.equalsIgnoreCase("all"))
+                && sent.getLexicon(startIndex + 1).form.equalsIgnoreCase("of")
+                && (dict.allPronouns.contains(headString) 
+                    || dict.determiners.contains(headString)
+                    || dict.singularDeterminers.contains(headString)
+                    || dict.pluralDeterminers.contains(headString))) {
+            mentionType = MentionType.PRONOMINAL;
+            
         }
         else if(!headword.ner.equals("O") || headword.postag.startsWith("NNP")) {
             // CARDINAL, QUANTITY are not regarded as Proper
@@ -1425,11 +1441,10 @@ public class Mention implements Serializable{
             }
             
             this.definite = Definiteness.GENERIC;
-            for(int i = this.startIndex; i < this.headIndex; ++i) {
+            for(int i = this.startIndex; i <= this.headIndex; ++i) {
                 String word = sent.getLexicon(i).form.toLowerCase();
                 String pos = sent.getLexicon(i).postag;
-                if(word.equals("its") || pos.equals("POS") 
-                        || dict.determiners.contains(word) || dict.quantDeterminers.contains(word)) {
+                if(pos.equals("POS") || dict.determiners.contains(word) || dict.quantDeterminers.contains(word)) {
                     this.definite = Definiteness.DEFINITE;
                     return;
                 }
@@ -1475,34 +1490,37 @@ public class Mention implements Serializable{
         }
     }
     
-    private void setNumber(Sentence sent, Dictionaries dict) {
-        if(this.isList()) {
+    private void setNumberForList() {
+        number = Number.PLURAL;
+    }
+    
+    private void setNumberForPronominal(Dictionaries dict) {
+        if (dict.pluralPronouns.contains(headString) || dict.pluralDeterminers.contains(headString)) {
             number = Number.PLURAL;
         }
-        else if(this.isPronominal()) {
-            if (dict.pluralPronouns.contains(headString) || dict.pluralDeterminers.contains(headString)) {
-                number = Number.PLURAL;
-            }
-            else if(dict.singularPronouns.contains(headString) || dict.singularDeterminers.contains(headString)) {
+        else if(dict.singularPronouns.contains(headString) || dict.singularDeterminers.contains(headString)) {
+            number = Number.SINGULAR;
+        }
+        else if(dict.quantDeterminers.contains(headString)) {
+            if(headString.equals("each")) {
                 number = Number.SINGULAR;
             }
-            else if(headString.equals("'s")) {
+            else {
                 number = Number.PLURAL;
             }
-            else if(dict.quantDeterminers.contains(headString)) {
-                if(headString.equals("each")) {
-                    number = Number.SINGULAR;
-                }
-                else {
-                    number = Number.PLURAL;
-                }
-            }
-            else {
-                number = Number.UNKNOWN;
+        }
+        else {
+            number = Number.UNKNOWN;
+            if(!dict.secondPersonPronouns.contains(headString) && !dict.otherPronouns.contains(headString)) {
+                this.display(System.out);
+                throw new RuntimeException("Unknow number for Pronominal: " + this.headString);
             }
         }
-        else if(quantityOfRule(sent, dict)) {
-            if(headword.form.equalsIgnoreCase("one") || headword.form.equalsIgnoreCase("each")) {
+    }
+    
+    private void setNumberForNominative(Sentence sent, Dictionaries dict) {
+        if(quantityOfRule(sent, dict)) {
+            if(dict.singularQuantifiers.contains(headString)) {
                 number = Number.SINGULAR;
             }
             else if(headword.form.equalsIgnoreCase("half")) {
@@ -1512,204 +1530,265 @@ public class Mention implements Serializable{
                 number = Number.PLURAL;
             }
         }
-        else if(!headword.ner.equals("O") && !this.isNominative()) {
-            if(headword.ner.equals("NORP") || headword.ner.equals("MISC") || headword.ner.equals("LAW")) {
-                // NORP, MISC or LAW can be both plural and singular
-                if((dict.isAdjectivalDemonym(headword.form) || headword.ner.equals("NORP")) 
-                        && headString.endsWith("s")) {
-                    number = Number.PLURAL;
-                }
-                else if(headword.postag.startsWith("N") && headword.postag.endsWith("S")) {
-                    number = Number.PLURAL;
-                }
-                else if(headword.postag.startsWith("N")) {
-                    number = Number.SINGULAR;
-                }
-                else {
-                    number = Number.UNKNOWN;
-                }
-            }
-            else {
-                number = Number.SINGULAR;
-            }
+        else if(headword.postag.startsWith("N") && headword.postag.endsWith("S")) {
+            number = Number.PLURAL;
+        }
+        else if(dict.pluralWords.contains(headString)){
+            number = Number.PLURAL;
+        }
+        else if(headword.postag.startsWith("N")) {
+            number = Number.SINGULAR;
+        }
+        else if(dict.singularWords.contains(headString)){
+            number = Number.SINGULAR;
+        }
+        else if(headword.ner.equals("QUANTITY")) {
+            number = Number.SINGULAR;
+        }
+        else if(this.isPureNumberMention(dict)) {
+            number = Number.SINGULAR;
+        }
+        else if((headword.ner.equals("NUMBER") || headword.ner.equals("CARDINAL")) 
+                && isNumber(this.headword, dict)) {
+            number = Number.SINGULAR;
+        }
+        else if(headword.ner.equals("MONEY")) {
+            number = Number.SINGULAR;
+        }
+        else if(headword.postag.startsWith("JJ")) {
+            number = Number.SINGULAR;
         }
         else {
-            if(headword.postag.startsWith("N") && headword.postag.endsWith("S")) {
-                number = Number.PLURAL;
-            }
-            else if(dict.pluralWords.contains(headString)){
-                number = Number.PLURAL;
-            }
-            else if(headword.postag.startsWith("N")) {
-                number = Number.SINGULAR;
-            }
-            else if(dict.singularWords.contains(headString)){
-                number = Number.SINGULAR;
-            }
-            else {
-                number = Number.UNKNOWN;
-            }
+            //for Unknown Number, set it to Singular
+            number = Number.SINGULAR;
         }
-        
-        if(!this.isPronominal() && number == Number.UNKNOWN) {
-            if (dict.pluralPronouns.contains(headString) || dict.pluralDeterminers.contains(headString)) {
-                number = Number.PLURAL;
+    }
+    
+    private void setNumberForProper(Sentence sent, Dictionaries dict) {
+        if(!headword.ner.equals("O") 
+                && !headword.ner.equals("NORP") 
+                && !headword.ner.equals("MISC")
+                && !headword.ner.equals("LAW")) {
+            number = Number.SINGULAR;
+        }
+        else if((dict.isAdjectivalDemonym(headword.form) || headword.ner.equals("NORP")) 
+                        && headString.endsWith("s")) {
+            number = Number.PLURAL;
+        }
+        else if(headword.postag.startsWith("N") && headword.postag.endsWith("S")) {
+            number = Number.PLURAL;
+        }
+        else if(dict.pluralWords.contains(headString)){
+            number = Number.PLURAL;
+        }
+        else if(headword.postag.startsWith("N")) {
+            number = Number.SINGULAR;
+        }
+        else if(dict.singularWords.contains(headString)){
+            number = Number.SINGULAR;
+        }
+        else if(this.isPureNumberMention(dict)) {
+            number = Number.SINGULAR;
+        }
+        else if(headword.postag.startsWith("JJ")) {
+            number = Number.SINGULAR;
+        }
+        else {
+            //for Unknown Number, set it to Singular
+            number = Number.SINGULAR;
+        }
+    }
+    
+    private void setNumber(Sentence sent, Dictionaries dict) {
+        if(this.isList()) {
+            setNumberForList();
+        }
+        else if(this.isPronominal()) {
+            setNumberForPronominal(dict);
+        }
+        else if(this.isNominative()) {
+            setNumberForNominative(sent, dict);
+        }
+        else if(this.isProper()) {
+            setNumberForProper(sent, dict);
+        }
+        else {
+            throw new RuntimeException("unknown mention type: " + this.mentionType);
+        }
+    }
+    
+    private void setAnimacyForList(Sentence sent, Dictionaries dict) {
+        for(Mention member : this.listMember) {
+            if(member.animacy == Animacy.ANIMATE) {
+                this.animacy = Animacy.ANIMATE;
             }
-            else if(dict.singularPronouns.contains(headString) || dict.singularDeterminers.contains(headString)) {
-                number = Number.SINGULAR;
-            }
-            else if(headString.equals("you")) {
-                if(headIndex - 2 >= startIndex && sent.getLexicon(headIndex - 1).form.equals("of")
-                    && (sent.getLexicon(headIndex - 2).form.toLowerCase().equals("both") 
-                        || sent.getLexicon(headIndex - 2).form.toLowerCase().equals("all"))) {
-                    number = Number.PLURAL;
-                }
-            }
-            else if(dict.singularWords.contains(headString)){
-                number = Number.SINGULAR;
-            }
-            else if(dict.pluralWords.contains(headString)){
-                number = Number.PLURAL;
-            }
-            else if(headword.ner.equals("QUANTITY")) {
-                number = Number.SINGULAR;
-            }
-            else if(this.isPureNumberMention(dict)) {
-                number = Number.SINGULAR;
-            }
-            else if((headword.ner.equals("NUMBER") || headword.ner.equals("CARDINAL")) 
-                    && isNumber(this.headword, dict)) {
-                number = Number.SINGULAR;
-            }
-            else if(headword.ner.equals("MONEY")) {
-                number = Number.SINGULAR;
-            }
-            else if(headword.postag.startsWith("JJ")) {
-                number = Number.SINGULAR;
+            else if(this.animacy == Animacy.UNKNOWN && member.animacy == Animacy.INANIMATE) {
+                this.animacy = Animacy.INANIMATE;
             }
         }
     }
     
-    private void setAnimacy(Sentence sent, Dictionaries dict) {
-        animacy = Animacy.UNKNOWN;
-        if(this.isPronominal()) {
-            if(dict.animatePronouns.contains(headString) || headString.equals("'s")) {
-                animacy = Animacy.ANIMATE;
-            }
-            else {
-                animacy = Animacy.UNKNOWN;
-            }
+    private void setAnimacyForPronominal(Dictionaries dict) {
+        if(dict.animatePronouns.contains(headString)) {
+            animacy = Animacy.ANIMATE;
+        }
+        else if(dict.singularDeterminers.contains(headString)) {
+            animacy = Animacy.INANIMATE;
         }
         else {
-            if(headword.ner.equals("PERSON") || headword.ner.equals("PER")) {
-                animacy = Animacy.ANIMATE;
-            }
-            else if(headword.ner.equals("NORP")) {
-                animacy = Animacy.ANIMATE;
-            }
-            else if(headword.ner.equals("GPE")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("LOCATION") || headword.ner.startsWith("LOC")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("MONEY")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("CARDINAL")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("ORDINAL")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("QUANTITY")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("NUMBER")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("PERCENT")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("DATE")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("TIME")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("LANGUAGE")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("MISC")) {
-                animacy = Animacy.UNKNOWN;
-            }
-            else if(headword.ner.equals("FAC")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("VEH")) {
-                animacy = Animacy.UNKNOWN;
-            }
-            else if(headword.ner.equals("WEA")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("PRODUCT")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.startsWith("ORG")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("LAW")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("EVENT")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(headword.ner.equals("WORK_OF_ART")) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(this.isPureNumberMention(dict)) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(this.isProper()) {
-                animacy = Animacy.INANIMATE;
-            }
+            animacy = Animacy.UNKNOWN;
         }
-        
-        if(!this.isPronominal() && animacy == Animacy.UNKNOWN) {
-            // Better heuristics using DekangLin:
-            if(this.isPureNumberMention(dict)) {
-                animacy = Animacy.INANIMATE;
-            }
-            else if(quantityOfRule(sent, dict)) {
-                for(int i = startIndex; i < endIndex; ++i) {
-                    if(i == headIndex) {
-                        continue;
+    }
+    
+    private void setAnimacyForNorminative(Sentence sent, Dictionaries dict) {
+        if(headword.ner.equals("MONEY")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("CARDINAL")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("QUANTITY")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("NUMBER")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(this.isPureNumberMention(dict)) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(quantityOfRule(sent, dict) 
+            || (dict.pluralDeterminers.contains(headString) || dict.singularDeterminers.contains(headString))
+                && headIndex + 1 < sent.length() && sent.getLexicon(headIndex + 1).form.equals("of")) {
+            animacy = Animacy.INANIMATE;
+            for(int i = startIndex; i < endIndex; ++i) {
+                if(i == headIndex) {
+                    continue;
+                }
+                Lexicon lex = sent.getLexicon(i);
+                if(lex.basic_head == headIndex || lex.basic_head == headIndex + 1) {
+                    if(dict.animals.contains(lex.lemma) || dict.animateWords.contains(lex.form)) {
+                        animacy = Animacy.ANIMATE;
+                        return;
                     }
-                    Lexicon lex = sent.getLexicon(i);
-                    if(lex.basic_head == headIndex || lex.basic_head == headIndex + 1) {
-                        if(dict.animals.contains(lex.lemma) || dict.animateWords.contains(lex.form)) {
-                            animacy = Animacy.ANIMATE;
-                            return;
-                        }
-                        else if(dict.inanimateWords.contains(lex.form)) {
-                            animacy = Animacy.INANIMATE;
-                            return;
-                        }
+                    else if(dict.inanimateWords.contains(lex.form)) {
+                        animacy = Animacy.INANIMATE;
+                        return;
                     }
                 }
             }
-            else if(dict.animals.contains(headword.lemma)) {
-                animacy = Animacy.ANIMATE;
+        }
+        else if(dict.animals.contains(headword.lemma)) {
+            animacy = Animacy.ANIMATE;
+        }
+        else if(dict.animateWords.contains(headString) || dict.animateWords.contains(headword.form)) {
+            animacy = Animacy.ANIMATE;
+        }
+        else if(dict.inanimateWords.contains(headString) || dict.inanimateWords.contains(headword.form)) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(this.headIndex + 1 < sent.length() && sent.getLexicon(headIndex + 1).postag.startsWith("W")
+                && dict.animatePronouns.contains(sent.getLexicon(headIndex + 1).form)) {
+            animacy = Animacy.ANIMATE;
+        }
+        else {
+            animacy = Animacy.INANIMATE;
+        }
+    }
+    
+    private void setAnimacyForProper(Sentence sent, Dictionaries dict) {
+        if(headword.ner.equals("PERSON") || headword.ner.equals("PER")) {
+            animacy = Animacy.ANIMATE;
+        }
+        else if(headword.ner.equals("GPE")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("LOCATION") || headword.ner.startsWith("LOC")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("MONEY")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("CARDINAL")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("ORDINAL")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("QUANTITY")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("NUMBER")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("PERCENT")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("DATE")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("TIME")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("LANGUAGE")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("MISC") || headword.ner.equals("NORP")) {
+            if(dict.isAdjectivalDemonym(headword.form)) {
+                if(this.number == Number.PLURAL) {
+                    animacy = Animacy.ANIMATE;
+                }
+                else {
+                    animacy = Animacy.INANIMATE;
+                }
             }
-            else if(dict.animateWords.contains(headString) || dict.animateWords.contains(headword.form)) {
-                animacy = Animacy.ANIMATE;
-            }
-            else if(dict.inanimateWords.contains(headString) || dict.inanimateWords.contains(headword.form)) {
+            else {
                 animacy = Animacy.INANIMATE;
             }
-            else if(dict.animatePronouns.contains(headString)) {
-                animacy = Animacy.ANIMATE;
-            }
+        }
+        else if(headword.ner.equals("FAC")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("VEH")) {
+            animacy = Animacy.UNKNOWN;
+        }
+        else if(headword.ner.equals("WEA")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("PRODUCT")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.startsWith("ORG")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("LAW")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("EVENT")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(headword.ner.equals("WORK_OF_ART")) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(this.isPureNumberMention(dict)) {
+            animacy = Animacy.INANIMATE;
+        }
+        else {
+            animacy = Animacy.INANIMATE;
+        }
+    }
+    
+    private void setAnimacy(Sentence sent, Dictionaries dict) {
+        if(this.isList()) {
+            setAnimacyForList(sent, dict);
+        }
+        else if(this.isPronominal()) {
+            setAnimacyForPronominal(dict);
+        }
+        else if(this.isNominative()) {
+            setAnimacyForNorminative(sent, dict);
+        }
+        else if(this.isProper()) {
+            setAnimacyForProper(sent, dict);
         }
     }
     
@@ -1776,46 +1855,113 @@ public class Mention implements Serializable{
         return null;
     }
     
-    private void setGender(Sentence sent, Dictionaries dict, Gender genderNumberResult) {
-        gender = Gender.UNKNOWN;
-        if (this.isPronominal()) {
-            if (dict.malePronouns.contains(headString)) {
-                gender = Gender.MALE;
-            } 
-            else if (dict.femalePronouns.contains(headString)) {
-                gender = Gender.FEMALE;
-            }
-            else if(dict.neutralPronouns.contains(headString)) {
-                gender = Gender.NEUTRAL;
-            }
+    private void setGenderForList(Sentence sent, Dictionaries dict, Gender genderNumberResult) {
+        if(this.animacy == Animacy.INANIMATE) {
+            this.gender = Gender.NEUTRAL;
         }
-        else if(this.isProper()) {
-            if(headword.ner.equals("PERSON") || headword.ner.equals("PER") 
-                || headword.ner.equals("MISC") || headword.ner.equals("NORP")
-                || headword.ner.equals("O")) {
-                if(genderNumberResult != null && this.number != Number.PLURAL) {
-                    gender = genderNumberResult;
+        else if(this.animacy == Animacy.ANIMATE) {
+            for(Mention member : this.listMember) {
+                if(this.gender == Gender.UNKNOWN) {
+                    this.gender = member.gender;
+                }
+                else if(this.gender != member.gender) {
+                    gender = Gender.FeORM;
+                    break;
                 }
             }
-            else {
-                gender = Gender.NEUTRAL;
+        }
+        else if(this.animacy == Animacy.UNKNOWN) {
+            for(Mention member : this.listMember) {
+                if(member.gender == Gender.FEMALE || member.gender == Gender.MALE || member.gender == Gender.FeORM) {
+                    this.animacy = Animacy.ANIMATE;
+                    this.gender = Gender.FeORM;
+                    return;
+                }
             }
+            this.animacy = Animacy.INANIMATE;
+            this.gender = Gender.NEUTRAL;
+        }
+    }
+    
+    private void setGenderForPronominal(Sentence sent, Dictionaries dict) {
+        if (dict.malePronouns.contains(headString)) {
+            gender = Gender.MALE;
+        } 
+        else if (dict.femalePronouns.contains(headString)) {
+            gender = Gender.FEMALE;
+        }
+        else if(dict.neutralPronouns.contains(headString)) {
+            gender = Gender.NEUTRAL;
+        }
+        else if(dict.firstPersonPronouns.contains(headString) 
+                || dict.secondPersonPronouns.contains(headString)
+                || dict.animatePronouns.contains(headString)) {
+            gender = Gender.FeORM;
+        }
+        else if(dict.singularDeterminers.contains(headString)) {
+            gender = Gender.NEUTRAL;
         }
         else {
+            gender = Gender.UNKNOWN;
+        }
+    }
+    
+    private void setGenderForNominative(Sentence sent, Dictionaries dict, Gender genderNumberResult) {
+        gender = Gender.UNKNOWN;
+        if(genderNumberResult != null && this.number != Number.PLURAL) {
+            gender = genderNumberResult;
+        }
+        else if(this.isPureNumberMention(dict)) {
+            gender = Gender.NEUTRAL;
+        }
+        else if(dict.animals.contains(headword.lemma)) {
+            gender = Gender.NEUTRAL;
+        }
+        else if(dict.maleWords.contains(headString) || dict.maleWords.contains(headword.form)) {
+            gender = Gender.MALE;
+        }
+        else if(dict.femaleWords.contains(headString) || dict.femaleWords.contains(headword.form)) {
+            gender = Gender.FEMALE;
+        }
+        else if(dict.neutralWords.contains(headString) || dict.neutralWords.contains(headword.form)) {
+            gender = Gender.NEUTRAL;
+        }
+        else if(animacy == Animacy.INANIMATE) {
+            gender = Gender.NEUTRAL;
+        }
+        
+        //Animate & Netural or UnKnown & person; gender --> FeORM
+        if(animacy == Animacy.ANIMATE && (gender == Gender.NEUTRAL || gender == Gender.UNKNOWN) 
+            && !dict.animals.contains(headword.lemma)) {
+            gender = Gender.FeORM;
+        }
+        
+        //InAnimate & Female or Male
+        if(this.animacy == Animacy.INANIMATE && (this.gender == Gender.FEMALE || this.gender == Gender.MALE)) {
+            this.gender = Gender.NEUTRAL;
+        }
+        //Unknown & Female or Male
+        if(this.animacy == Animacy.UNKNOWN && (this.gender == Gender.FEMALE || this.gender == Gender.MALE)) {
+            this.animacy = Animacy.INANIMATE;
+            this.gender = Gender.NEUTRAL;
+        }
+    }
+    
+    private void setGenderForProper(Sentence sent, Dictionaries dict, Gender genderNumberResult) {
+        if(headword.ner.equals("PERSON") || headword.ner.equals("PER") 
+                || headword.ner.equals("MISC") || headword.ner.equals("NORP")
+                || headword.ner.equals("O")) {
             if(genderNumberResult != null && this.number != Number.PLURAL) {
                 gender = genderNumberResult;
             }
-        }
-        
-        // gender == UnK, use special rules to determine gender
-        if(!this.isPronominal() && gender == Gender.UNKNOWN) {
-            if (dict.malePronouns.contains(headString)) {
+            else if(dict.maleWords.contains(headString) || dict.maleWords.contains(headword.form)) {
                 gender = Gender.MALE;
-            } 
-            else if (dict.femalePronouns.contains(headString)) {
+            }
+            else if(dict.femaleWords.contains(headString) || dict.femaleWords.contains(headword.form)) {
                 gender = Gender.FEMALE;
             }
             else if(headword.ner.equals("PERSON") || headword.ner.equals("PER")) {
+                gender = Gender.FeORM;
                 int[] ids = getNerSpan(sent);
                 for(int j = ids[0]; j < ids[1]; ++j) {
                     if(dict.maleWords.contains(sent.getLexicon(j).form.toLowerCase())) {
@@ -1828,130 +1974,157 @@ public class Mention implements Serializable{
                     }
                 }
             }
-            else{
-                if(this.isPureNumberMention(dict)) {
-                    gender = Gender.NEUTRAL;
+            else if(this.isPureNumberMention(dict)) {
+                gender = Gender.NEUTRAL;
+            }
+            else if(headword.ner.equals("MISC") || headword.ner.equals("NORP")) {
+                if(animacy == Animacy.ANIMATE) {
+                    gender = Gender.FeORM;
                 }
-                else if(dict.animals.contains(headword.lemma)) {
-                    gender = Gender.NEUTRAL;
-                }
-                else if(dict.maleWords.contains(headString) || dict.maleWords.contains(headword.form)) {
-                    gender = Gender.MALE;
-                }
-                else if(dict.femaleWords.contains(headString) || dict.femaleWords.contains(headword.form)) {
-                    gender = Gender.FEMALE;
-                }
-                else if(dict.neutralWords.contains(headString) || dict.neutralWords.contains(headword.form)) {
-                    gender = Gender.NEUTRAL;
-                }
-                else if(animacy == Animacy.INANIMATE) {
+                else {
                     gender = Gender.NEUTRAL;
                 }
             }
+            else if(dict.animals.contains(headword.lemma)) {
+                gender = Gender.NEUTRAL;
+            }
+            else if(dict.neutralWords.contains(headString) || dict.neutralWords.contains(headword.form)) {
+                gender = Gender.NEUTRAL;
+            }
+            else if(animacy == Animacy.INANIMATE) {
+                gender = Gender.NEUTRAL;
+            }
+            else {
+                gender = Gender.UNKNOWN;
+            }
+        }
+        else {
+            gender = Gender.NEUTRAL;
         }
         
-        // coordinate Animacy and Gender
-        valideAnimacyAndGender(sent, dict);
-    }
-    
-    private void valideAnimacyAndGender(Sentence sent, Dictionaries dict) {
         //Animate & Netural or UnKnown & person; gender --> FeORM
-        if(this.animacy == Animacy.ANIMATE 
-                && (!this.isProper() && !dict.animals.contains(headword.lemma) 
-                        || headword.ner.startsWith("PER")
-                        || headword.ner.equals("MISC")) 
-                && (this.gender == Gender.NEUTRAL || this.gender == Gender.UNKNOWN)) {
+        if(this.animacy == Animacy.ANIMATE && (this.gender == Gender.NEUTRAL || this.gender == Gender.UNKNOWN)
+                && (headword.ner.startsWith("PER") || headword.ner.equals("MISC"))) {
             gender = Gender.FeORM;
-        }
-        //Animate & Female or Male & List; gender --> FeORM
-        if(this.animacy == Animacy.ANIMATE 
-                && this.isList()
-                && (this.gender == Gender.FEMALE || this.gender == Gender.MALE)) {
-            for(Mention member : this.listMember) {
-                if(this.gender != member.gender) {
-                    gender = Gender.FeORM;
-                    break;
-                }
-            }
         }
         
         //InAnimate & Female or Male
         if(this.animacy == Animacy.INANIMATE && (this.gender == Gender.FEMALE || this.gender == Gender.MALE)) {
-            if(this.isNominative()) {
-                this.gender = Gender.NEUTRAL;
+            if(headword.ner.equals("PERSON") || headword.ner.equals("PER") 
+                    || headword.ner.equals("MISC") || headword.ner.equals("NORP")
+                    || headword.ner.equals("O")) {
+                this.animacy = Animacy.ANIMATE;
             }
-            else if(this.isProper()) {
-                if(headword.ner.equals("PERSON") || headword.ner.equals("PER") 
-                        || headword.ner.equals("MISC") || headword.ner.equals("NORP")
-                        || headword.ner.equals("O")) {
-                    this.animacy = Animacy.ANIMATE;
-                }
-                else {
-                    this.gender = Gender.NEUTRAL;
-                }
-            }
-            else if(this.isList() && this.mentionType == MentionType.PROPER) {
-                if(headword.ner.equals("PERSON") || headword.ner.equals("PER") 
-                        || headword.ner.equals("MISC") || headword.ner.equals("NORP")
-                        || headword.ner.equals("O")) {
-                    this.animacy = Animacy.ANIMATE;
-                }
-                else {
-                    this.gender = Gender.NEUTRAL;
-                }
-            }
-            else if(this.isList() && this.mentionType == MentionType.NOMINAL) {
+            else {
                 this.gender = Gender.NEUTRAL;
             }
         }
         
         //Unknown & Female or Male
         if(this.animacy == Animacy.UNKNOWN && (this.gender == Gender.FEMALE || this.gender == Gender.MALE)) {
-            if(this.isNominative()) {
-                this.animacy = Animacy.INANIMATE;
-                this.gender = Gender.NEUTRAL;
+            this.animacy = Animacy.ANIMATE;
+        }
+    }
+    
+    private void setGender(Sentence sent, Dictionaries dict, Gender genderNumberResult) {
+        if(this.isList()) {
+            setGenderForList(sent, dict, genderNumberResult);
+        }
+        else if(this.isPronominal()) {
+            setGenderForPronominal(sent, dict);
+        }
+        else if(this.isNominative()) {
+            setGenderForNominative(sent, dict, genderNumberResult);
+        }
+        else if(this.isProper()) {
+            setGenderForProper(sent, dict, genderNumberResult);
+        }
+    }
+    
+    private void setPersonForList(Sentence sent, Dictionaries dict) {
+        if(this.person == Person.I || this.person == Person.WE) {
+            this.person = Person.WE;
+        }
+        else if(this.person == Person.YOU) {
+            this.person = Person.YOU;
+        }
+        else {
+            this.person = Person.THEY;
+        }
+        
+        for(Mention member : this.listMember) {
+            if(member.person == Person.I || member.person == Person.WE) {
+                this.person = Person.WE;
             }
-            else if(this.isProper()) {
-                this.animacy = Animacy.ANIMATE;
-            }
-            else if(this.isList() && this.mentionType == MentionType.NOMINAL) {
-                this.animacy = Animacy.INANIMATE;
-                this.gender = Gender.NEUTRAL;
-            }
-            else if(this.isList() && this.mentionType == MentionType.PROPER) {
-                this.animacy = Animacy.ANIMATE;
+            else if(member.person == Person.YOU && this.person != Person.WE) {
+                this.person = Person.YOU;
             }
         }
     }
     
-    private void setPerson(Sentence sent, Dictionaries dict) {
-        if(!this.isPronominal()) {
-            if(this.isList()) {
-                return;
+    private void setPersonForPronominal(Sentence sent, Dictionaries dict) {
+        if(dict.firstPersonPronouns.contains(headString)) {
+            if (number == Number.SINGULAR) {
+                person = Person.I;
             }
-            else if(headword.ner.equals("O") 
-                    && dict.firstPersonPronouns.contains(headString) && headword.postag.equals("PRP")) {
-                if (number == Number.SINGULAR) {
-                    person = Person.I;
-                }
-                else if (number == Number.PLURAL) {
-                    person = Person.WE;
-                }
-                else {
-                    person = Person.UNKNOWN;
-                }
+            else if (number == Number.PLURAL) {
+                person = Person.WE;
             }
-            else if(headword.ner.equals("O")
-                    && dict.secondPersonPronouns.contains(headString) && headword.postag.equals("PRP")) {
-                person = Person.YOU;
+            else {
+                throw new RuntimeException("unknow person: " + this.getSpan(sent));
             }
-            else if(this.number == Number.UNKNOWN) {
+        }
+        else if(dict.secondPersonPronouns.contains(headString)) {
+            person = Person.YOU;
+        }
+        else if(dict.thirdPersonPronouns.contains(headString)) {
+            if (gender == Gender.MALE && number == Number.SINGULAR) {
+                person = Person.HE;
+            }
+            else if (gender == Gender.FEMALE && number == Number.SINGULAR) {
+                person = Person.SHE;
+            }
+            else if (gender == Gender.FeORM && number == Number.SINGULAR) {
                 person = Person.UNKNOWN;
             }
-            else if(this.number == Number.PLURAL) {
+            else if (gender == Gender.NEUTRAL && number == Number.SINGULAR) {
+                person = Person.IT;
+            }
+            else if (number == Number.PLURAL) {
                 person = Person.THEY;
             }
-            else if(this.gender == Gender.MALE) {
+            else {
+                this.display(sent, System.out);
+                throw new RuntimeException("unknow person: " + this.getSpan(sent));
+            }
+        }
+        else if(dict.singularDeterminers.contains(headString)) {
+            person = Person.IT;
+        }
+        else if(dict.pluralDeterminers.contains(headString)) {
+            person = Person.THEY;
+        }
+        else if(dict.quantDeterminers.contains(headString)) {
+            if(headString.equals("each")) {
+                person = Person.IT;
+            }
+            else {
+                person = Person.THEY;
+            }
+        }
+        else {
+            if(!dict.otherPronouns.contains(headString)) {
+                throw new RuntimeException("unknow person: " + this.getSpan(sent));
+            }
+        }
+    }
+    
+    private void setPersonForNominativeOrProper(Sentence sent, Dictionaries dict) {
+        if(this.number == Number.PLURAL) {
+            person = Person.THEY;
+        }
+        else if(this.number == Number.SINGULAR) {
+            if(this.gender == Gender.MALE) {
                 person = Person.HE;
             }
             else if(this.gender == Gender.FEMALE) {
@@ -1964,62 +2137,25 @@ public class Mention implements Serializable{
                 person = Person.IT;
             }
             else {
-                if(this.animacy == Animacy.INANIMATE) {
-                    person = Person.IT;
-                }
-                else {
-                    person = Person.UNKNOWN;
-                }
-            }
-            return;
-        }
-        
-        String spanToString = getSpan(sent).toLowerCase();
-        if(dict.firstPersonPronouns.contains(spanToString) || spanToString.equals("'s")) {
-            if (number == Number.SINGULAR) {
-                person = Person.I;
-            }
-            else if (number == Number.PLURAL) {
-                person = Person.WE;
-            }
-            else {
                 person = Person.UNKNOWN;
+                this.display(sent, System.out);
+                throw new RuntimeException("unknow person: " + this.getSpan(sent));
             }
-        }
-        else if(dict.secondPersonPronouns.contains(spanToString)) {
-            person = Person.YOU;
-        }
-        else if(dict.thirdPersonPronouns.contains(spanToString)) {
-            if (gender == Gender.MALE && number == Number.SINGULAR) {
-                person = Person.HE;
-            }
-            else if (gender == Gender.FEMALE && number == Number.SINGULAR) {
-                person = Person.SHE;
-            }
-            else if (gender == Gender.FeORM && number == Number.SINGULAR) {
-                person = Person.UNKNOWN;
-            }
-            else if ((gender == Gender.NEUTRAL || animacy == Animacy.INANIMATE) && number == Number.SINGULAR) {
-                person = Person.IT;
-            }
-            else if (number == Number.PLURAL) {
-                person = Person.THEY;
-            }
-            else {
-                person = Person.UNKNOWN;
-            }
-        }
-        else if(dict.singularDeterminers.contains(spanToString)) {
-            person = Person.IT;
-        }
-        else if(dict.pluralDeterminers.contains(spanToString)) {
-            person = Person.THEY;
-        }
-        else if(dict.quantDeterminers.contains(spanToString)) {
-            person = Person.THEY;
         }
         else {
-            person = Person.UNKNOWN;
+            throw new RuntimeException("unknow person: " + this.getSpan(sent));
+        }
+    }
+    
+    private void setPerson(Sentence sent, Dictionaries dict) {
+        if(this.isList()) {
+            setPersonForList(sent, dict);
+        }
+        else if(this.isPronominal()) {
+            setPersonForPronominal(sent, dict);
+        }
+        else {
+            setPersonForNominativeOrProper(sent, dict);
         }
     }
     
@@ -2077,12 +2213,10 @@ public class Mention implements Serializable{
         printer.println("cluster ID: " + (this.corefCluster == null ? -1 : this.corefCluster.clusterID));
         printer.println(this.startIndex + " " + this.endIndex + " " + this.getSpan(sent));
         printer.println("headIndex: " + this.headIndex);
-        printer.println("headString: " + this.headString);
+        printer.println("headString: " + this.headString + ": " + headword.postag);
         printer.println("mention type: " + this.mentionType);
         printer.println("mention definiteness: " + this.definite);
-        printer.println("mention number: " + this.number);
-        printer.println("mention animacy: " + this.animacy + " gender: " + this.gender);
-        printer.println("mention person: " + this.person);
+        printer.println("mention number: " + this.number + " animacy: " + this.animacy + " gender: " + this.gender + "  person: " + this.person);
         printer.println("mention ner: " + this.headword.ner);
         int[] nerSpan = this.getNerSpan(sent);
         if(nerSpan != null) {
@@ -2120,12 +2254,10 @@ public class Mention implements Serializable{
         printer.println("cluster ID: " + (this.corefCluster == null ? -1 : this.corefCluster.clusterID));
         printer.println(this.startIndex + " " + this.endIndex);
         printer.println("headIndex: " + this.headIndex);
-        printer.println("headString: " + this.headString);
+        printer.println("headString: " + this.headString + ": " + headword.postag);
         printer.println("mention type: " + this.mentionType);
         printer.println("mention definiteness: " + this.definite);
-        printer.println("mention number: " + this.number);
-        printer.println("mention animacy: " + this.animacy + " gender: " + this.gender);
-        printer.println("mention person: " + this.person);
+        printer.println("mention number: " + this.number + " animacy: " + this.animacy + " gender: " + this.gender + "  person: " + this.person);
         printer.println("mention ner: " + this.headword.ner);
         printer.println("mention speaker: " + (this.speakerInfo == null ? "null" : this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerMentionId() + " " + this.speakerInfo.getSpeakerName() + " " + this.speakerInfo.getSpkeakerNameAsOneString()));
         printer.println("previous speaker: " + (this.preSpeakerInfo == null ? "null" : this.preSpeakerInfo.toString() + " " + this.preSpeakerInfo.getSpeakerName()));

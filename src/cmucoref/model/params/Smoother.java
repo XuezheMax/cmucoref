@@ -13,35 +13,17 @@ public class Smoother {
 		
 	}
 	
-	public final void smooth(double[] mFeatC, double[] mGivenC, double[] mGivenCNoNil, double alpha_m, 
-			double[] eFeatC, double[] eGivenC, double[] eGivenCNoNil, double[] eUnigramC, double eUnigramN, double alpha_e, 
-			CorefModel model) {
-		smoothMentionParams(mFeatC, mGivenC, mGivenCNoNil, alpha_m, model);
-		if(eFeatC != null) {
-			smoothEventParams(eFeatC, eGivenC, eGivenCNoNil, eUnigramC, eUnigramN, alpha_e, model);
-		}
-	}
-	
-	protected void smoothMentionParams(double[] mFeatC, double[] mGivenC, double[] mGivenCNoNil, double alpha_m, CorefModel model) {
+	public void smoothMentionParams(double[] mFeatC, double[] mGivenC, double beta, CorefModel model) {
 		int nsizeOfM = model.mentionFeatureSize();
-		int gsizeOfM = model.givenSizeofMention();
 		// update mention parameters
 		for(int j = 0; j < nsizeOfM; ++j) {
 			int gid = model.getMentionGidFromIndex(j);
 			double val = mFeatC[j] - mGivenC[gid];
 			model.updateMentionParams(j, val);
 		}
-		// update mention nils
-		for(int j = 0; j < gsizeOfM; ++j) {
-			double val = Util.logsubsexp(mGivenC[j], mGivenCNoNil[j]) - mGivenC[j]
-						- Math.log(model.mentionFeatureSize() + 1 - model.getSizeOfMentionFeatFromGid(j));
-			model.updateMentionNils(j, val);
-		}
-		
-		model.updateMentionNil(Double.NEGATIVE_INFINITY);
 	}
 	
-	protected void smoothEventParams(double[] eFeatC, double[] eGivenC, double[] eGivenCNoNil, double[] eUnigramC, double eUnigramN, double alpha_e, CorefModel model) {
+	public void smoothEventParams(double[] eFeatC, double[] eGivenC, double[] eGivenCNoNil, double[] eUnigramC, double eUnigramN, double alpha, CorefModel model) {
 		int nsizeOfE = model.eventFeatureSize();
 		int gsizeOfE = model.givenSizeofEvent();
 		

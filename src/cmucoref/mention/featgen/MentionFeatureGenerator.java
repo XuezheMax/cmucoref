@@ -65,7 +65,7 @@ public class MentionFeatureGenerator {
             Dictionaries dict, CorefModel model, FeatureVector mfv, FeatureVector efv) {
         //given
         StringBuilder given = new StringBuilder();
-        given.append("mode = PREC_MAT");
+        given.append("mode=PREC_MAT");
         given.append(", TYPE=" +  antec.getMentionType());
         
         //entry
@@ -212,20 +212,25 @@ public class MentionFeatureGenerator {
         given.append(", ANI=" + antec.animacy);
         //gender feature
         given.append(", GEN=" + antec.gender);
+        //person feature
+        given.append(", PER=" + antec.person);
         
         
         //entry
         StringBuilder feat = new StringBuilder();
-        feat.append("TYPE=" + anaph.getMentionType());
         //distance features
         int distOfSent = anaph.getDistOfSent(antec);
-        feat.append(", " + "DIST=" + distOfSent);
+        feat.append("DIST=" + distOfSent);
+        //type features
+        feat.append(", TYPE=" + anaph.getMentionType());
         //number features;
-        feat.append(", " + "NUM=" + anaph.number);
+        feat.append(", NUM=" + anaph.number);
         //animacy features
-        feat.append(", " + "ANI=" + anaph.animacy);
+        feat.append(", ANI=" + anaph.animacy);
         //gender features
-        feat.append(", " + "GEN=" + anaph.gender);
+        feat.append(", GEN=" + anaph.gender);
+        //person feature
+        feat.append(", PER=" + anaph.person);
         
         //string match features (does not apply for pronominals)
         if(!anaph.isPronominal() && !antec.isPronominal()) {
@@ -259,11 +264,13 @@ public class MentionFeatureGenerator {
         StringBuilder feat = new StringBuilder();
         feat.append("TYPE=" + anaph.getMentionType());
         //number features;
-        feat.append(", " + "NUM=" + anaph.number);
+        feat.append(", NUM=" + anaph.number);
         //animacy features
-        feat.append(", " + "ANI=" + anaph.animacy);
+        feat.append(", ANI=" + anaph.animacy);
         //gender features
-        feat.append(", " + "GEN=" + anaph.gender);
+        feat.append(", GEN=" + anaph.gender);
+        //person features
+        feat.append(", PER=" + anaph.person);
         addMentionFeature(feat.toString(), given, model, mfv);
     }
     

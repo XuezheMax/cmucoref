@@ -56,11 +56,11 @@ public class CorefModel implements Serializable{
 	}
 	
 	private double getMentionScore(FeatureVector mfv) {
-		return mentionParams.getScore(mfv);
+		return mentionParams.getScoreWithNil(mfv);
 	}
 	
 	private double getEventScore(FeatureVector efv) {
-		return (efv == null || efv.size() == 0) ? 0.0 : eventParams.getScoreWithNil(efv);
+		return (efv == null || efv.size() == 0) ? 0.0 : eventParams.getScoreWithNilAndUniGram(efv);
 	}
 	
 	public void updateMentionParams(int index, double val) {
@@ -119,6 +119,10 @@ public class CorefModel implements Serializable{
 		return eventParams.uniParamAt(eid);
 	}
 	
+	//get mention gid
+	public int getMentionGid(String given) {
+	    return mentionAlphabet.lookupGivenIndex(given);
+	}
 	//get mention feature index
 	public Pair<Integer, Integer> getMentionFeatureIndex(String feat, String given) {
 		return mentionAlphabet.lookupIndex(feat, given);

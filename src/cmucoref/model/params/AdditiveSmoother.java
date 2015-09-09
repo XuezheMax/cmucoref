@@ -9,15 +9,44 @@ public class AdditiveSmoother extends Smoother {
 	}
 	
 	@Override
-	protected void smoothEventParams(double[] eFeatC, double[] eGivenC, double[] eGivenCNoNil, double[] eUnigramC, double eUnigramN, double alpha_e, CorefModel model) {
+	public void smoothMentionParams(double[] mFeatC, double[] mGivenC, double beta, CorefModel model) {
+	    int nsizeOfM = model.mentionFeatureSize();
+	    int gsizeOfM = model.givenSizeofMention();
+	    int newClusGid = model.getMentionGid("mode=ATTR_MAT, NEWCLUSMENTION");
+	    int d = model.getSizeOfMentionFeatFromGid(newClusGid) * 20 * 5;
+	    double logD = Math.log(d);
+        double logBeta = Math.log(beta);
+        
+        // update mention parameters
+        for(int j = 0; j < nsizeOfM; ++j) {
+            int gid = model.getMentionGidFromIndex(j);
+            double val = (gid == newClusGid ? mFeatC[j] - mGivenC[gid] : 
+                Util.logsumexp(mFeatC[j], logBeta) - Util.logsumexp(mGivenC[gid], logBeta + logD));
+            model.updateMentionParams(j, val);
+        }
+        
+        // update nil
+        model.updateMentionNil(-logD);
+        
+        // update mention nils
+        for(int j = 0; j < gsizeOfM; ++j) {
+            if(j != newClusGid) {
+                double val = beta - Util.logsumexp(mGivenC[j], logBeta + logD);
+                model.updateMentionNils(j, val);
+            }
+        }
+	}
+	
+	@Override
+	public void smoothEventParams(double[] eFeatC, double[] eGivenC, double[] eGivenCNoNil, double[] eUnigramC, double eUnigramN, double alpha, CorefModel model) {
 		int nsizeOfE = model.eventFeatureSize();
 		int gsizeOfE = model.givenSizeofEvent();
 		
 		int d = model.eventV();
 		double logD = Math.log(d);
-		double logAlpha = Math.log(alpha_e);
+		double logAlpha = Math.log(alpha);
 		
-		//update uni_val
+		//update nil
 		model.updateEventNil(-logD);
 		
 		//update event parameters

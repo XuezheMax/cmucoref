@@ -82,7 +82,7 @@ public class Decoder {
 				Mention antec = (j == -1 ? null : allMentions.get(j));
 				Sentence antecSent = (antec == null ? null : doc.getSentence(antec.sentID));
 				
-				if(antec != null && anaph.ruleout(anaphSent, antec, antecSent, manager.getDict(), true)) {
+				if(anaph.ruleout(anaphSent, antec, antecSent, manager.getDict(), true)) {
 					continue;
 				}
 				
@@ -159,7 +159,7 @@ public class Decoder {
 				Mention antec = (j == -1 ? null : allMentions.get(j));
 				Sentence antecSent = (antec == null ? null : doc.getSentence(antec.sentID));
 				
-				if(antec != null && anaph.ruleout(anaphSent, antec, antecSent, manager.getDict(), true)) {
+				if(anaph.ruleout(anaphSent, antec, antecSent, manager.getDict(), true)) {
 					continue;
 				}
 				
