@@ -135,6 +135,7 @@ public class Test {
         
         MentionExtractor mentionExtractor = new CMUMentionExtractor();
         mentionExtractor.createDict(options.getPropFile());
+        mentionExtractor.createWordNet(options.getWordNet());
         
         EventExtractor eventExtractor = EventExtractor.createExtractor(options.getEventExtractor());
         eventExtractor.createDict(options.getPropFile());

@@ -1,3 +1,3 @@
 Main-Class: cmucoref.CorefSystem
-Class-Path: lib/stanford-corenlp-3.4.jar lib/stanford-corenlp-3.4-models.jar lib/trove.jar lib/cmucoref-models.jar
+Class-Path: lib/stanford-corenlp-3.4.jar lib/stanford-corenlp-3.4-models.jar lib/trove.jar lib/cmucoref-models.jar lib/edu.mit.jwi_2.4.0.jar
 

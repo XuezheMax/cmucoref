@@ -23,6 +23,7 @@ import cmucoref.mention.Dictionaries.Gender;
 import edu.stanford.nlp.dcoref.Dictionaries.MentionType;
 import edu.stanford.nlp.dcoref.Dictionaries.Number;
 import edu.stanford.nlp.dcoref.Dictionaries.Person;
+import cmucoref.mention.Dictionaries.SemanticClass;
 
 public class Mention implements Serializable{
     
@@ -50,6 +51,7 @@ public class Mention implements Serializable{
     public Animacy animacy;
     public Person person;
     public Definiteness definite;
+    public SemanticClass semclass;
     
     public SpeakerInfo speakerInfo = null;
     public SpeakerInfo utteranceInfo = null; // the utterances with this mention as speaker;
@@ -477,61 +479,56 @@ public class Mention implements Serializable{
         }
     }
     
-    public boolean NERAgree(Mention mention, Dictionaries dict) {
+    public boolean SemanticClassAgree(Mention mention, Dictionaries dict) {
         if(this.isPronominal()) {
-            if(mention.headword.ner.equals("O")){
-                return true;
-            }
-            else if(mention.isList()) {
-                if(mention.headword.ner.equals("PERSON") || mention.headword.ner.equals("PER")) {
+            if(mention.isList()) {
+                if(mention.semclass == SemanticClass.PERSON) {
                     return dict.pluralPronouns.contains(headString) || dict.quantDeterminers.contains(headString);
                 }
-                else if(mention.headword.ner.equals("EVENT")
-                        || mention.headword.ner.equals("TIME")
-                        || mention.headword.ner.equals("DATE")) {
+                else if(mention.semclass == SemanticClass.TIME) {
                     return false;
                 }
                 else {
                     return dict.norpPronouns.contains(headString) || dict.quantDeterminers.contains(headString);
                 }
             }
-            else if(mention.headword.ner.equals("NORP")
+            else if(mention.semclass == SemanticClass.ANIMAL
+                    ||mention.headword.ner.equals("NORP")
                     || mention.headword.ner.equals("MISC")
                     || mention.headword.ner.equals("LAW")
                     || mention.headword.ner.equals("NUMBER")) {
                 return dict.norpPronouns.contains(headString) || dict.quantDeterminers.contains(headString);
             }
-            else if(mention.headword.ner.equals("PERSON") || mention.headword.ner.equals("PER")) {
+            else if(mention.semclass == SemanticClass.PERSON) {
                 return dict.personPronouns.contains(headString) || dict.quantDeterminers.contains(headString);
             }
-            else if(mention.headword.ner.equals("LOCATION") 
-                    || mention.headword.ner.equals("GPE")
-                    || mention.headword.ner.equals("PRODUCT")
-                    || mention.headword.ner.equals("LOC")
-                    || mention.headword.ner.equals("FAC")
-                    || mention.headword.ner.equals("WORK_OF_ART")
-                    || mention.headword.ner.equals("MONEY") 
-                    || mention.headword.ner.equals("PERCENT") 
-                    || mention.headword.ner.equals("CARDINAL") 
-                    || mention.headword.ner.equals("QUANTITY") 
-                    || mention.headword.ner.equals("ORDINAL") 
-                    || mention.headword.ner.equals("LANGUAGE")
-                    || mention.headword.ner.equals("ORGANIZATION") || mention.headword.ner.equals("ORG")) {
+            else if(mention.semclass == SemanticClass.LOCATION
+                    || mention.semclass == SemanticClass.GPE
+                    || mention.semclass == SemanticClass.MONEY
+                    || mention.semclass == SemanticClass.PERCENT
+                    || mention.semclass == SemanticClass.QUANTITY
+                    || mention.semclass == SemanticClass.NUMBER
+                    || mention.semclass == SemanticClass.ORGANIZATION) {
                 return dict.locationPronouns.contains(headString);
             }
-            else if(mention.headword.ner.equals("EVENT")
-                    || mention.headword.ner.equals("TIME")
-                    || mention.headword.ner.equals("DATE")) {
+            else if(mention.semclass == SemanticClass.TIME) {
                 return false;
             }
             else {
-                return false;
+                return true;
             }
         }
         else if(mention.isPronominal()){
-            return mention.NERAgree(this, dict);
+            return mention.SemanticClassAgree(this, dict);
         }
         
+        if(this.semclass == SemanticClass.UNKNOWN || mention.semclass == SemanticClass.UNKNOWN) {
+            return this.headString.equals(mention.headString);
+        }
+        return this.semclass == mention.semclass;
+    }
+    
+    public boolean NERAgree(Mention mention) {
         return this.headword.ner.equals("O") || mention.headword.ner.equals("O")
                 || this.headword.ner.equals(mention.headword.ner);
     }
@@ -546,7 +543,10 @@ public class Mention implements Serializable{
         else if(!(this.animateAgree(mention))) {
             return false;
         }
-        else if(!(this.NERAgree(mention, dict))) {
+        else if(!(this.SemanticClassAgree(mention, dict))) {
+            return false;
+        }
+        else if(!(this.NERAgree(mention))) {
             return false;
         }
         else if(!(this.personAgree(mention, dict))) {
@@ -928,7 +928,7 @@ public class Mention implements Serializable{
         else if(options.useDemonym() && this.isDemonym(sent, anaph, anaphSent, dict)) {
             return true;
         }
-        else if((this.headword.ner.startsWith("PER") && anaph.headword.ner.startsWith("PER") )
+        else if((this.semclass == SemanticClass.PERSON)
 //                || this.headword.ner.startsWith("ORG") && anaph.headword.ner.startsWith("ORG")
 //                || this.headword.ner.startsWith("LOC") && anaph.headword.ner.startsWith("LOC")
 //                || this.headword.ner.startsWith("GPE") && anaph.headword.ner.startsWith("GPE"))
@@ -1010,7 +1010,7 @@ public class Mention implements Serializable{
         }
         
         modifiersOfAnaph.removeAll(dict.entityWordsToExclude);
-        if(anaph.headword.ner.equals("PERSON") || anaph.headword.ner.equals("PER")) {
+        if(anaph.semclass == SemanticClass.PERSON) {
             modifiersOfAnaph.removeAll(dict.personalTitles);
         }
         possessivePronsOfAanph.removeAll(dict.excludePossessivePronouns);
@@ -1023,7 +1023,7 @@ public class Mention implements Serializable{
             return false;
         }
         
-        if((anaph.headword.ner.equals("GPE") || anaph.headword.ner.startsWith("LOC") || anaph.headword.ner.equals("NORP")) 
+        if((anaph.semclass == SemanticClass.GPE || anaph.semclass == SemanticClass.LOCATION) 
                 && !locModifiersOfAnaph.containsAll(locModifiersOfAntec)) {
             return false;
         }
@@ -1247,7 +1247,7 @@ public class Mention implements Serializable{
                 && sent.getLexicon(headIndex + 1).form.equalsIgnoreCase("of");
     }
     
-    public void correctHeadIndex(Sentence sent, Dictionaries dict) {
+    public void correctHeadIndex(Sentence sent, Dictionaries dict, WordNet wordNet) {
         // make sure that the head of a NE is not a known suffix, e.g., Corp.
         if(!headword.ner.equals("O")) {
             int start = headIndex;
@@ -1262,6 +1262,7 @@ public class Mention implements Serializable{
                     this.headword = new Lexicon(sent.getLexicon(headIndex));
                     setType(sent, dict);
                     setDefiniteness(sent, dict);
+                    setSemanticClass(wordNet);
                     setNumber(sent, dict);
                     setAnimacy(sent, dict);
                     setGender(sent, dict, getGender(sent, dict));
@@ -1282,6 +1283,7 @@ public class Mention implements Serializable{
                     this.headword = new Lexicon(sent.getLexicon(headIndex));
                     setType(sent, dict);
                     setDefiniteness(sent, dict);
+                    setSemanticClass(wordNet);
                     setNumber(sent, dict);
                     setAnimacy(sent, dict);
                     setGender(sent, dict, getGender(sent, dict));
@@ -1298,6 +1300,7 @@ public class Mention implements Serializable{
         if(this.isList()) {
             setTypeForList(sent, dict);
             setDefiniteness(sent, dict);
+            setSemanticClass(wordNet);
             setNumber(sent, dict);
             setAnimacy(sent, dict);
             setGender(sent, dict, getGender(sent, dict));
@@ -1353,10 +1356,11 @@ public class Mention implements Serializable{
         }
     }
     
-    public void process(Sentence sent, List<Mention> mentions, Dictionaries dict, Set<Mention> remove) {
+    public void process(Sentence sent, List<Mention> mentions, Dictionaries dict, WordNet wordNet, Set<Mention> remove) {
         getHeadword(sent, mentions, dict, remove);
         setType(sent, dict);
         setDefiniteness(sent, dict);
+        setSemanticClass(wordNet);
         setNumber(sent, dict);
         setAnimacy(sent, dict);
         setGender(sent, dict, getGender(sent, dict));
@@ -1542,7 +1546,7 @@ public class Mention implements Serializable{
         else if(dict.singularWords.contains(headString)){
             number = Number.SINGULAR;
         }
-        else if(headword.ner.equals("QUANTITY")) {
+        else if(semclass == SemanticClass.QUANTITY) {
             number = Number.SINGULAR;
         }
         else if(this.isPureNumberMention(dict)) {
@@ -1552,7 +1556,7 @@ public class Mention implements Serializable{
                 && isNumber(this.headword, dict)) {
             number = Number.SINGULAR;
         }
-        else if(headword.ner.equals("MONEY")) {
+        else if(semclass == SemanticClass.MONEY) {
             number = Number.SINGULAR;
         }
         else if(headword.postag.startsWith("JJ")) {
@@ -1641,17 +1645,35 @@ public class Mention implements Serializable{
     }
     
     private void setAnimacyForNorminative(Sentence sent, Dictionaries dict) {
-        if(headword.ner.equals("MONEY")) {
+        if(semclass == SemanticClass.MONEY) {
             animacy = Animacy.INANIMATE;
         }
-        else if(headword.ner.equals("CARDINAL")) {
+        else if(semclass == SemanticClass.PERCENT) {
             animacy = Animacy.INANIMATE;
         }
-        else if(headword.ner.equals("QUANTITY")) {
+        else if(semclass == SemanticClass.NUMBER) {
             animacy = Animacy.INANIMATE;
         }
-        else if(headword.ner.equals("NUMBER")) {
+        else if(semclass == SemanticClass.QUANTITY) {
             animacy = Animacy.INANIMATE;
+        }
+        else if(semclass == SemanticClass.TIME) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(semclass == SemanticClass.GPE) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(semclass == SemanticClass.LOCATION) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(semclass == SemanticClass.ORGANIZATION) {
+            animacy = Animacy.INANIMATE;
+        }
+        else if(semclass == SemanticClass.ANIMAL) {
+            animacy = Animacy.ANIMATE;
+        }
+        else if(semclass == SemanticClass.PERSON) {
+            animacy = Animacy.ANIMATE;
         }
         else if(this.isPureNumberMention(dict)) {
             animacy = Animacy.INANIMATE;
@@ -1773,7 +1795,7 @@ public class Mention implements Serializable{
             animacy = Animacy.INANIMATE;
         }
         else {
-            animacy = Animacy.INANIMATE;
+            setAnimacyForNorminative(sent, dict);
         }
     }
     
@@ -1914,7 +1936,7 @@ public class Mention implements Serializable{
         else if(this.isPureNumberMention(dict)) {
             gender = Gender.NEUTRAL;
         }
-        else if(dict.animals.contains(headword.lemma)) {
+        else if(semclass == SemanticClass.ANIMAL || dict.animals.contains(headword.lemma)) {
             gender = Gender.NEUTRAL;
         }
         else if(dict.maleWords.contains(headString) || dict.maleWords.contains(headword.form)) {
@@ -1923,6 +1945,9 @@ public class Mention implements Serializable{
         else if(dict.femaleWords.contains(headString) || dict.femaleWords.contains(headword.form)) {
             gender = Gender.FEMALE;
         }
+        else if(semclass == SemanticClass.PERSON) {
+            gender = Gender.FeORM;
+        }
         else if(dict.neutralWords.contains(headString) || dict.neutralWords.contains(headword.form)) {
             gender = Gender.NEUTRAL;
         }
@@ -1930,9 +1955,9 @@ public class Mention implements Serializable{
             gender = Gender.NEUTRAL;
         }
         
-        //Animate & Netural or UnKnown & person; gender --> FeORM
+        //Animate & Netural or UnKnown & !animal; gender --> FeORM
         if(animacy == Animacy.ANIMATE && (gender == Gender.NEUTRAL || gender == Gender.UNKNOWN) 
-            && !dict.animals.contains(headword.lemma)) {
+            && !dict.animals.contains(headword.lemma) && semclass != SemanticClass.ANIMAL) {
             gender = Gender.FeORM;
         }
         
@@ -1942,8 +1967,17 @@ public class Mention implements Serializable{
         }
         //Unknown & Female or Male
         if(this.animacy == Animacy.UNKNOWN && (this.gender == Gender.FEMALE || this.gender == Gender.MALE)) {
-            this.animacy = Animacy.INANIMATE;
-            this.gender = Gender.NEUTRAL;
+            if(semclass == SemanticClass.PERSON) {
+                this.animacy = Animacy.ANIMATE;
+            }
+            else if(semclass == SemanticClass.ANIMAL) {
+                this.animacy = Animacy.ANIMATE;
+                this.gender = Gender.NEUTRAL;
+            }
+            else {
+                this.animacy = Animacy.INANIMATE;
+                this.gender = Gender.NEUTRAL;
+            }
         }
     }
     
@@ -1985,7 +2019,7 @@ public class Mention implements Serializable{
                     gender = Gender.NEUTRAL;
                 }
             }
-            else if(dict.animals.contains(headword.lemma)) {
+            else if(semclass == SemanticClass.ANIMAL || dict.animals.contains(headword.lemma)) {
                 gender = Gender.NEUTRAL;
             }
             else if(dict.neutralWords.contains(headString) || dict.neutralWords.contains(headword.form)) {
@@ -2003,9 +2037,17 @@ public class Mention implements Serializable{
         }
         
         //Animate & Netural or UnKnown & person; gender --> FeORM
-        if(this.animacy == Animacy.ANIMATE && (this.gender == Gender.NEUTRAL || this.gender == Gender.UNKNOWN)
-                && (headword.ner.startsWith("PER") || headword.ner.equals("MISC"))) {
-            gender = Gender.FeORM;
+        if(this.animacy == Animacy.ANIMATE && (this.gender == Gender.NEUTRAL || this.gender == Gender.UNKNOWN)) {
+            if(this.semclass == SemanticClass.PERSON) {
+                gender = Gender.FeORM;
+            }
+            else if(this.semclass == SemanticClass.ANIMAL) {
+                gender = Gender.NEUTRAL;
+            }
+            else {
+                animacy = Animacy.INANIMATE;
+                gender = Gender.NEUTRAL;
+            }
         }
         
         //InAnimate & Female or Male
@@ -2159,6 +2201,48 @@ public class Mention implements Serializable{
         }
     }
     
+    private void setSemanticClass(WordNet wordNet) {
+        if(this.isPronominal()) {
+            this.semclass = SemanticClass.UNKNOWN;
+        }
+        else {
+            String ner = this.headword.ner;
+            if(ner.equals("PERSON") || ner.equals("PER")) {
+                semclass = SemanticClass.PERSON;
+            }
+            else if(ner.startsWith("ORG")) {
+                semclass = SemanticClass.ORGANIZATION;
+            }
+            else if(ner.startsWith("LOC")) {
+                semclass = SemanticClass.LOCATION;
+            }
+            else if(ner.equals("GPE") || ner.equals("NORP")) {
+                semclass = SemanticClass.GPE;
+            }
+            else if(ner.equals("DATE") || ner.equals("TIME")) {
+                semclass = SemanticClass.TIME;
+            }
+            else if(ner.equals("QUANTITY")) {
+                semclass = SemanticClass.QUANTITY;
+            }
+            else if(ner.equals("PERCENT")) {
+                semclass = SemanticClass.PERCENT;
+            }
+            else if(ner.equals("MONEY")) {
+                semclass = SemanticClass.MONEY;
+            }
+            else if(ner.equals("CARDINAL") || ner.equals("NUMBER") || ner.equals("ORDINAL")) {
+                semclass = SemanticClass.NUMBER;
+            }
+            else if(!ner.equals("O")) {
+                semclass = SemanticClass.UNKNOWN;
+            }
+            else {
+                semclass = wordNet.getSemanticClass(this.headword.lemma);
+            }
+        }
+    }
+    
     private int[] getNerSpan(Sentence sent) {
         if(headword.ner.equals("O")) {
             return null;
@@ -2216,7 +2300,7 @@ public class Mention implements Serializable{
         printer.println("headString: " + this.headString + ": " + headword.postag);
         printer.println("mention type: " + this.mentionType);
         printer.println("mention definiteness: " + this.definite);
-        printer.println("mention number: " + this.number + " animacy: " + this.animacy + " gender: " + this.gender + "  person: " + this.person);
+        printer.println("mention number: " + this.number + " animacy: " + this.animacy + " gender: " + this.gender + " semantic-class: " + this.semclass + "  person: " + this.person);
         printer.println("mention ner: " + this.headword.ner);
         int[] nerSpan = this.getNerSpan(sent);
         if(nerSpan != null) {
@@ -2257,7 +2341,7 @@ public class Mention implements Serializable{
         printer.println("headString: " + this.headString + ": " + headword.postag);
         printer.println("mention type: " + this.mentionType);
         printer.println("mention definiteness: " + this.definite);
-        printer.println("mention number: " + this.number + " animacy: " + this.animacy + " gender: " + this.gender + "  person: " + this.person);
+        printer.println("mention number: " + this.number + " animacy: " + this.animacy + " gender: " + this.gender + " semantic-class: " + this.semclass + "  person: " + this.person);
         printer.println("mention ner: " + this.headword.ner);
         printer.println("mention speaker: " + (this.speakerInfo == null ? "null" : this.speakerInfo.toString() + " " + this.speakerInfo.getSpeakerMentionId() + " " + this.speakerInfo.getSpeakerName() + " " + this.speakerInfo.getSpkeakerNameAsOneString()));
         printer.println("previous speaker: " + (this.preSpeakerInfo == null ? "null" : this.preSpeakerInfo.toString() + " " + this.preSpeakerInfo.getSpeakerName()));

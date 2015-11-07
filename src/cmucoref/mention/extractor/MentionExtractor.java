@@ -10,6 +10,7 @@ import cmucoref.mention.extractor.relationextractor.*;
 import cmucoref.model.Options;
 import cmucoref.util.Pair;
 import cmucoref.mention.SpeakerInfo;
+import cmucoref.mention.WordNet;
 import cmucoref.mention.Dictionaries;
 
 import java.io.FileNotFoundException;
@@ -31,6 +32,8 @@ public abstract class MentionExtractor {
     
     protected Dictionaries dict;
     
+    protected WordNet wordNet;
+    
     protected EventExtractor eventExtractor;
     
     public MentionExtractor(){}
@@ -42,12 +45,24 @@ public abstract class MentionExtractor {
         this.dict = new Dictionaries(props);
     }
     
+    public void createWordNet(String wnDir) throws IOException {
+        wordNet = new WordNet(wnDir);
+    }
+    
+    public void closeWordNet() {
+        wordNet.close();
+    }
+    
     public void setEventExtractor(EventExtractor eventExtractor) {
         this.eventExtractor = eventExtractor;
     }
     
     public Dictionaries getDict() {
         return dict;
+    }
+    
+    public WordNet getWordNet() {
+        return wordNet;
     }
     
     public int sizeOfEvent() {
@@ -154,7 +169,7 @@ public abstract class MentionExtractor {
                         remove.add(mention);
                     }
                     else {
-                        mention.process(sent, mentions, dict, remove);
+                        mention.process(sent, mentions, dict, wordNet, remove);
                     }
                 }
             }
@@ -502,7 +517,7 @@ public abstract class MentionExtractor {
     
     protected void correctHeadIndexforNERMentions(List<Mention> mentions, Sentence sent) {
         for(Mention mention : mentions) {
-            mention.correctHeadIndex(sent, dict);
+            mention.correctHeadIndex(sent, dict, wordNet);
         }
     }
     

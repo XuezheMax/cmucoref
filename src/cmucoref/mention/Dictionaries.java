@@ -17,6 +17,8 @@ public class Dictionaries extends edu.stanford.nlp.dcoref.Dictionaries {
     
     public enum Gender { MALE, FEMALE, FeORM, NEUTRAL, UNKNOWN }
     
+    public enum SemanticClass {PERSON, ANIMAL, ORGANIZATION, LOCATION, GPE, TIME, NUMBER, QUANTITY, MONEY, PERCENT, UNKNOWN}
+    
     //re-define pronouns
     public final Set<String> animatePronouns = new HashSet<String>(Arrays.asList(new String[]{ "i", "me", "myself", "mine", "my", "we", "us", "'s", "ourself", "ourselves", "ours", "our", "you", "yourself", "yours", "your", "yourselves", "he", "him", "himself", "his", "she", "her", "herself", "hers", "her", "who", "whom", "one", "one's", "oneself"}));
     public final Set<String> neutralPronouns = new HashSet<String>(Arrays.asList(new String[]{"it", "itself", "its", "where", "when", "the", "that", "this"}));

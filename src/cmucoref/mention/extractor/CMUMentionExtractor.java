@@ -117,7 +117,7 @@ public class CMUMentionExtractor extends MentionExtractor {
 			Set<Mention> remove = new HashSet<Mention>();
 			if(options.extractMentionAttribute()) {
 				for(Mention mention : mentions) {
-					mention.process(sent, mentions, dict, remove);
+					mention.process(sent, mentions, dict, wordNet, remove);
 				}
 			}
 			mentions.removeAll(remove);

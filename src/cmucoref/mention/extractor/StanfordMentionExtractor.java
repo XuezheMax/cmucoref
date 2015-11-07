@@ -88,7 +88,7 @@ public class StanfordMentionExtractor extends MentionExtractor{
 			Set<Mention> remove = new HashSet<Mention>();
 			for(Mention mention : mentions) {
 				if(options.extractMentionAttribute()){
-					mention.process(sent, mentions, dict, remove);
+					mention.process(sent, mentions, dict, wordNet, remove);
 				}
 			}
 			mentions.removeAll(remove);

@@ -86,6 +86,8 @@ public class Options implements Serializable{
 								MODELFILE = "model-file",
 								PROPERTYFILE = "property-file",
 								DEFAULT_PROPERTY_FILE = "cmucoref_models/properties/default.properties",
+								WORDNETDIR = "wordnet",
+								DEFAULT_WORDNETDIR = "lib/WordNet-3.0",
 								CONLL_SCORER = "conll-scorer",
 								MAX_ITER = "maxIter",
 								DEFAULT_MAX_ITER = "1000",
@@ -202,6 +204,8 @@ public class Options implements Serializable{
 		valid_opt_set.add(CONFIGURATION);
 		valid_opt_set.add(PROPERTYFILE);
 		argToValueMap.put(PROPERTYFILE, DEFAULT_PROPERTY_FILE);
+		valid_opt_set.add(WORDNETDIR);
+		argToValueMap.put(WORDNETDIR, DEFAULT_WORDNETDIR);
 	}
 	
 	private String helpInfo(){
@@ -471,6 +475,10 @@ public class Options implements Serializable{
 		return getArgValue(PROPERTYFILE);
 	}
 	
+	public String getWordNet() {
+	    return getArgValue(WORDNETDIR);
+	}
+	
 	public void putDocReader(String reader) {
 		putArgValue(DOC_READER, reader);
 	}
@@ -520,6 +528,8 @@ public class Options implements Serializable{
 		out.writeObject(getEventExtractor());
 		//write propertity file
 		out.writeObject(getPropFile());
+		//write wordnet dir
+		out.writeObject(getWordNet());
 	}
 	
 	private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException{
@@ -560,5 +570,8 @@ public class Options implements Serializable{
 		//read propertity file
 		String propfile = (String) in.readObject();
 		argToValueMap.put(PROPERTYFILE, propfile);
+		//read wornet dir
+		String wordnetDir = (String) in.readObject();
+		argToValueMap.put(WORDNETDIR, wordnetDir);
 	}
 }

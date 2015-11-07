@@ -40,6 +40,9 @@ public class CorefSystem {
 			//initialize mention extractor
 			MentionExtractor mentionExtractor = MentionExtractor.createExtractor(options.getMentionExtractor());
 			mentionExtractor.createDict(options.getPropFile());
+			//intialize wordnet
+			mentionExtractor.createWordNet(options.getWordNet());
+			
 			//initialize event extractor
 			EventExtractor eventExtractor = EventExtractor.createExtractor(options.getEventExtractor());
 			eventExtractor.createDict(options.getPropFile());
@@ -69,6 +72,8 @@ public class CorefSystem {
 			//initialize mention extractor
 			MentionExtractor mentionExtractor = MentionExtractor.createExtractor(options.getMentionExtractor());
 			mentionExtractor.createDict(model.options.getPropFile());
+			mentionExtractor.createWordNet(model.options.getWordNet());
+			
 			//initialize event extractor
 			EventExtractor eventExtractor = EventExtractor.createExtractor(options.getEventExtractor());
 			eventExtractor.createDict(options.getPropFile());
