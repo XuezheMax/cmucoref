@@ -31,7 +31,7 @@ public class AdditiveSmoother extends Smoother {
         // update mention nils
         for(int j = 0; j < gsizeOfM; ++j) {
             if(j != newClusGid) {
-                double val = beta - Util.logsumexp(mGivenC[j], logBeta + logD);
+                double val = logBeta - Util.logsumexp(mGivenC[j], logBeta + logD);
                 model.updateMentionNils(j, val);
             }
         }
