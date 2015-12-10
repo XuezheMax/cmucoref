@@ -5,13 +5,14 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-import cmucoref.io.ObjectWriter;
 import cmucoref.document.Document;
 import cmucoref.document.Sentence;
 import cmucoref.exception.CreatingInstanceException;
 import cmucoref.io.DocumentReader;
+import cmucoref.io.ObjectWriter;
 import cmucoref.mention.Dictionaries;
 import cmucoref.mention.Mention;
+import cmucoref.mention.WordNet;
 import cmucoref.mention.extractor.MentionExtractor;
 import cmucoref.mention.featgen.MentionFeatureGenerator;
 import cmucoref.model.CorefModel;
@@ -29,6 +30,10 @@ public class CorefManager {
 	
 	public Dictionaries getDict(){
 		return mentionExtractor.getDict();
+	}
+	
+	public WordNet getWordNet() {
+	    return mentionExtractor.getWordNet();
 	}
 	
 	public int[] createDocInstance(String trainfile, String traintmp, CorefModel model) throws InstantiationException, IllegalAccessException, ClassNotFoundException, IOException, CreatingInstanceException {
@@ -132,7 +137,7 @@ public class CorefManager {
 					for(int j = 0; j <= i; ++j) {
 						Mention antec = (j == i ? null : allMentions.get(j));
 						Sentence antecSent = (antec == null ? null : doc.getSentence(antec.sentID));
-						if(anaph.ruleout(anaphSent, antec, antecSent, getDict(), false)) {
+						if(anaph.ruleout(anaphSent, antec, antecSent, getDict(), getWordNet(), false)) {
 							continue;
 						}
 							
@@ -216,12 +221,13 @@ public class CorefManager {
 			}
 			
 			//mode=0;
-			mfvs = new FeatureVector[i + 1];
-			efvs = useEvent ? new FeatureVector[i + 1] : null;
-			for(int j = 0; j <= i; ++j) {
-				Mention antec = (j == i ? null : allMentions.get(j));
+			// 1 new-cluster per sent
+			mfvs = new FeatureVector[i + (anaphSent.getId() + 1)];
+			efvs = useEvent ? new FeatureVector[i + (anaphSent.getId() + 1)] : null;
+			for(int j = 0; j < mfvs.length; ++j) {
+				Mention antec = (j < i ? allMentions.get(j) : null);
 				Sentence antecSent = (antec == null ? null : doc.getSentence(antec.sentID));
-				if(anaph.ruleout(anaphSent, antec, antecSent, getDict(), false)) {
+				if(anaph.ruleout(anaphSent, antec, antecSent, getDict(), getWordNet(), false)) {
 					continue;
 				}
 					

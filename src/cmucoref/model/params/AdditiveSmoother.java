@@ -13,7 +13,7 @@ public class AdditiveSmoother extends Smoother {
 	    int nsizeOfM = model.mentionFeatureSize();
 	    int gsizeOfM = model.givenSizeofMention();
 	    int newClusGid = model.getMentionGid("mode=ATTR_MAT, NEWCLUSMENTION");
-	    int d = model.getSizeOfMentionFeatFromGid(newClusGid) * 20 * 5;
+	    int d = model.getSizeOfMentionFeatFromGid(newClusGid) * 30;
 	    double logD = Math.log(d);
         double logBeta = Math.log(beta);
         

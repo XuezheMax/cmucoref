@@ -8,18 +8,35 @@ public class UniformInitializer extends ParameterInitializer{
 	
 	@Override
 	public void initializeMentionParams(Parameters parameters) {
+	    int newClusGid = model.getMentionGid("mode=ATTR_MAT, NEWCLUSMENTION");
+	    int d = model.getSizeOfMentionFeatFromGid(newClusGid) * 30;
+        double logD = Math.log(d);
+	    
+        // initialize mention nils
 		for(int j = 0; j < parameters.sizeOfNil(); ++j) {
-			parameters.updateNil(j, Double.NEGATIVE_INFINITY);
+		    if(j == newClusGid) {
+		        parameters.updateNil(j, Double.NEGATIVE_INFINITY);
+		    }
+		    else {
+		        parameters.updateNil(j, -logD);
+		    }
+		}
+		
+		// initialize mention parameters
+		for(int j = 0; j < parameters.sizeOfFeat(); ++j) {
+		    int gid = model.getMentionGidFromIndex(j);
+		    double val = (gid == newClusGid ? -Math.log(model.getSizeOfMentionFeatFromGid(gid)) : -logD);
+		    parameters.updateParam(j, val);
 		}
 		
 		for(int j = 0; j < parameters.sizeOfUni(); ++j) {
 			parameters.updateUniParam(j, Double.NEGATIVE_INFINITY);
 		}
 		
-		for(int j = 0; j < parameters.sizeOfFeat(); ++j) {
-			int gid = model.getMentionGidFromIndex(j);
-			parameters.updateParam(j, -Math.log(model.getSizeOfMentionFeatFromGid(gid)));
-		}
+//		for(int j = 0; j < parameters.sizeOfFeat(); ++j) {
+//			int gid = model.getMentionGidFromIndex(j);
+//			parameters.updateParam(j, -Math.log(model.getSizeOfMentionFeatFromGid(gid)));
+//		}
 		
 //		for(int j = 0; j < parameters.length; ++j) {
 //			parameters[j] = Math.log(1.0 / model.givenSizeofMention());

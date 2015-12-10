@@ -233,24 +233,24 @@ public class MentionFeatureGenerator {
         feat.append(", PER=" + anaph.person);
         
         //string match features (does not apply for pronominals)
-        if(!anaph.isPronominal() && !antec.isPronominal()) {
-            if(anaph.isList() || antec.isList()) {
-                boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent, dict);
-                feat.append(", " + "HDMAT=" + headMatch);
-                feat.append(", " + "CMPMOD=false");
-                feat.append(", " + "WDIND=false");
-            }
-            else {
-                boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent, dict);
-                feat.append(", " + "HDMAT=" + headMatch);
-                //compatible modifier
-                boolean compatibleModifier = antec.compatibleModifier(antecSent, anaph, anaphSent, dict);
-                feat.append(", " + "CMPMOD=" + compatibleModifier);
-                //wordInclude
-                boolean wordIncluded = antec.wordsInclude(antecSent, anaph, anaphSent, dict);
-                feat.append(", " + "WDIND=" + wordIncluded);
-            }
-        }        
+//        if(!anaph.isPronominal() && !antec.isPronominal()) {
+//            if(anaph.isList() || antec.isList()) {
+//                boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent, dict);
+//                feat.append(", " + "HDMAT=" + headMatch);
+//                feat.append(", " + "CMPMOD=false");
+//                feat.append(", " + "WDIND=false");
+//            }
+//            else {
+//                boolean headMatch = antec.headMatch(antecSent, anaph, anaphSent, dict);
+//                feat.append(", " + "HDMAT=" + headMatch);
+//                //compatible modifier
+//                boolean compatibleModifier = antec.compatibleModifier(antecSent, anaph, anaphSent, dict);
+//                feat.append(", " + "CMPMOD=" + compatibleModifier);
+//                //wordInclude
+//                boolean wordIncluded = antec.wordsInclude(antecSent, anaph, anaphSent, dict);
+//                feat.append(", " + "WDIND=" + wordIncluded);
+//            }
+//        }        
         addMentionFeature(feat.toString(), given.toString(), model, mfv);
     }
     

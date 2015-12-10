@@ -35,6 +35,9 @@ public class WordNet {
     protected Set<ISynsetID> MONEY = new HashSet<ISynsetID>();
     protected Set<ISynsetID> PERCENT = new HashSet<ISynsetID>();
     
+    protected ISynsetID MALE;
+    protected ISynsetID FEMALE;
+    
     protected void init() {
         PERSON.add(new SynsetID(7626, POS.NOUN));
         
@@ -59,6 +62,9 @@ public class WordNet {
         MONEY.add(new SynsetID(13212169, POS.NOUN));
         
         PERCENT.add(new SynsetID(13636179, POS.NOUN));
+        
+        MALE = new SynsetID(9487097, POS.NOUN);
+        FEMALE = new SynsetID(9482706, POS.NOUN);
     }
 
     public WordNet(String wnDir) throws IOException {
@@ -125,6 +131,60 @@ public class WordNet {
         return false;
     }
     
+    protected boolean isHypernym(ISynsetID hypernym, ISynsetID term) {
+        List<ISynsetID> hypernyms = new ArrayList<ISynsetID>();
+        hypernyms.add(term);
+        for(int s = 0, e = 1; s < e; s++) {
+            ISynsetID synsetId = hypernyms.get(s);
+            if(hypernym.equals(synsetId)) {
+                return true;
+            }
+            hypernyms.addAll(dict.getSynset(synsetId).getRelatedSynsets(Pointer.HYPERNYM));
+            e = hypernyms.size();
+        }
+        return false;
+    }
+    
+    public int isMaleOrFemale(String lemma) {
+        IIndexWord indexWord = dict.getIndexWord(lemma, POS.NOUN);
+        if(indexWord == null) {
+            return 0;
+        }
+        IWord sense = dict.getWord(indexWord.getWordIDs().get(0));
+        ISynsetID term = sense.getSynset().getID();
+        
+        if(isHypernym(MALE, term)) {
+            return 1;
+        }
+        else if(isHypernym(FEMALE, term)) {
+            return -1;
+        }
+        else {
+            return 0;
+        }
+    }
+    
+    /**
+     * check if two lemma has matched sense
+     * @param lemma1
+     * @param lemma2
+     * @return
+     */
+    public boolean senseMatch(String lemma1, String lemma2) {
+        IIndexWord indexWord1 = dict.getIndexWord(lemma1, POS.NOUN);
+        IIndexWord indexWord2 = dict.getIndexWord(lemma2, POS.NOUN);
+        if(indexWord1 == null || indexWord2 == null) {
+            return lemma1.equalsIgnoreCase(lemma2);
+        }
+        IWord sense1 = dict.getWord(indexWord1.getWordIDs().get(0));
+        ISynsetID term1 = sense1.getSynset().getID();
+        
+        IWord sense2 = dict.getWord(indexWord2.getWordIDs().get(0));
+        ISynsetID term2 = sense2.getSynset().getID();
+        
+        return isHypernym(term1, term2) || isHypernym(term2, term1);
+    }
+    
     public static void main(String[] args) throws IOException {
         WordNet wordNet = new WordNet(args[0]);
         IIndexWord idxWord = wordNet.dict.getIndexWord("person", POS.NOUN);
@@ -186,6 +246,17 @@ public class WordNet {
         synset = word.getSynset();
         System.out.println(word.getLemma() + " " + synset.getID() + " (" + synset.getGloss() + ")");
         
+        //male
+        idxWord = wordNet.dict.getIndexWord("male", POS.NOUN);
+        word = wordNet.dict.getWord(idxWord.getWordIDs().get(1));
+        synset = word.getSynset();
+        System.out.println(word.getLemma() + " " + synset.getID() + " (" + synset.getGloss() + ")");
+        //female
+        idxWord = wordNet.dict.getIndexWord("female", POS.NOUN);
+        word = wordNet.dict.getWord(idxWord.getWordIDs().get(1));
+        synset = word.getSynset();
+        System.out.println(word.getLemma() + " " + synset.getID() + " (" + synset.getGloss() + ")");
+        
         idxWord = wordNet.dict.getIndexWord("definite_quantity", POS.NOUN);
         word = wordNet.dict.getWord(idxWord.getWordIDs().get(0));
         synset = word.getSynset();
@@ -232,5 +303,11 @@ public class WordNet {
         
         lemma = "paper";
         System.out.println(lemma + " " + wordNet.getSemanticClass(lemma));
+        
+        System.out.println(wordNet.isMaleOrFemale("man"));
+        System.out.println(wordNet.isMaleOrFemale("woman"));
+        System.out.println(wordNet.isMaleOrFemale("boy"));
+        System.out.println(wordNet.isMaleOrFemale("girl"));
+        System.out.println(wordNet.isMaleOrFemale("dog"));
     }
 }
