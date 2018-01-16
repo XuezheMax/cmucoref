@@ -221,9 +221,12 @@ public class CorefManager {
 			}
 			
 			//mode=0;
-			// 1 new-cluster per sent
-			mfvs = new FeatureVector[i + (anaphSent.getId() + 1)];
-			efvs = useEvent ? new FeatureVector[i + (anaphSent.getId() + 1)] : null;
+			// 10 new-cluster per sent
+			mfvs = new FeatureVector[i + (anaphSent.getId() + 1) * 10];
+			efvs = useEvent ? new FeatureVector[i + (anaphSent.getId() + 1) * 10] : null;
+			// 1 new-cluster per mention
+//			mfvs = new FeatureVector[i + i + 1];
+//          efvs = useEvent ? new FeatureVector[i + i + 1] : null;
 			for(int j = 0; j < mfvs.length; ++j) {
 				Mention antec = (j < i ? allMentions.get(j) : null);
 				Sentence antecSent = (antec == null ? null : doc.getSentence(antec.sentID));
